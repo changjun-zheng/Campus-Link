@@ -87,14 +87,14 @@ public class ForumQueryApplicationService {
      * <p>sort 非法值 / 空串 → 1001，**不静默归一到 latest**——与同端点族 {@code days} 只受理 7/30/90 的口径一致：
      * 静默降级会让调用方以为拿到了热榜、实际拿到的是最新序，这种错法查不出来。
      */
-    public PageResult<PostSummary> listPosts(String boardCode, String sort, int page, int size) {
+    public PageResult<PostSummary> listPosts(String boardCode, String sort, int page, int size, Long viewerId) {
         PostSortOrder sortOrder = PostSortOrder.fromCode(sort)
                 .orElseThrow(() -> new ApiException(ResultCode.INVALID_PARAM));
         int currentPage = normalizePage(page);
         int pageSize = normalizeSize(size);
         Long boardId = boardIdOf(boardCode);
         PageResult<Post> found = postRepository.findPage(boardId, sortOrder, currentPage, pageSize);
-        return new PageResult<>(toSummaries(found.items()), found.total(), currentPage, pageSize);
+        return new PageResult<>(toSummaries(found.items(), viewerId), found.total(), currentPage, pageSize);
     }
 
     /**
@@ -103,7 +103,8 @@ public class ForumQueryApplicationService {
      * keyword 去首尾空白后长度须 2~50，days 只接受 7 / 30 / 90——不满足即 1001，不静默归一（与分页口径不同：
      * 分页越界只是翻页放大，关键词过短会退化成全表扫描且 ngram 分不出词）。
      */
-    public PageResult<PostSummary> searchPosts(String keyword, String boardCode, Integer days, int page, int size) {
+    public PageResult<PostSummary> searchPosts(String keyword, String boardCode, Integer days, int page, int size,
+                                               Long viewerId) {
         String kw = keyword == null ? "" : keyword.trim();
         if (kw.length() < KEYWORD_MIN_CHARS || kw.length() > KEYWORD_MAX_CHARS) {
             throw new ApiException(ResultCode.INVALID_PARAM);
@@ -115,7 +116,7 @@ public class ForumQueryApplicationService {
         int pageSize = normalizeSize(size);
         Long boardId = boardIdOf(boardCode);
         PageResult<Post> found = postRepository.search(kw, boardId, days, currentPage, pageSize);
-        return new PageResult<>(toSummaries(found.items()), found.total(), currentPage, pageSize);
+        return new PageResult<>(toSummaries(found.items(), viewerId), found.total(), currentPage, pageSize);
     }
 
     /**
@@ -168,7 +169,7 @@ public class ForumQueryApplicationService {
         int currentPage = normalizePage(page);
         int pageSize = normalizeSize(size);
         PageResult<Post> found = favoriteRepository.findFavoritePosts(userId, currentPage, pageSize);
-        return new PageResult<>(toSummaries(found.items()), found.total(), currentPage, pageSize);
+        return new PageResult<>(toSummaries(found.items(), userId), found.total(), currentPage, pageSize);
     }
 
     /**
@@ -230,7 +231,7 @@ public class ForumQueryApplicationService {
         PageResult<Post> found = postRepository.findPageByAuthors(
                 authorIds.size() > FOLLOWING_FEED_AUTHOR_CAP ? authorIds.subList(0, FOLLOWING_FEED_AUTHOR_CAP) : authorIds,
                 currentPage, pageSize);
-        return new PageResult<>(toSummaries(found.items()), found.total(), currentPage, pageSize);
+        return new PageResult<>(toSummaries(found.items(), userId), found.total(), currentPage, pageSize);
     }
 
     /**
@@ -248,12 +249,12 @@ public class ForumQueryApplicationService {
      * <p>作者存在性在本方法里过一道门（而不是交给控制器）：不存在 / 已注销 → 2007 / 404，
      * 不对外区分。跳上下文只调 account 的 application（ADR-012 / 守护测试 G4）。
      */
-    public PageResult<PostSummary> listVisiblePostsByAuthor(long authorId, int page, int size) {
+    public PageResult<PostSummary> listVisiblePostsByAuthor(long authorId, int page, int size, Long viewerId) {
         accountApplicationService.publicAccountOf(authorId);
         int currentPage = normalizePage(page);
         int pageSize = normalizeSize(size);
         PageResult<Post> found = postRepository.findPageByAuthors(List.of(authorId), currentPage, pageSize);
-        return new PageResult<>(toSummaries(found.items()), found.total(), currentPage, pageSize);
+        return new PageResult<>(toSummaries(found.items(), viewerId), found.total(), currentPage, pageSize);
     }
 
     /**
@@ -349,11 +350,22 @@ public class ForumQueryApplicationService {
                 .getId();
     }
 
-    /** 列表 / 收藏 / 搜索三处共用的摘要映射：版块名与作者昵称一页一次批量解析（设计 §4.3，不做 N+1） */
-    private List<PostSummary> toSummaries(List<Post> posts) {
+    /**
+     * 列表 / 收藏 / 搜索 / 关注 Feed / 他人主页五处共用的摘要映射：版块名、作者昵称、已赞集合**各自一页一次批量解析**
+     * （设计 §4.3，不做 N+1）。
+     *
+     * <p>{@code viewerId} 为 null（匿名）时 likedByMe 恒 false 且**一次仓储都不调**——与 {@link #postDetail}
+     * 同一口径（F-FORUM-005：公开可读、登录态回显是附加能力）。[CR-080] 新增此参数，是为了让列表能就地显示
+     * "我赞没赞过"，而不必为每行发一次请求。
+     */
+    private List<PostSummary> toSummaries(List<Post> posts, Long viewerId) {
         Map<Long, Board> boardsById = boardsById();
         Map<Long, String> nicknames = accountApplicationService.nicknamesOf(
                 posts.stream().map(Post::getAuthorId).toList());
+        List<Long> postIds = posts.stream().map(Post::getId).toList();
+        Set<Long> likedIds = viewerId == null || postIds.isEmpty()
+                ? Set.of()
+                : likeRepository.findLikedTargetIds(viewerId, LikeTargetType.POST, postIds);
         return posts.stream()
                 .map(post -> {
                     Board board = boardsById.get(post.getBoardId());
@@ -364,7 +376,7 @@ public class ForumQueryApplicationService {
                             nicknames.getOrDefault(post.getAuthorId(), NICKNAME_FALLBACK),
                             post.getReplyCount(), post.getLikeCount(), post.getViewCount(), post.getCoverUrl(),
                             markdownRenderer.toPlainSummary(post.getContentMd(), SUMMARY_MAX_CHARS),
-                            post.getCreatedAt(), post.isAccepted());
+                            post.getCreatedAt(), post.isAccepted(), likedIds.contains(post.getId()));
                 })
                 .toList();
     }

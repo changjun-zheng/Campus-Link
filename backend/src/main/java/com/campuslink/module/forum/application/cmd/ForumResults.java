@@ -16,7 +16,7 @@ public final class ForumResults {
     /** 列表项（设计 §3.2）：summary 为服务端去 Markdown 后的纯文本摘要；accepted 供列表 [已采纳] 徽标（F-QA-001）；viewCount / coverUrl 供阅读数与封面缩略图（CR-074） */
     public record PostSummary(Long id, String boardCode, String boardName, String title, String authorNickname,
                               int replyCount, int likeCount, int viewCount, String coverUrl,
-                              String summary, Instant createdAt, boolean accepted) {
+                              String summary, Instant createdAt, boolean accepted, boolean likedByMe) {
     }
 
     /** 详情（设计 §3.4）：contentHtml 是发布时渲染好的 HTML，前端直接渲染；authorId / boardType 供前端判定采纳按钮可见性（F-QA-001）；likedByMe / favoritedByMe 仅登录时填充、匿名恒 false（F-FORUM-005）；viewCount 供阅读数展示（CR-074） */

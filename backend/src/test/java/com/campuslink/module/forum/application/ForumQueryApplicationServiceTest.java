@@ -93,7 +93,7 @@ class ForumQueryApplicationServiceTest {
         when(boardRepository.findAllEnabled()).thenReturn(List.of(board(1L, "qna", "技术问答")));
         when(accountApplicationService.nicknamesOf(List.of(100L, 200L))).thenReturn(Map.of(100L, "张三"));
 
-        PageResult<PostSummary> page = service.listPosts(null, "latest", 1, 20);
+        PageResult<PostSummary> page = service.listPosts(null, "latest", 1, 20, null);
 
         assertThat(page.total()).isEqualTo(2);
         assertThat(page.items()).extracting(PostSummary::authorNickname)
@@ -104,12 +104,57 @@ class ForumQueryApplicationServiceTest {
     }
 
     @Test
+    @DisplayName("列表点赞回显（CR-080）：登录时一页**一次**批量取已赞集合，并逐条落到 likedByMe")
+    void listPostsMarksLikedByMeFromASingleBatchQuery() {
+        when(postRepository.findPage(null, PostSortOrder.LATEST, 1, 20))
+                .thenReturn(new PageResult<>(List.of(post(1L, 101L), post(2L, 102L), post(3L, 103L)), 3, 1, 20));
+        when(boardRepository.findAllEnabled()).thenReturn(List.of());
+        when(accountApplicationService.nicknamesOf(List.of(101L, 102L, 103L)))
+                .thenReturn(Map.of(101L, "甲", 102L, "乙", 103L, "丙"));
+        when(likeRepository.findLikedTargetIds(42L,
+                com.campuslink.module.forum.domain.model.LikeTargetType.POST, List.of(1L, 2L, 3L)))
+                .thenReturn(java.util.Set.of(2L));
+
+        PageResult<PostSummary> page = service.listPosts(null, "latest", 1, 20, 42L);
+
+        assertThat(page.items()).extracting(PostSummary::likedByMe).containsExactly(false, true, false);
+        // 断言"只发生一次、且问的是整页 id"——逐条查（N+1）会在这里红
+        verify(likeRepository, times(1)).findLikedTargetIds(42L,
+                com.campuslink.module.forum.domain.model.LikeTargetType.POST, List.of(1L, 2L, 3L));
+    }
+
+    @Test
+    @DisplayName("列表点赞回显（CR-080）：匿名请求**一次仓储都不调**，likedByMe 恒 false（与详情同口径）")
+    void anonymousListNeverTouchesLikeRepository() {
+        when(postRepository.findPage(null, PostSortOrder.LATEST, 1, 20))
+                .thenReturn(new PageResult<>(List.of(post(1L, 101L)), 1, 1, 20));
+        when(boardRepository.findAllEnabled()).thenReturn(List.of());
+        when(accountApplicationService.nicknamesOf(List.of(101L))).thenReturn(Map.of(101L, "甲"));
+
+        PageResult<PostSummary> page = service.listPosts(null, "latest", 1, 20, null);
+
+        assertThat(page.items()).extracting(PostSummary::likedByMe).containsExactly(false);
+        org.mockito.Mockito.verifyNoInteractions(likeRepository);
+    }
+
+    @Test
+    @DisplayName("列表点赞回显（CR-080）：空页不去查已赞集合（无 id 可问，省一次往返）")
+    void emptyListSkipsLikeLookup() {
+        when(postRepository.findPage(null, PostSortOrder.LATEST, 1, 20))
+                .thenReturn(new PageResult<>(List.of(), 0, 1, 20));
+        when(boardRepository.findAllEnabled()).thenReturn(List.of());
+
+        assertThat(service.listPosts(null, "latest", 1, 20, 42L).items()).isEmpty();
+        org.mockito.Mockito.verifyNoInteractions(likeRepository);
+    }
+
+    @Test
     @DisplayName("分页归一：page<1 → 1、size>100 → 100，响应回显生效值")
     void pagingIsNormalized() {
         when(postRepository.findPage(null, PostSortOrder.LATEST, 1, 100)).thenReturn(new PageResult<>(List.of(), 0, 1, 100));
         when(boardRepository.findAllEnabled()).thenReturn(List.of());
 
-        PageResult<PostSummary> page = service.listPosts(null, "latest", 0, 500);
+        PageResult<PostSummary> page = service.listPosts(null, "latest", 0, 500, null);
 
         assertThat(page.page()).isEqualTo(1);
         assertThat(page.size()).isEqualTo(100);
@@ -121,7 +166,7 @@ class ForumQueryApplicationServiceTest {
     void unknownBoardCodeIsNotFound() {
         when(boardRepository.findByCode("nope")).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.listPosts("nope", "latest", 1, 20))
+        assertThatThrownBy(() -> service.listPosts("nope", "latest", 1, 20, null))
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
 
@@ -137,7 +182,7 @@ class ForumQueryApplicationServiceTest {
         when(boardRepository.findAllEnabled()).thenReturn(List.of());
         when(accountApplicationService.nicknamesOf(any())).thenReturn(Map.of(100L, "张三"));
 
-        String summary = service.listPosts(null, "latest", 1, 20).items().get(0).summary();
+        String summary = service.listPosts(null, "latest", 1, 20, null).items().get(0).summary();
 
         assertThat(summary).doesNotContain("#").hasSize(120);
     }
@@ -149,13 +194,13 @@ class ForumQueryApplicationServiceTest {
                 .thenReturn(new PageResult<>(List.of(), 0, 1, 20));
         when(boardRepository.findAllEnabled()).thenReturn(List.of());
 
-        service.listPosts(null, "hot", 1, 20);
-        service.listPosts(null, "HOT", 1, 20);
-        service.listPosts(null, "  hot  ", 1, 20);
+        service.listPosts(null, "hot", 1, 20, null);
+        service.listPosts(null, "HOT", 1, 20, null);
+        service.listPosts(null, "  hot  ", 1, 20, null);
         verify(postRepository, times(3)).findPage(null, PostSortOrder.HOT, 1, 20);
 
-        service.listPosts(null, "latest", 1, 20);
-        service.listPosts(null, "LATEST", 1, 20);
+        service.listPosts(null, "latest", 1, 20, null);
+        service.listPosts(null, "LATEST", 1, 20, null);
         verify(postRepository, times(2)).findPage(null, PostSortOrder.LATEST, 1, 20);
     }
 
@@ -163,7 +208,7 @@ class ForumQueryApplicationServiceTest {
     @DisplayName("sort：非法值 / 空串 / null → 1001，且不查仓储（不静默归一到最新序）")
     void sortRejectsUnknownValue() {
         for (String bad : Arrays.asList("foo", "new", "", "   ", null)) {
-            assertThatThrownBy(() -> service.listPosts(null, bad, 1, 20))
+            assertThatThrownBy(() -> service.listPosts(null, bad, 1, 20, null))
                     .as("sort=%s 应被拒绝", bad)
                     .isInstanceOfSatisfying(ApiException.class,
                             e -> assertThat(e.getCode()).isEqualTo(ResultCode.INVALID_PARAM));
@@ -255,7 +300,7 @@ class ForumQueryApplicationServiceTest {
         when(boardRepository.findAllEnabled()).thenReturn(List.of(board(1L, "qna", "技术问答")));
         when(accountApplicationService.nicknamesOf(List.of(100L, 200L))).thenReturn(Map.of(100L, "张三"));
 
-        PageResult<PostSummary> page = service.searchPosts("  Redis  ", "qna", null, 1, 20);
+        PageResult<PostSummary> page = service.searchPosts("  Redis  ", "qna", null, 1, 20, null);
 
         assertThat(page.total()).isEqualTo(2);
         assertThat(page.items()).extracting(PostSummary::authorNickname).containsExactly("张三", "已注销用户");
@@ -266,7 +311,7 @@ class ForumQueryApplicationServiceTest {
     @Test
     @DisplayName("搜索：keyword 过短（1 字，ngram 分不出词）→ 1001，且不查仓储")
     void searchRejectsSingleCharKeyword() {
-        assertThatThrownBy(() -> service.searchPosts("R", null, null, 1, 20))
+        assertThatThrownBy(() -> service.searchPosts("R", null, null, 1, 20, null))
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.INVALID_PARAM));
 
@@ -276,10 +321,10 @@ class ForumQueryApplicationServiceTest {
     @Test
     @DisplayName("搜索：keyword 缺失 / 空白 → 1001（缺参另由框架层 400 兜住，这里是应用层兜底）")
     void searchRejectsBlankKeyword() {
-        assertThatThrownBy(() -> service.searchPosts(null, null, null, 1, 20))
+        assertThatThrownBy(() -> service.searchPosts(null, null, null, 1, 20, null))
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.INVALID_PARAM));
-        assertThatThrownBy(() -> service.searchPosts("   ", null, null, 1, 20))
+        assertThatThrownBy(() -> service.searchPosts("   ", null, null, 1, 20, null))
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.INVALID_PARAM));
 
@@ -289,7 +334,7 @@ class ForumQueryApplicationServiceTest {
     @Test
     @DisplayName("搜索：keyword 超 50 字 → 1001")
     void searchRejectsOverlongKeyword() {
-        assertThatThrownBy(() -> service.searchPosts("词".repeat(51), null, null, 1, 20))
+        assertThatThrownBy(() -> service.searchPosts("词".repeat(51), null, null, 1, 20, null))
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.INVALID_PARAM));
     }
@@ -297,13 +342,13 @@ class ForumQueryApplicationServiceTest {
     @Test
     @DisplayName("搜索：days 不在白名单（7 / 30 / 90）→ 1001，白名单值原样传仓储")
     void searchRejectsUnknownTimeWindow() {
-        assertThatThrownBy(() -> service.searchPosts("Redis", null, 15, 1, 20))
+        assertThatThrownBy(() -> service.searchPosts("Redis", null, 15, 1, 20, null))
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.INVALID_PARAM));
 
         when(postRepository.search("Redis", null, 30, 1, 20)).thenReturn(new PageResult<>(List.of(), 0, 1, 20));
         when(boardRepository.findAllEnabled()).thenReturn(List.of());
-        service.searchPosts("Redis", null, 30, 1, 20);
+        service.searchPosts("Redis", null, 30, 1, 20, null);
         verify(postRepository).search("Redis", null, 30, 1, 20);
     }
 
@@ -312,7 +357,7 @@ class ForumQueryApplicationServiceTest {
     void searchUnknownBoardCodeIsNotFound() {
         when(boardRepository.findByCode("nope")).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.searchPosts("Redis", "nope", null, 1, 20))
+        assertThatThrownBy(() -> service.searchPosts("Redis", "nope", null, 1, 20, null))
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
 

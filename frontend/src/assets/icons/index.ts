@@ -4,7 +4,7 @@
  * 颜色由调用点的文字色令牌决定，本体不带任何色值。
  *
  * `eager: true` 是**编译期内联**：本目录下每个 svg 都会进首屏包，故只放实际被引用的图标
- * （19 个 / 6847 B；全量 43 个为 16092 B）。要加新图标，先从 `D:\Workspace\TechResources\
+ * （20 个 / 7250 B；全量 43 个为 16092 B）。要加新图标，先从 `D:\Workspace\TechResources\
  * 前端素材\01-图标库-tabler\` 取归一化副本放进本目录，再在下面 ICON_NAMES 里加一行。
  */
 
@@ -24,6 +24,7 @@ const ICON_NAMES = [
   'chevron-down',
   'chevron-right',
   'circle-check',
+  'eye',
   'link',
   'list',
   'message-2',
@@ -33,6 +34,7 @@ const ICON_NAMES = [
   'photo',
   'school',
   'search',
+  'thumb-up',
   'trophy',
 ] as const
 

@@ -82,7 +82,7 @@ class ForumQueryApplicationServiceUserPostsTest {
         when(accountApplicationService.publicAccountOf(AUTHOR_ID))
                 .thenThrow(new ApiException(ResultCode.USER_NOT_FOUND));
 
-        assertThatThrownBy(() -> service.listVisiblePostsByAuthor(AUTHOR_ID, 1, 20))
+        assertThatThrownBy(() -> service.listVisiblePostsByAuthor(AUTHOR_ID, 1, 20, null))
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.USER_NOT_FOUND));
 
@@ -98,7 +98,7 @@ class ForumQueryApplicationServiceUserPostsTest {
         when(boardRepository.findAllEnabled()).thenReturn(List.of(board(1L, "qna", "技术问答")));
         when(accountApplicationService.nicknamesOf(List.of(AUTHOR_ID))).thenReturn(Map.of(AUTHOR_ID, "张三同学"));
 
-        PageResult<PostSummary> page = service.listVisiblePostsByAuthor(AUTHOR_ID, 1, 20);
+        PageResult<PostSummary> page = service.listVisiblePostsByAuthor(AUTHOR_ID, 1, 20, null);
 
         assertThat(page.total()).isEqualTo(1L);
         PostSummary item = page.items().getFirst();
@@ -115,7 +115,7 @@ class ForumQueryApplicationServiceUserPostsTest {
                 .thenReturn(new PageResult<>(List.of(), 0, 1, 20));
         when(boardRepository.findAllEnabled()).thenReturn(List.of());
 
-        service.listVisiblePostsByAuthor(AUTHOR_ID, 1, 20);
+        service.listVisiblePostsByAuthor(AUTHOR_ID, 1, 20, null);
 
         verify(postRepository, never()).findPageByAuthor(anyLong(), anyInt(), anyInt());
     }
@@ -127,7 +127,7 @@ class ForumQueryApplicationServiceUserPostsTest {
                 .thenReturn(new PageResult<>(List.of(), 0, 1, 100));
         when(boardRepository.findAllEnabled()).thenReturn(List.of());
 
-        PageResult<PostSummary> page = service.listVisiblePostsByAuthor(AUTHOR_ID, 0, 500);
+        PageResult<PostSummary> page = service.listVisiblePostsByAuthor(AUTHOR_ID, 0, 500, null);
 
         assertThat(page.page()).isEqualTo(1);
         assertThat(page.size()).isEqualTo(100);

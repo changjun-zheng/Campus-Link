@@ -3,6 +3,7 @@ package com.campuslink.module.forum.web;
 import com.campuslink.common.result.ApiResponse;
 import com.campuslink.common.result.ErrorCodes;
 import com.campuslink.common.result.ResultCode;
+import com.campuslink.common.web.CurrentUser;
 import com.campuslink.common.web.PublicEndpoint;
 import com.campuslink.module.forum.application.ForumQueryApplicationService;
 import com.campuslink.module.forum.application.cmd.ForumResults.PostSummary;
@@ -12,6 +13,7 @@ import com.campuslink.module.forum.web.vo.PostSummaryVo;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -48,8 +50,10 @@ public class UserPostController {
     @GetMapping("/{id}/posts")
     public ApiResponse<PageVo<PostSummaryVo>> userPosts(@PathVariable("id") long id,
                                                         @RequestParam(defaultValue = "1") int page,
-                                                        @RequestParam(defaultValue = "20") int size) {
-        PageResult<PostSummary> result = forumQueryService.listVisiblePostsByAuthor(id, page, size);
+                                                        @RequestParam(defaultValue = "20") int size,
+                                                        Authentication authentication) {
+        PageResult<PostSummary> result = forumQueryService.listVisiblePostsByAuthor(id, page, size,
+                CurrentUser.optionalId(authentication));
         return ApiResponse.ok(new PageVo<>(result.items().stream().map(PostSummaryVo::from).toList(),
                 result.total(), result.page(), result.size()));
     }

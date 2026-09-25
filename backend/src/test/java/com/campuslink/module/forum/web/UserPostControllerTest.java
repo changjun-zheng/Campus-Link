@@ -45,24 +45,31 @@ class UserPostControllerTest {
     private final UserPostController controller = new UserPostController(forumQueryService);
 
     @Test
-    @DisplayName("匿名可读：方法不收 Authentication，只挂 @PublicEndpoint（不挂 @SecurityRequirement）")
+    @DisplayName("匿名可读：只挂 @PublicEndpoint（不挂 @SecurityRequirement），且 Authentication 是**可选身份**而非鉴权门槛——传 null 照样读得到")
     void userPostsIsAnonymousReadableByShape() throws NoSuchMethodException {
-        Method userPosts = UserPostController.class.getMethod("userPosts", long.class, int.class, int.class);
+        // CR-080 起本方法带 Authentication（用于回显 likedByMe），原判据"方法不收 Authentication"随之失效：
+        // 那条把"可选身份"与"要求登录"混为一谈，而 detail / 楼层列表早就是"公开 + 可选身份"。
+        // 匿名可读的真正承重的是下面这对抗拒注解 + 末尾那条 null 也能读的行为断言。
+        Method userPosts = UserPostController.class.getMethod("userPosts", long.class, int.class, int.class,
+                Authentication.class);
 
-        assertThat(Arrays.stream(userPosts.getParameterTypes())).doesNotContain(Authentication.class);
         assertThat(userPosts.isAnnotationPresent(PublicEndpoint.class)).isTrue();
         assertThat(userPosts.isAnnotationPresent(SecurityRequirement.class)).isFalse();
+
+        when(forumQueryService.listVisiblePostsByAuthor(USER_ID, 1, 20, null))
+                .thenReturn(new PageResult<>(List.of(), 0, 1, 20));
+        assertThat(controller.userPosts(USER_ID, 1, 20, null).data().list()).isEmpty();
     }
 
     @Test
     @DisplayName("page / size 原样透传（归一在 application 层做，控制器不二次加工），分页壳回显生效值")
     void passesPagingThroughAndEchoesEffectiveValues() {
-        when(forumQueryService.listVisiblePostsByAuthor(USER_ID, 2, 20))
+        when(forumQueryService.listVisiblePostsByAuthor(USER_ID, 2, 20, null))
                 .thenReturn(new PageResult<>(List.of(summary(7L)), 45L, 2, 20));
 
-        PageVo<PostSummaryVo> page = controller.userPosts(USER_ID, 2, 20).data();
+        PageVo<PostSummaryVo> page = controller.userPosts(USER_ID, 2, 20, null).data();
 
-        verify(forumQueryService).listVisiblePostsByAuthor(USER_ID, 2, 20);
+        verify(forumQueryService).listVisiblePostsByAuthor(USER_ID, 2, 20, null);
         assertThat(page.total()).isEqualTo(45L);
         assertThat(page.page()).isEqualTo(2);
         assertThat(page.size()).isEqualTo(20);
@@ -71,10 +78,10 @@ class UserPostControllerTest {
     @Test
     @DisplayName("映射：PostSummary → PostSummaryVo 逐字段落位，出参字段名是 list（前端按此取数组）")
     void mapsSummariesOntoVos() {
-        when(forumQueryService.listVisiblePostsByAuthor(USER_ID, 1, 20))
+        when(forumQueryService.listVisiblePostsByAuthor(USER_ID, 1, 20, null))
                 .thenReturn(new PageResult<>(List.of(summary(7L)), 1L, 1, 20));
 
-        ApiResponse<PageVo<PostSummaryVo>> response = controller.userPosts(USER_ID, 1, 20);
+        ApiResponse<PageVo<PostSummaryVo>> response = controller.userPosts(USER_ID, 1, 20, null);
         PostSummaryVo vo = response.data().list().getFirst();
 
         assertThat(vo.id()).isEqualTo(7L);
@@ -90,15 +97,15 @@ class UserPostControllerTest {
     @Test
     @DisplayName("用户不存在 / 已注销 → 2007 原样透传（与资料端点同码，主页整页统一 404 文案）")
     void notFoundPropagates() {
-        when(forumQueryService.listVisiblePostsByAuthor(USER_ID, 1, 20))
+        when(forumQueryService.listVisiblePostsByAuthor(USER_ID, 1, 20, null))
                 .thenThrow(new ApiException(ResultCode.USER_NOT_FOUND));
 
-        assertThatThrownBy(() -> controller.userPosts(USER_ID, 1, 20))
+        assertThatThrownBy(() -> controller.userPosts(USER_ID, 1, 20, null))
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.USER_NOT_FOUND));
     }
 
     private static PostSummary summary(Long id) {
-        return new PostSummary(id, "qna", "技术问答", "标题", "张三同学", 3, 2, 100, null, "摘要", CREATED_AT, true);
+        return new PostSummary(id, "qna", "技术问答", "标题", "张三同学", 3, 2, 100, null, "摘要", CREATED_AT, true, false);
     }
 }

@@ -42,4 +42,18 @@ public final class CurrentUser {
         }
         return userId;
     }
+
+    /**
+     * 公开端点的**可选**身份：已登录返回账号 id，匿名（无 Authentication 或 principal 不是账号 id）返回 {@code null} 而不抛 401。
+     *
+     * <p>存在的理由是"公开可读、登录附加回显"这一类端点（详情的 likedByMe、楼层的点赞态、列表的点赞态）
+     * 都需要它。此前这份判定在 {@code PostController} 与 {@code ReplyController} 各抄了一份私有
+     * {@code viewerIdOf}，[CR-080] 把第三、四份要加出来时收敛到此处——"匿名怎么算"只能有一处答案。
+     *
+     * <p>⚠️ 本方法**不是授权**入口：它不拦任何人，公开端点仍由 {@code @PublicEndpoint} 放行、
+     * 受保护端点必须用 {@link #requireId}。拿它替代 {@code requireId} 等于把受保护端点做成匿名可读。
+     */
+    public static Long optionalId(Authentication authentication) {
+        return authentication != null && authentication.getPrincipal() instanceof Long userId ? userId : null;
+    }
 }

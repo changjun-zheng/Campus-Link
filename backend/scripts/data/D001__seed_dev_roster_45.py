@@ -31,12 +31,12 @@
 """
 
 import argparse
+import http.client
 import json
 import os
 import sys
 import time
-import urllib.error
-import urllib.request
+from urllib.parse import urlsplit
 
 import pymysql
 
@@ -112,22 +112,24 @@ def call(path, *, method="POST", json_body=None, text_body=None, token=None):
     if token:
         headers["Authorization"] = "Bearer " + token
 
-    # 本工具只允许打本机开发实例（安全扫描器对无守卫的 urlopen 按 SSRF 处理，此处显式收口）
-    if not API_BASE.startswith(("http://127.0.0.1", "http://localhost")):
-        raise SystemExit("refusing non-local API_BASE: %s" % API_BASE)
-
-    req = urllib.request.Request(API_BASE + path, data=data, headers=headers, method=method)
+    # 本工具只允许打本机开发实例：http.client + 域名白名单显式收口（替代 urlopen，安全扫描器口径）
+    parts = urlsplit(API_BASE + path)
+    if parts.hostname not in ("127.0.0.1", "localhost"):
+        raise SystemExit("refusing non-local host: %s" % parts.hostname)
+    conn = (http.client.HTTPSConnection if parts.scheme == "https" else http.client.HTTPConnection)(
+        parts.hostname, parts.port or (443 if parts.scheme == "https" else 80), timeout=30)
     try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            return resp.status, json.loads(resp.read().decode("utf-8"))
-    except urllib.error.HTTPError as e:
-        raw = e.read().decode("utf-8", errors="replace")
+        conn.request(method, parts.path + ("?" + parts.query if parts.query else ""), body=data, headers=headers)
+        resp = conn.getresponse()
+        raw = resp.read()
         try:
-            return e.code, json.loads(raw)
+            return resp.status, json.loads(raw.decode("utf-8"))
         except json.JSONDecodeError:
-            return e.code, {"code": None, "message": raw[:200]}
-    except urllib.error.URLError as e:
-        raise SystemExit(f"[失败] 连不上后端 {API_BASE}：{e.reason}（请先启动后端）")
+            return resp.status, {"code": None, "message": raw[:200].decode("utf-8", errors="replace")}
+    except OSError as e:
+        raise SystemExit(f"[失败] 连不上后端 {API_BASE}：{e}（请先启动后端）")
+    finally:
+        conn.close()
 
 
 def db_report(label):

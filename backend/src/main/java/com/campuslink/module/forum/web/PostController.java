@@ -60,15 +60,17 @@ public class PostController {
     private final InteractionApplicationService interactionApplicationService;
     private final PostViewCounter viewCounter;
 
-    @Operation(summary = "帖子列表（公开）：boardCode 缺省为全站；sort=latest（缺省，created_at DESC）或 hot（hot_score DESC，热榜），非法值 400")
+    @Operation(summary = "帖子列表（公开）：boardCode 缺省为全站；sort=latest（缺省，created_at DESC）或 hot（hot_score DESC，热榜），非法值 400；登录请求每条附带 likedByMe（匿名恒 false）")
     @ErrorCodes({ResultCode.NOT_FOUND})
     @PublicEndpoint
     @GetMapping
     public ApiResponse<PageVo<PostSummaryVo>> list(@RequestParam(required = false) String boardCode,
                                                    @RequestParam(defaultValue = "latest") String sort,
                                                    @RequestParam(defaultValue = "1") int page,
-                                                   @RequestParam(defaultValue = "20") int size) {
-        PageResult<PostSummary> result = forumQueryService.listPosts(boardCode, sort, page, size);
+                                                   @RequestParam(defaultValue = "20") int size,
+                                                   Authentication authentication) {
+        PageResult<PostSummary> result = forumQueryService.listPosts(boardCode, sort, page, size,
+                CurrentUser.optionalId(authentication));
         return ApiResponse.ok(new PageVo<>(result.items().stream().map(PostSummaryVo::from).toList(),
                 result.total(), result.page(), result.size()));
     }
@@ -102,15 +104,17 @@ public class PostController {
                                                      @RequestParam(required = false) String boardCode,
                                                      @RequestParam(required = false) Integer days,
                                                      @RequestParam(defaultValue = "1") int page,
-                                                     @RequestParam(defaultValue = "20") int size) {
-        PageResult<PostSummary> result = forumQueryService.searchPosts(keyword, boardCode, days, page, size);
+                                                     @RequestParam(defaultValue = "20") int size,
+                                                     Authentication authentication) {
+        PageResult<PostSummary> result = forumQueryService.searchPosts(keyword, boardCode, days, page, size,
+                CurrentUser.optionalId(authentication));
         return ApiResponse.ok(new PageVo<>(result.items().stream().map(PostSummaryVo::from).toList(),
                 result.total(), result.page(), result.size()));
     }
 
     @Operation(summary = "相似帖子推荐（受保护）——发帖时根据标题检索已有的相似问题")
     @SecurityRequirement(name = ApiDocs.BEARER_AUTH)
-    @ErrorCodes({ResultCode.NOT_LOGGED_IN, ResultCode.INVALID_PARAM})
+    @ErrorCodes({ResultCode.NOT_LOGGED_IN})
     @GetMapping("/similar")
     public ApiResponse<List<SimilarPostVo>> similar(
             @RequestParam String title,
@@ -127,7 +131,7 @@ public class PostController {
     public ApiResponse<PostDetailVo> detail(@PathVariable("id") Long id,
                                             Authentication authentication,
                                             jakarta.servlet.http.HttpServletRequest request) {
-        Long viewerId = viewerIdOf(authentication);
+        Long viewerId = CurrentUser.optionalId(authentication);
         viewCounter.record(id, viewerId, IpUtil.clientIp(request));
         return ApiResponse.ok(PostDetailVo.from(forumQueryService.postDetail(id, viewerId)));
     }
@@ -194,10 +198,5 @@ public class PostController {
     public ApiResponse<InteractionResult> favorite(@PathVariable("id") Long id, Authentication authentication) {
         long userId = CurrentUser.requireId(authentication);
         return ApiResponse.ok(interactionApplicationService.togglePostFavorite(userId, id));
-    }
-
-    /** 详情端点保持公开；已登录时附带登录态回显（匿名 / principal 非 id 一律视为匿名，不抛 401） */
-    private static Long viewerIdOf(Authentication authentication) {
-        return authentication != null && authentication.getPrincipal() instanceof Long userId ? userId : null;
     }
 }

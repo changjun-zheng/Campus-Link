@@ -376,7 +376,10 @@ watch(
             <span>·</span>
             <span>{{ post.replyCount }} 回复</span>
             <span>·</span>
-            <span title="阅读数（同一账号每天只计一次）">阅读 {{ post.viewCount }}</span>
+            <span class="inline-flex items-center gap-0.5" title="阅读数（同一账号每天只计一次）">
+              <SvgIcon name="eye" :size="12" />
+              {{ post.viewCount }}
+            </span>
             <el-button
               v-if="auth.isLoggedIn && auth.user?.id !== post.authorId"
               link

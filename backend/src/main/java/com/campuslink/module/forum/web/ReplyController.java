@@ -54,7 +54,8 @@ public class ReplyController {
                                              @RequestParam(defaultValue = "1") int page,
                                              @RequestParam(defaultValue = "20") int size,
                                              Authentication authentication) {
-        PageResult<ReplyItem> result = forumQueryService.listReplies(postId, page, size, viewerIdOf(authentication));
+        PageResult<ReplyItem> result = forumQueryService.listReplies(postId, page, size,
+                CurrentUser.optionalId(authentication));
         return ApiResponse.ok(new PageVo<>(result.items().stream().map(ReplyVo::from).toList(),
                 result.total(), result.page(), result.size()));
     }
@@ -79,10 +80,5 @@ public class ReplyController {
                                                Authentication authentication) {
         long userId = CurrentUser.requireId(authentication);
         return ApiResponse.ok(interactionApplicationService.toggleReplyLike(userId, postId, replyId));
-    }
-
-    /** 楼层列表端点保持公开；已登录时附带登录态回显（匿名 / principal 非 id 一律视为匿名，不抛 401） */
-    private static Long viewerIdOf(Authentication authentication) {
-        return authentication != null && authentication.getPrincipal() instanceof Long userId ? userId : null;
     }
 }

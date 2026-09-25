@@ -33,6 +33,8 @@ export interface PostSummaryVo {
   createdAt: string
   /** 已有最佳答案（F-QA-001），列表页 [已采纳] 徽标 */
   accepted: boolean
+  /** 当前登录账号是否已赞（CR-080）：口径同详情——登录为真实状态、匿名恒 false */
+  likedByMe: boolean
 }
 
 export interface PostDetailVo {

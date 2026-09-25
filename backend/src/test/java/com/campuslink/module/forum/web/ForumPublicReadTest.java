@@ -56,17 +56,17 @@ class ForumPublicReadTest {
     @Test
     @DisplayName("帖子列表与详情：匿名可读（含 sort=hot——新参数没有把公开读端点变成受保护端点）")
     void postsAreReadableAnonymously() {
-        when(forumQueryService.listPosts(null, "latest", 1, 20)).thenReturn(new PageResult<>(
-                List.of(new PostSummary(1L, "qna", "技术问答", "标题", "张三", 0, 0, 0, null, "摘要", CREATED_AT, false)),
+        when(forumQueryService.listPosts(null, "latest", 1, 20, null)).thenReturn(new PageResult<>(
+                List.of(new PostSummary(1L, "qna", "技术问答", "标题", "张三", 0, 0, 0, null, "摘要", CREATED_AT, false, false)),
                 1, 1, 20));
-        when(forumQueryService.listPosts(null, "hot", 1, 20)).thenReturn(new PageResult<>(
-                List.of(new PostSummary(1L, "qna", "技术问答", "标题", "张三", 0, 0, 0, null, "摘要", CREATED_AT, false)),
+        when(forumQueryService.listPosts(null, "hot", 1, 20, null)).thenReturn(new PageResult<>(
+                List.of(new PostSummary(1L, "qna", "技术问答", "标题", "张三", 0, 0, 0, null, "摘要", CREATED_AT, false, false)),
                 1, 1, 20));
         when(forumQueryService.postDetail(1L, null)).thenReturn(new PostDetail(1L, "qna", "技术问答", "QUESTION",
                 "标题", "<p>正文</p>", 42L, "张三", 0, 0, 0, false, false, false, CREATED_AT));
 
-        var list = postController.list(null, "latest", 1, 20);
-        var hotList = postController.list(null, "hot", 1, 20);
+        var list = postController.list(null, "latest", 1, 20, null);
+        var hotList = postController.list(null, "hot", 1, 20, null);
         var detail = postController.detail(1L, null, null);
 
         assertThat(list.data().list()).hasSize(1);
@@ -80,11 +80,11 @@ class ForumPublicReadTest {
     @Test
     @DisplayName("站内搜索：匿名可读（F-FORUM-008）")
     void searchIsReadableAnonymously() {
-        when(forumQueryService.searchPosts("Redis", null, null, 1, 20)).thenReturn(new PageResult<>(
-                List.of(new PostSummary(1L, "qna", "技术问答", "Redis 怎么用", "张三", 0, 0, 0, null, "摘要", CREATED_AT, false)),
+        when(forumQueryService.searchPosts("Redis", null, null, 1, 20, null)).thenReturn(new PageResult<>(
+                List.of(new PostSummary(1L, "qna", "技术问答", "Redis 怎么用", "张三", 0, 0, 0, null, "摘要", CREATED_AT, false, false)),
                 1, 1, 20));
 
-        var response = postController.search("Redis", null, null, 1, 20);
+        var response = postController.search("Redis", null, null, 1, 20, null);
 
         assertThat(response.data().list()).extracting("title").containsExactly("Redis 怎么用");
         assertThat(response.data().total()).isEqualTo(1);

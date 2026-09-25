@@ -59,7 +59,7 @@
         "tags": [
           "user"
         ],
-        "summary": "我的主页（F-ACC-002 最小版；他人主页在后续 Sprint）",
+        "summary": "我的主页（F-ACC-002 最小版；他人主页见 GET /users/{id}）",
         "operationId": "me",
         "responses": {
           "200": {
@@ -601,7 +601,7 @@
         "tags": [
           "post"
         ],
-        "summary": "帖子列表（公开）：boardCode 缺省为全站；sort=latest（缺省，created_at DESC）或 hot（hot_score DESC，热榜），非法值 400",
+        "summary": "帖子列表（公开）：boardCode 缺省为全站；sort=latest（缺省，created_at DESC）或 hot（hot_score DESC，热榜），非法值 400；登录请求每条附带 likedByMe（匿名恒 false）",
         "operationId": "list",
         "parameters": [
           {
@@ -1264,6 +1264,83 @@
         ]
       }
     },
+    "/api/v1/notifications/{id}/read": {
+      "post": {
+        "tags": [
+          "notification"
+        ],
+        "summary": "单条标记已读（需登录，幂等）：不存在与非本人一律 404，已读再调仍 200",
+        "operationId": "markRead",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseVoid"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数错误（1001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未登录（4001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "资源不存在（3001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "系统繁忙，请稍后再试（9999）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/v1/auth/verify-student": {
       "post": {
         "tags": [
@@ -1672,6 +1749,160 @@
         ]
       }
     },
+    "/api/v1/users/{id}": {
+      "get": {
+        "tags": [
+          "user"
+        ],
+        "summary": "用户公开资料（公开）：昵称 / 专业 / 签名 / 加入时间 + 帖子数 / 粉丝数 / 关注数；用户不存在或已注销 404 / 2007；按 IP 限流 30 次/分钟",
+        "operationId": "profile",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseUserProfileVo"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数错误（1001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "用户不存在（2007）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "访问过于频繁，请稍后再试（2010）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "系统繁忙，请稍后再试（9999）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/{id}/posts": {
+      "get": {
+        "tags": [
+          "post"
+        ],
+        "summary": "某用户的公开帖子（公开）：时间倒序分页，口径同全站列表（不含已删除与已下架）；用户不存在或已注销 404 / 2007",
+        "operationId": "userPosts",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponsePageVoPostSummaryVo"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数错误（1001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "用户不存在（2007）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "系统繁忙，请稍后再试（9999）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/replies/mine": {
       "get": {
         "tags": [
@@ -1871,6 +2102,72 @@
           },
           "404": {
             "description": "资源不存在（3001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "系统繁忙，请稍后再试（9999）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/posts/similar": {
+      "get": {
+        "tags": [
+          "post"
+        ],
+        "summary": "相似帖子推荐（受保护）——发帖时根据标题检索已有的相似问题",
+        "operationId": "similar",
+        "parameters": [
+          {
+            "name": "title",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseListSimilarPostVo"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数错误（1001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未登录（4001）",
             "content": {
               "application/json": {
                 "schema": {
@@ -2883,7 +3180,7 @@
           }
         }
       },
-      "ApiResponsePageVoMyReplyVo": {
+      "ApiResponseUserProfileVo": {
         "type": "object",
         "properties": {
           "code": {
@@ -2894,61 +3191,43 @@
             "type": "string"
           },
           "data": {
-            "$ref": "#/components/schemas/PageVoMyReplyVo"
+            "$ref": "#/components/schemas/UserProfileVo"
           },
           "traceId": {
             "type": "string"
           }
         }
       },
-      "MyReplyVo": {
+      "UserProfileVo": {
         "type": "object",
+        "description": "用户公开资料（他人主页资料卡）",
         "properties": {
           "id": {
             "type": "integer",
             "format": "int64"
           },
-          "postId": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "postTitle": {
+          "nickname": {
             "type": "string"
           },
-          "floorNo": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "summary": {
+          "major": {
             "type": "string"
           },
-          "status": {
+          "bio": {
             "type": "string"
           },
           "createdAt": {
             "type": "string",
             "format": "date-time"
-          }
-        }
-      },
-      "PageVoMyReplyVo": {
-        "type": "object",
-        "properties": {
-          "list": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/MyReplyVo"
-            }
           },
-          "total": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "page": {
+          "postCount": {
             "type": "integer",
             "format": "int32"
           },
-          "size": {
+          "followerCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "followingCount": {
             "type": "integer",
             "format": "int32"
           }
@@ -3038,6 +3317,80 @@
           },
           "accepted": {
             "type": "boolean"
+          },
+          "likedByMe": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ApiResponsePageVoMyReplyVo": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/PageVoMyReplyVo"
+          },
+          "traceId": {
+            "type": "string"
+          }
+        }
+      },
+      "MyReplyVo": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "postId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "postTitle": {
+            "type": "string"
+          },
+          "floorNo": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PageVoMyReplyVo": {
+        "type": "object",
+        "properties": {
+          "list": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MyReplyVo"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       },
@@ -3185,6 +3538,57 @@
             "type": "boolean"
           },
           "favoritedByMe": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ApiResponseListSimilarPostVo": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SimilarPostVo"
+            }
+          },
+          "traceId": {
+            "type": "string"
+          }
+        }
+      },
+      "SimilarPostVo": {
+        "type": "object",
+        "description": "相似帖子推荐条目",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "title": {
+            "type": "string"
+          },
+          "boardCode": {
+            "type": "string"
+          },
+          "boardName": {
+            "type": "string"
+          },
+          "replyCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "accepted": {
             "type": "boolean"
           },
           "createdAt": {
