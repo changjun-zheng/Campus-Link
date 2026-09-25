@@ -137,7 +137,7 @@ public class ForumQueryApplicationService {
                 board == null ? null : board.getName(),
                 board == null ? null : board.getType().name(),
                 post.getTitle(), post.getContentHtml(), post.getAuthorId(), nickname,
-                post.getReplyCount(), post.getLikeCount(), post.getViewCount(), post.isAccepted(),
+                post.getReplyCount(), post.getLikeCount(), post.getViewCount(), post.getTags(), post.isAccepted(),
                 likedByMe, favoritedByMe, post.getCreatedAt());
     }
 
@@ -374,7 +374,7 @@ public class ForumQueryApplicationService {
                             board == null ? null : board.getName(),
                             post.getTitle(),
                             nicknames.getOrDefault(post.getAuthorId(), NICKNAME_FALLBACK),
-                            post.getReplyCount(), post.getLikeCount(), post.getViewCount(), post.getCoverUrl(),
+                            post.getReplyCount(), post.getLikeCount(), post.getViewCount(), post.getCoverUrl(), post.getTags(),
                             markdownRenderer.toPlainSummary(post.getContentMd(), SUMMARY_MAX_CHARS),
                             post.getCreatedAt(), post.isAccepted(), likedIds.contains(post.getId()));
                 })

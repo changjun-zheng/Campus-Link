@@ -5,6 +5,7 @@ import com.campuslink.module.forum.domain.exception.NotAQuestionException;
 import lombok.Getter;
 
 import java.time.Instant;
+import java.util.List;
 
 /**
  * 帖子聚合根。contentHtml 在**发布时**由 application 调用 MarkdownRenderer 渲染后传入并落库，
@@ -29,6 +30,7 @@ public class Post {
     private final int likeCount;
     private final int viewCount;
     private final String coverUrl;
+    private final List<String> tags;
     private final boolean accepted;
     private final Long acceptedReplyId;
     private final Instant createdAt;
@@ -36,7 +38,7 @@ public class Post {
 
     private Post(Long id, Long boardId, Long authorId, BoardType type, String title,
                  String contentMd, String contentHtml, PostStatus status, int replyCount, int likeCount,
-                 int viewCount, String coverUrl, boolean accepted, Long acceptedReplyId,
+                 int viewCount, String coverUrl, List<String> tags, boolean accepted, Long acceptedReplyId,
                  Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.boardId = boardId;
@@ -50,31 +52,32 @@ public class Post {
         this.likeCount = likeCount;
         this.viewCount = viewCount;
         this.coverUrl = coverUrl;
+        this.tags = tags;
         this.accepted = accepted;
         this.acceptedReplyId = acceptedReplyId;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
 
-    /** 发布新帖：type 随版块，status 恒为 PUBLISHED，计数归零（id / 时间戳由数据库生成）；标题去除首尾空白；封面为发布时提取的首图（可为 null） */
+    /** 发布新帖：type 随版块，status 恒为 PUBLISHED，计数归零（id / 时间戳由数据库生成）；标题去除首尾空白；封面为发布时提取的首图（可为 null）；tags 为已规范化的标签名（可为空列表） */
     public static Post publish(Long boardId, Long authorId, BoardType type, String title,
-                               String contentMd, String contentHtml, String coverUrl) {
+                               String contentMd, String contentHtml, String coverUrl, List<String> tags) {
         return new Post(null, boardId, authorId, type, title.trim(), contentMd, contentHtml,
-                PostStatus.PUBLISHED, 0, 0, 0, coverUrl, false, null, null, null);
+                PostStatus.PUBLISHED, 0, 0, 0, coverUrl, List.copyOf(tags), false, null, null, null);
     }
 
     /** 仓储重建入口（infrastructure 适配器调用）；已删除的行由仓储读侧过滤，不会到达这里 */
     public static Post rehydrate(Long id, Long boardId, Long authorId, BoardType type, String title,
                                  String contentMd, String contentHtml, PostStatus status, int replyCount,
-                                 int likeCount, int viewCount, String coverUrl, boolean accepted, Long acceptedReplyId,
+                                 int likeCount, int viewCount, String coverUrl, List<String> tags, boolean accepted, Long acceptedReplyId,
                                  Instant createdAt, Instant updatedAt) {
         return new Post(id, boardId, authorId, type, title, contentMd, contentHtml, status,
-                replyCount, likeCount, viewCount, coverUrl, accepted, acceptedReplyId, createdAt, updatedAt);
+                replyCount, likeCount, viewCount, coverUrl, tags, accepted, acceptedReplyId, createdAt, updatedAt);
     }
 
     /**
-     * @deprecated 测试夹具过渡重载（CR-074）：等价于 viewCount=0、coverUrl=null；
-     * 既有单测不关心这两个读侧展示字段，逐个改写 7 个夹具文件收益为零——新代码一律用 16 参签名。
+     * @deprecated 测试夹具过渡重载（CR-074）：等价于 viewCount=0、coverUrl=null、tags=空；
+     * 既有单测不关心这三个读侧展示字段，逐个改写夹具文件收益为零——新代码一律用 18 参签名。
      */
     @Deprecated
     public static Post rehydrate(Long id, Long boardId, Long authorId, BoardType type, String title,
@@ -82,7 +85,7 @@ public class Post {
                                  int likeCount, boolean accepted, Long acceptedReplyId,
                                  Instant createdAt, Instant updatedAt) {
         return rehydrate(id, boardId, authorId, type, title, contentMd, contentHtml, status,
-                replyCount, likeCount, 0, null, accepted, acceptedReplyId, createdAt, updatedAt);
+                replyCount, likeCount, 0, null, List.of(), accepted, acceptedReplyId, createdAt, updatedAt);
     }
 
     /** 对外可见性：仅 PUBLISHED 可读 / 可回帖（已删除属仓储读侧约定，见 PostRepository） */
@@ -102,6 +105,6 @@ public class Post {
             throw new CannotAcceptOwnReplyException();
         }
         return new Post(id, boardId, authorId, type, title, contentMd, contentHtml, status,
-                replyCount, likeCount, viewCount, coverUrl, true, replyId, createdAt, updatedAt);
+                replyCount, likeCount, viewCount, coverUrl, tags, true, replyId, createdAt, updatedAt);
     }
 }

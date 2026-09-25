@@ -13,13 +13,17 @@ import com.campuslink.module.forum.domain.gateway.BoardRepository;
 import com.campuslink.module.forum.domain.gateway.ModerationGateway;
 import com.campuslink.module.forum.domain.gateway.PostRepository;
 import com.campuslink.module.forum.domain.gateway.ReplyRepository;
+import com.campuslink.module.forum.domain.gateway.TagRepository;
 import com.campuslink.module.forum.domain.model.Board;
 import com.campuslink.module.forum.domain.model.Post;
 import com.campuslink.module.forum.domain.model.Reply;
 import com.campuslink.module.forum.domain.service.CoverImages;
+import com.campuslink.module.forum.domain.service.TagNames;
 import com.campuslink.module.notification.application.NotificationApplicationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 import org.springframework.transaction.annotation.Transactional;
 
 /** 论坛写用例：发帖、采纳最佳答案、作者删除自己的帖子 */
@@ -38,6 +42,7 @@ public class PostApplicationService {
     private final AuditService auditService;
     private final ModerationGateway moderationGateway;
     private final AccountApplicationService accountApplicationService;
+    private final TagRepository tagRepository;
 
     /**
      * 机审前置（F-SAFE-001 / CR-082）：命中风险 → 5001 拦发布；网关任何异常 → 5002（fail-closed，
@@ -57,10 +62,10 @@ public class PostApplicationService {
 
     /**
      * 发帖：{@code contentHtml} 在**发布时**渲染后随帖子一起落库，请求时零渲染（ADR-005）；
-     * 帖子 type 随版块（QUESTION 版块即提问帖）。
-     *
-     * <p>单条 INSERT，无需事务编排；鉴权在 web 层（N-4 敞口下必须手写，见设计 §4.2）。
+     * 帖子 type 随版块（QUESTION 版块即提问帖）。标签（CR-083）规范化后随帖落 tags / post_tags /
+     * posts.tags 冗余列——三条写路径同事务，回滚即整体回滚。
      */
+    @Transactional
     public PublishedPost publish(Long authorId, PublishPostCommand command) {
         accountApplicationService.assertActiveForContent(authorId);
         Board board = boardRepository.findByCode(command.boardCode())
@@ -68,10 +73,15 @@ public class PostApplicationService {
         // 机审放在版块校验之后：无效请求（版块不存在）先给出准确错误，而不是被 5002 抢占语义
         moderateOrThrow(command.contentMd());
         // 封面（CR-074 外链方案）：发布时从正文提取首张 https 图一次落库，读时零成本；无图即 null
+        List<String> tags = TagNames.normalize(command.tags(), 5);
         Post post = Post.publish(board.getId(), authorId, board.getType(), command.title(),
                 command.contentMd(), markdownRenderer.render(command.contentMd()),
-                CoverImages.firstHttpsImage(command.contentMd()));
-        return new PublishedPost(postRepository.save(post).getId());
+                CoverImages.firstHttpsImage(command.contentMd()), tags);
+        Post saved = postRepository.save(post);
+        if (!tags.isEmpty()) {
+            tagRepository.attachToPost(saved.getId(), tags);
+        }
+        return new PublishedPost(saved.getId());
     }
 
     /**

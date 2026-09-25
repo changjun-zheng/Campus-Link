@@ -57,6 +57,8 @@ class PostApplicationServiceTest {
     private com.campuslink.module.forum.domain.gateway.ModerationGateway moderationGateway;
     @Mock
     private com.campuslink.module.account.application.AccountApplicationService accountApplicationService;
+    @Mock
+    private com.campuslink.module.forum.domain.gateway.TagRepository tagRepository;
 
     private PostApplicationService service;
 
@@ -65,7 +67,7 @@ class PostApplicationServiceTest {
         // MarkdownRenderer 是纯组件（无 I/O），直接 new，不必走 Spring 上下文
         service = new PostApplicationService(boardRepository, postRepository, replyRepository,
                 new MarkdownRenderer(), notificationService, auditService, moderationGateway,
-                accountApplicationService);
+                accountApplicationService, tagRepository);
     }
 
     @Test
@@ -83,14 +85,14 @@ class PostApplicationServiceTest {
                     saved.getAcceptedReplyId(), null, null);
         });
 
-        PublishedPost result = service.publish(42L, new PublishPostCommand("qna", "  标题  ", "**加粗**"));
+        PublishedPost result = service.publish(42L, new PublishPostCommand("qna", "  标题  ", "**加粗**", null));
 
         assertThat(result.id()).isEqualTo(123L);
         ArgumentCaptor<Post> captor = ArgumentCaptor.forClass(Post.class);
         verify(postRepository).save(captor.capture());
         Post published = captor.getValue();
         assertThat(published.getTitle()).isEqualTo("标题");
-        assertThat(published.getContentMd()).isEqualTo("**加粗**");
+        assertThat(published.getContentMd()).isEqualTo("**加粗**", null);
         assertThat(published.getContentHtml()).contains("<strong>加粗</strong>");
         assertThat(published.getType()).isEqualTo(BoardType.QUESTION);
         assertThat(published.getAuthorId()).isEqualTo(42L);
@@ -102,7 +104,7 @@ class PostApplicationServiceTest {
     void unknownBoardIsNotFound() {
         when(boardRepository.findByCode("nope")).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.publish(42L, new PublishPostCommand("nope", "标题", "正文")))
+        assertThatThrownBy(() -> service.publish(42L, new PublishPostCommand("nope", "标题", "正文", null)))
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
 
@@ -256,3 +258,4 @@ class PostApplicationServiceTest {
         return Board.rehydrate(id, code, code, "描述", type, 1);
     }
 }
+

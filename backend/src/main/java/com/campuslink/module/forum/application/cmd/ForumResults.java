@@ -13,16 +13,17 @@ public final class ForumResults {
     private ForumResults() {
     }
 
-    /** 列表项（设计 §3.2）：summary 为服务端去 Markdown 后的纯文本摘要；accepted 供列表 [已采纳] 徽标（F-QA-001）；viewCount / coverUrl 供阅读数与封面缩略图（CR-074） */
+    /** 列表项（设计 §3.2）：summary 为服务端去 Markdown 后的纯文本摘要；accepted 供列表 [已采纳] 徽标（F-QA-001）；viewCount / coverUrl / tags 供阅读数、封面缩略图与标签 chips（CR-074 / CR-083） */
     public record PostSummary(Long id, String boardCode, String boardName, String title, String authorNickname,
                               int replyCount, int likeCount, int viewCount, String coverUrl,
-                              String summary, Instant createdAt, boolean accepted, boolean likedByMe) {
+                              java.util.List<String> tags, String summary, Instant createdAt,
+                              boolean accepted, boolean likedByMe) {
     }
 
-    /** 详情（设计 §3.4）：contentHtml 是发布时渲染好的 HTML，前端直接渲染；authorId / boardType 供前端判定采纳按钮可见性（F-QA-001）；likedByMe / favoritedByMe 仅登录时填充、匿名恒 false（F-FORUM-005）；viewCount 供阅读数展示（CR-074） */
+    /** 详情（设计 §3.4）：contentHtml 是发布时渲染好的 HTML，前端直接渲染；authorId / boardType 供前端判定采纳按钮可见性（F-QA-001）；likedByMe / favoritedByMe 仅登录时填充、匿名恒 false（F-FORUM-005）；viewCount / tags 供阅读数与标签展示（CR-074 / CR-083） */
     public record PostDetail(Long id, String boardCode, String boardName, String boardType, String title,
                              String contentHtml, long authorId, String authorNickname,
-                             int replyCount, int likeCount, int viewCount, boolean accepted,
+                             int replyCount, int likeCount, int viewCount, java.util.List<String> tags, boolean accepted,
                              boolean likedByMe, boolean favoritedByMe,
                              Instant createdAt) {
     }

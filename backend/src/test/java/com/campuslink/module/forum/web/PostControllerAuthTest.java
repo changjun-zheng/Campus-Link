@@ -40,7 +40,7 @@ import static org.mockito.Mockito.when;
  */
 class PostControllerAuthTest {
 
-    private static final PublishPostCommand COMMAND = new PublishPostCommand("qna", "标题", "正文");
+    private static final PublishPostCommand COMMAND = new PublishPostCommand("qna", "标题", "正文", null);
 
     private final ForumQueryApplicationService forumQueryService = mock(ForumQueryApplicationService.class);
     private final PostApplicationService postApplicationService = mock(PostApplicationService.class);
@@ -178,3 +178,4 @@ class PostControllerAuthTest {
                 42L, null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
     }
 }
+

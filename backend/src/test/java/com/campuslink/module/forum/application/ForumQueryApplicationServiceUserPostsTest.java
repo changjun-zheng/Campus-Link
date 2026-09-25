@@ -109,7 +109,7 @@ class ForumQueryApplicationServiceUserPostsTest {
     }
 
     @Test
-    @DisplayName("⚠️ 反证守门：走 findPageByAuthors（复数 / 路人视角），绝不走 findPageByAuthor（单数 / 作者视角）")
+    @DisplayName("反证守门：走 findPageByAuthors（复数 / 路人视角），绝不走 findPageByAuthor（单数 / 作者视角）")
     void deliberatelyUsesThePublicVisibilityPath() {
         when(postRepository.findPageByAuthors(List.of(AUTHOR_ID), 1, 20))
                 .thenReturn(new PageResult<>(List.of(), 0, 1, 20));
@@ -134,7 +134,7 @@ class ForumQueryApplicationServiceUserPostsTest {
     }
 
     @Test
-    @DisplayName("帖子计数透传仓储，且**不**重复校验账号——唯一调用方（account 的资料聚合）已先过同一道门")
+    @DisplayName("帖子计数透传仓储，且不重复校验账号——唯一调用方（account 的资料聚合）已先过同一道门")
     void countPassesThroughWithoutRecheckingTheAccount() {
         when(postRepository.countVisibleByAuthor(AUTHOR_ID)).thenReturn(7L);
 
@@ -144,7 +144,7 @@ class ForumQueryApplicationServiceUserPostsTest {
 
     private static Post post(Long id, Long authorId) {
         return Post.rehydrate(id, 1L, authorId, BoardType.QUESTION, "标题", "正文", "<p>正文</p>",
-                PostStatus.PUBLISHED, 0, 0, 0, null, false, null, CREATED_AT, CREATED_AT);
+                PostStatus.PUBLISHED, 0, 0, 0, null, java.util.List.of(), false, null, CREATED_AT, CREATED_AT);
     }
 
     private static Board board(Long id, String code, String name) {

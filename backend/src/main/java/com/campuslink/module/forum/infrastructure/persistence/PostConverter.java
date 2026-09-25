@@ -29,6 +29,7 @@ public final class PostConverter {
         d.setLikeCount(post.getLikeCount());
         d.setViewCount(post.getViewCount());
         d.setCoverUrl(post.getCoverUrl());
+        d.setTags(post.getTags() == null ? null : String.join(",", post.getTags()));
         d.setIsAccepted(post.isAccepted());
         d.setAcceptedReplyId(post.getAcceptedReplyId());
         d.setCreatedAt(post.getCreatedAt());
@@ -41,6 +42,7 @@ public final class PostConverter {
                 d.getTitle(), d.getContentMd(), d.getContentHtml(), PostStatus.valueOf(d.getStatus()),
                 d.getReplyCount(), d.getLikeCount(),
                 d.getViewCount() == null ? 0 : d.getViewCount(), d.getCoverUrl(),
+                d.getTags() == null || d.getTags().isBlank() ? java.util.List.of() : java.util.List.of(d.getTags().split(",")),
                 Boolean.TRUE.equals(d.getIsAccepted()),
                 d.getAcceptedReplyId(), d.getCreatedAt(), d.getUpdatedAt());
     }
