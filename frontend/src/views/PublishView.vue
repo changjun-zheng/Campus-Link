@@ -18,7 +18,11 @@ const form = reactive({
   boardCode: '',
   title: '',
   contentMd: '',
+  tags: [] as string[],
 })
+
+/** 常用标签建议（CR-083）：el-select 可搜索可自建，上限 5 个由 multiple-limit 兜底 */
+const TAG_SUGGESTIONS = ['Java', 'Spring Boot', 'Redis', 'MySQL', '前端', 'Vue', '算法', '考研', 'ACM', '实习', '面经']
 
 /* ─── 草稿箱状态 ─── */
 const draftRestored = ref(false)
@@ -203,12 +207,17 @@ async function submit() {
     ElMessage.warning('请填写正文')
     return
   }
+  if (form.tags.length > 5) {
+    ElMessage.warning('标签最多 5 个')
+    return
+  }
   submitting.value = true
   try {
     const res = await publishPost({
       boardCode: form.boardCode,
       title: form.title.trim(),
       contentMd: form.contentMd,
+      tags: form.tags,
     })
     clearDraft(form.boardCode)
     draftRestored.value = false
@@ -254,6 +263,19 @@ async function submit() {
         placeholder="输入标题（1~100 字）"
         class="block w-full border-0 bg-transparent py-6 text-[26px] leading-snug font-medium text-ink outline-none placeholder:text-ink-meta max-md:text-[22px]"
       />
+      <!-- 标签（CR-083）：可搜索可自建，最多 5 个 -->
+      <el-select
+        v-model="form.tags"
+        multiple
+        filterable
+        allow-create
+        default-first-option
+        :multiple-limit="5"
+        placeholder="添加标签（0~5 个，回车自建）"
+        class="mb-4 w-full"
+      >
+        <el-option v-for="t in TAG_SUGGESTIONS" :key="t" :label="t" :value="t" />
+      </el-select>
     </div>
 
     <!-- 相似帖子推荐（F-FORUM-009） -->

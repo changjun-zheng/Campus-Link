@@ -114,6 +114,10 @@ async function onLike() {
             {{ post.replyCount }}
           </span>
           <span aria-hidden="true">·</span>
+          <el-tag v-for="t in post.tags?.slice(0, 3)" :key="t" size="small" effect="plain" class="flex-none">
+            {{ t }}
+          </el-tag>
+          <span aria-hidden="true">·</span>
           <span class="inline-flex items-center gap-0.5" title="阅读数">
             <SvgIcon name="eye" :size="12" />
             {{ post.viewCount }}

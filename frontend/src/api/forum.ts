@@ -28,6 +28,8 @@ export interface PostSummaryVo {
   viewCount: number
   /** 封面图（CR-074）：发布时从正文提取的首张 https 图；无图帖为空，前端不占位 */
   coverUrl?: string
+  /** 标签（CR-083）：0~5 个，发帖时规范化；无标签帖为空数组 */
+  tags: string[]
   /** 服务端已去 Markdown 并截断为 120 字（设计 §3.2），前端不再兜底截断 */
   summary: string
   createdAt: string
@@ -52,6 +54,8 @@ export interface PostDetailVo {
   likeCount: number
   /** 阅读数（CR-074） */
   viewCount: number
+  /** 标签（CR-083） */
+  tags: string[]
   accepted: boolean
   /** 当前登录用户是否已点赞（F-FORUM-005）；匿名请求恒 false */
   likedByMe: boolean
@@ -93,7 +97,7 @@ export const getPost = (id: number | string) => get<PostDetailVo>(`/posts/${id}`
 export const listReplies = (postId: number | string, page = 1, size = 20) =>
   get<PageVo<ReplyVo>>(`/posts/${postId}/replies?page=${page}&size=${size}`)
 
-export const publishPost = (payload: { boardCode: string; title: string; contentMd: string }) =>
+export const publishPost = (payload: { boardCode: string; title: string; contentMd: string; tags?: string[] }) =>
   post<{ id: number }>('/posts', payload)
 
 /**

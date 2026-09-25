@@ -360,6 +360,7 @@ watch(
               <el-tag type="primary" effect="light" size="small">{{ post.boardName }}</el-tag>
             </RouterLink>
             <el-tag v-if="post.accepted" type="success" effect="light" size="small">已采纳</el-tag>
+            <el-tag v-for="t in post.tags" :key="t" size="small" effect="plain">{{ t }}</el-tag>
           </div>
           <h1 class="my-2 text-h1 font-medium text-ink">{{ post.title }}</h1>
           <div class="flex flex-wrap items-center gap-1.5 text-caption text-ink-meta">
