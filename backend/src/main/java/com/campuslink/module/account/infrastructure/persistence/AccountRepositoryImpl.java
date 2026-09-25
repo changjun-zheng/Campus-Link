@@ -6,12 +6,14 @@ import com.campuslink.module.account.domain.exception.AccountConflictException;
 import com.campuslink.module.account.domain.gateway.AccountRepository;
 import com.campuslink.module.account.domain.gateway.SensitiveCodec;
 import com.campuslink.module.account.domain.model.Account;
+import com.campuslink.module.account.domain.model.AccountStatus;
 import com.campuslink.module.account.domain.model.ProfileField;
 import com.campuslink.module.account.infrastructure.persistence.mapper.UserMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -99,6 +101,40 @@ public class AccountRepositoryImpl implements AccountRepository {
             return List.of();
         }
         return userMapper.selectBatchIds(ids).stream()
+                .map(d -> AccountConverter.toDomain(d, codec))
+                .toList();
+    }
+
+    @Override
+    public void updateStatus(Long accountId, AccountStatus status, Instant deleteAt) {
+        userMapper.update(null, new LambdaUpdateWrapper<UserDO>()
+                .eq(UserDO::getId, accountId)
+                .set(UserDO::getStatus, status.name())
+                .set(UserDO::getDeleteAt, deleteAt));
+    }
+
+    @Override
+    public void anonymize(Long accountId, String placeholderNickname) {
+        userMapper.update(null, new LambdaUpdateWrapper<UserDO>()
+                .eq(UserDO::getId, accountId)
+                .set(UserDO::getNickname, placeholderNickname)
+                .set(UserDO::getEmailEnc, null)
+                .set(UserDO::getEmailHash, null)
+                .set(UserDO::getPhoneEnc, null)
+                .set(UserDO::getPhoneHash, null)
+                .set(UserDO::getStudentIdEnc, null)
+                .set(UserDO::getStudentIdHash, null)
+                .set(UserDO::getAvatarUrl, null)
+                .set(UserDO::getAnonymized, true));
+    }
+
+    @Override
+    public List<Account> findExpiredDeactivations(Instant now) {
+        return userMapper.selectList(new LambdaQueryWrapper<UserDO>()
+                .eq(UserDO::getStatus, AccountStatus.DEACTIVATED.name())
+                .eq(UserDO::getAnonymized, false)
+                .isNotNull(UserDO::getDeleteAt)
+                .le(UserDO::getDeleteAt, now)).stream()
                 .map(d -> AccountConverter.toDomain(d, codec))
                 .toList();
     }

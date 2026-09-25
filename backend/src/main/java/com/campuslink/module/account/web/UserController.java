@@ -20,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -99,5 +100,18 @@ public class UserController {
                                              Authentication authentication) {
         long userId = CurrentUser.requireId(authentication);
         return ApiResponse.ok(UserVo.from(profileApplicationService.updateProfile(userId, command)));
+    }
+
+    /**
+     * 注销账号（F-ACC-003 / CR-082）：进入 7 天冷静期——期内登录即视为撤销（恢复 ACTIVE），
+     * 期满由匿名化定时任务清除实名信息。二次确认由前端弹窗承担，本端点幂等可重入。
+     */
+    @Operation(summary = "注销账号（需登录）：进入 7 天冷静期；期内登录即撤销注销，期满匿名化")
+    @SecurityRequirement(name = ApiDocs.BEARER_AUTH)
+    @ErrorCodes({ResultCode.NOT_LOGGED_IN, ResultCode.USER_NOT_FOUND})
+    @PostMapping("/me/deactivate")
+    public ApiResponse<Void> deactivate(Authentication authentication) {
+        accountApplicationService.deactivate(CurrentUser.requireId(authentication));
+        return ApiResponse.ok();
     }
 }

@@ -3,6 +3,7 @@ package com.campuslink.module.forum.application;
 import com.campuslink.common.audit.AuditService;
 import com.campuslink.common.exception.ApiException;
 import com.campuslink.common.markdown.MarkdownRenderer;
+import static org.mockito.Mockito.mock;
 import com.campuslink.common.result.ResultCode;
 import com.campuslink.module.forum.application.cmd.ForumResults.PublishedPost;
 import com.campuslink.module.forum.application.cmd.PublishPostCommand;
@@ -52,6 +53,10 @@ class PostApplicationServiceTest {
     private NotificationApplicationService notificationService;
     @Mock
     private AuditService auditService;
+    @Mock
+    private com.campuslink.module.forum.domain.gateway.ModerationGateway moderationGateway;
+    @Mock
+    private com.campuslink.module.account.application.AccountApplicationService accountApplicationService;
 
     private PostApplicationService service;
 
@@ -59,7 +64,8 @@ class PostApplicationServiceTest {
     void setUp() {
         // MarkdownRenderer 是纯组件（无 I/O），直接 new，不必走 Spring 上下文
         service = new PostApplicationService(boardRepository, postRepository, replyRepository,
-                new MarkdownRenderer(), notificationService, auditService);
+                new MarkdownRenderer(), notificationService, auditService, moderationGateway,
+                accountApplicationService);
     }
 
     @Test
@@ -67,6 +73,8 @@ class PostApplicationServiceTest {
     void publishRendersHtmlAndSavesPost() {
         when(boardRepository.findByCode("qna"))
                 .thenReturn(Optional.of(board(1L, "qna", BoardType.QUESTION)));
+        when(moderationGateway.moderate(any()))
+                .thenReturn(com.campuslink.module.forum.domain.gateway.ModerationGateway.ModerationVerdict.ok());
         when(postRepository.save(any())).thenAnswer(invocation -> {
             Post saved = invocation.getArgument(0);
             return Post.rehydrate(123L, saved.getBoardId(), saved.getAuthorId(), saved.getType(),

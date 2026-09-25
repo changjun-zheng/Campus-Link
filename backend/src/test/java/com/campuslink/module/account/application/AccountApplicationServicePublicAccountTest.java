@@ -2,7 +2,9 @@ package com.campuslink.module.account.application;
 
 import com.campuslink.common.exception.ApiException;
 import com.campuslink.common.result.ResultCode;
+import com.campuslink.common.audit.AuditService;
 import com.campuslink.config.AppProperties;
+import static org.mockito.Mockito.mock;
 import com.campuslink.module.account.domain.gateway.AccountRepository;
 import com.campuslink.module.account.domain.gateway.RateLimitGateway;
 import com.campuslink.module.account.domain.gateway.RosterGateway;
@@ -70,7 +72,7 @@ class AccountApplicationServicePublicAccountTest {
     void setUp() {
         service = new AccountApplicationService(
                 verificationService, accountRepository, rosterGateway, ticketStore, captchaService,
-                codec, tokenIssuer, rateLimitGateway, new AppProperties(), eventPublisher);
+                codec, tokenIssuer, rateLimitGateway, mock(AuditService.class), new AppProperties(), eventPublisher);
     }
 
     @Test

@@ -4,11 +4,13 @@ import com.campuslink.common.audit.AuditService;
 import com.campuslink.common.exception.ApiException;
 import com.campuslink.common.markdown.MarkdownRenderer;
 import com.campuslink.common.result.ResultCode;
+import com.campuslink.module.account.application.AccountApplicationService;
 import com.campuslink.module.forum.application.cmd.ForumResults.PublishedPost;
 import com.campuslink.module.forum.application.cmd.PublishPostCommand;
 import com.campuslink.module.forum.domain.exception.BoardNotFoundException;
 import com.campuslink.module.forum.domain.exception.PostNotFoundException;
 import com.campuslink.module.forum.domain.gateway.BoardRepository;
+import com.campuslink.module.forum.domain.gateway.ModerationGateway;
 import com.campuslink.module.forum.domain.gateway.PostRepository;
 import com.campuslink.module.forum.domain.gateway.ReplyRepository;
 import com.campuslink.module.forum.domain.model.Board;
@@ -34,6 +36,24 @@ public class PostApplicationService {
     private final MarkdownRenderer markdownRenderer;
     private final NotificationApplicationService notificationService;
     private final AuditService auditService;
+    private final ModerationGateway moderationGateway;
+    private final AccountApplicationService accountApplicationService;
+
+    /**
+     * 机审前置（F-SAFE-001 / CR-082）：命中风险 → 5001 拦发布；网关任何异常 → 5002（fail-closed，
+     * 宁可暂时关发布入口也不放行——技术方案 §7.3）。
+     */
+    private void moderateOrThrow(String content) {
+        try {
+            if (!moderationGateway.moderate(content).pass()) {
+                throw new ApiException(ResultCode.MODERATION_BLOCKED);
+            }
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException(ResultCode.MODERATION_UNAVAILABLE);
+        }
+    }
 
     /**
      * 发帖：{@code contentHtml} 在**发布时**渲染后随帖子一起落库，请求时零渲染（ADR-005）；
@@ -42,8 +62,11 @@ public class PostApplicationService {
      * <p>单条 INSERT，无需事务编排；鉴权在 web 层（N-4 敞口下必须手写，见设计 §4.2）。
      */
     public PublishedPost publish(Long authorId, PublishPostCommand command) {
+        accountApplicationService.assertActiveForContent(authorId);
         Board board = boardRepository.findByCode(command.boardCode())
                 .orElseThrow(BoardNotFoundException::new);
+        // 机审放在版块校验之后：无效请求（版块不存在）先给出准确错误，而不是被 5002 抢占语义
+        moderateOrThrow(command.contentMd());
         // 封面（CR-074 外链方案）：发布时从正文提取首张 https 图一次落库，读时零成本；无图即 null
         Post post = Post.publish(board.getId(), authorId, board.getType(), command.title(),
                 command.contentMd(), markdownRenderer.render(command.contentMd()),

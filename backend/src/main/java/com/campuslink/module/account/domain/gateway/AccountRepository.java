@@ -2,6 +2,7 @@ package com.campuslink.module.account.domain.gateway;
 
 import com.campuslink.module.account.domain.exception.AccountConflictException;
 import com.campuslink.module.account.domain.model.Account;
+import com.campuslink.module.account.domain.model.AccountStatus;
 import com.campuslink.module.account.domain.model.ProfileField;
 
 import java.util.Collection;
@@ -43,4 +44,19 @@ public interface AccountRepository {
 
     /** 批量按 id 查询（跨上下文读昵称的唯一入口，一次查询不做 N+1）；不存在的 id 不返回 */
     List<Account> findByIds(Collection<Long> ids);
+
+    /**
+     * 账号状态定向 UPDATE（CR-082 治理：封禁 / 注销 / 撤销注销共用），同时写 delete_at
+     * （非注销场景传 null 即清空）。与 updateProfile 同理走定向 SQL，不整行回写。
+     */
+    void updateStatus(Long accountId, AccountStatus status, java.time.Instant deleteAt);
+
+    /**
+     * 匿名化（CR-082 注销冷静期满）：清 email / phone / 学号（_enc 与 _hash）、头像，
+     * 昵称置占位文案，anonymized = true。不可逆操作，仅对「冷静期满且未撤销」的账号调用。
+     */
+    void anonymize(Long accountId, String placeholderNickname);
+
+    /** 冷静期已满且尚未匿名化的注销账号（status=DEACTIVATED AND 0 < delete_at <= now AND anonymized = 0） */
+    List<Account> findExpiredDeactivations(java.time.Instant now);
 }

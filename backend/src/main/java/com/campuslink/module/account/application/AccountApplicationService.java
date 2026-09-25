@@ -1,5 +1,6 @@
 package com.campuslink.module.account.application;
 
+import com.campuslink.common.audit.AuditService;
 import com.campuslink.common.exception.ApiException;
 import com.campuslink.common.result.ResultCode;
 import com.campuslink.config.AppProperties;
@@ -17,6 +18,7 @@ import com.campuslink.module.account.domain.gateway.SensitiveCodec;
 import com.campuslink.module.account.domain.gateway.TokenIssuer;
 import com.campuslink.module.account.domain.gateway.VerificationTicketStore;
 import com.campuslink.module.account.domain.model.Account;
+import com.campuslink.module.account.domain.model.AccountRole;
 import com.campuslink.module.account.domain.model.AccountStatus;
 import com.campuslink.module.account.domain.model.EmailAddress;
 import com.campuslink.module.account.domain.model.StudentId;
@@ -49,6 +51,7 @@ public class AccountApplicationService {
     private final SensitiveCodec codec;
     private final TokenIssuer tokenIssuer;
     private final RateLimitGateway rateLimitGateway;
+    private final AuditService auditService;
     private final AppProperties props;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -110,6 +113,18 @@ public class AccountApplicationService {
         if (account == null || !captchaService.verify(email.value(), command.code())) {
             throw new ApiException(ResultCode.LOGIN_FAILED);
         }
+        if (account.getStatus() == AccountStatus.DEACTIVATED) {
+            // 注销冷静期（F-ACC-003 / CR-082）：期内登录即视为撤销注销；期满拒绝（2011）
+            if (account.getDeleteAt() != null && account.getDeleteAt().isAfter(Instant.now())) {
+                accountRepository.updateStatus(account.getId(), AccountStatus.ACTIVE, null);
+                auditService.record(account.getId(), "ACCOUNT_REACTIVATE", "users", account.getId(), null);
+                captchaService.consume(email.value());
+                // 回读刷新状态：撤销后响应里的 status 必须是 ACTIVE，而不是内存里的 DEACTIVATED
+                Account reactivated = accountRepository.findById(account.getId()).orElse(account);
+                return toResult(reactivated);
+            }
+            throw new ApiException(ResultCode.ACCOUNT_EXPIRED);
+        }
         if (!account.isActive()) {
             throw new ApiException(ResultCode.USER_BANNED);
         }
@@ -142,6 +157,41 @@ public class AccountApplicationService {
     public Account accountOf(Long accountId) {
         return accountRepository.findById(accountId)
                 .orElseThrow(() -> new ApiException(ResultCode.USER_NOT_FOUND));
+    }
+
+    /** 注销（F-ACC-003 / CR-082）：置 DEACTIVATED + 7 天冷静期；期内登录即撤销，期满由匿名化定时任务处理 */
+    @Transactional
+    public void deactivate(long userId) {
+        accountOf(userId);
+        accountRepository.updateStatus(userId, AccountStatus.DEACTIVATED, Instant.now().plus(Duration.ofDays(7)));
+        auditService.record(userId, "ACCOUNT_DEACTIVATE", "users", userId, "coolingDays=7");
+    }
+
+    /** 内容发布前置（CR-082）：封禁（2006）与注销中（2013）均不得发帖 / 回帖 */
+    public void assertActiveForContent(long userId) {
+        Account a = accountOf(userId);
+        if (a.getStatus() == AccountStatus.BANNED) {
+            throw new ApiException(ResultCode.USER_BANNED);
+        }
+        if (a.getStatus() == AccountStatus.DEACTIVATED) {
+            throw new ApiException(ResultCode.ACCOUNT_DEACTIVATED);
+        }
+    }
+
+    /** 管理员封禁 / 解封（CR-082 治理）：超级管理员不可被封禁；全程审计。forum 侧工单 REMOVE 用户时经此方法（跨上下文不带 domain 类型） */
+    public void adminSetStatus(long operatorId, long targetId, AccountStatus target) {
+        Account a = accountOf(targetId);
+        if (a.getRole() == AccountRole.SUPERADMIN) {
+            throw new ApiException(ResultCode.FORBIDDEN);
+        }
+        accountRepository.updateStatus(targetId, target, null);
+        auditService.record(operatorId, target == AccountStatus.BANNED ? "USER_BAN" : "USER_UNBAN",
+                "users", targetId, null);
+    }
+
+    /** 封禁（工单 REMOVE 用户目标的专用入口，避免 forum 引用 AccountStatus domain 类型） */
+    public void adminBan(long operatorId, long targetId) {
+        adminSetStatus(operatorId, targetId, AccountStatus.BANNED);
     }
 
     /**

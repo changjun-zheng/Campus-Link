@@ -28,6 +28,9 @@ public enum ResultCode {
     CANNOT_FOLLOW_SELF(2009, 400, "不能关注自己"),
     /** 他人主页 IP 限流（GET /users/{id} 防批量枚举）：不复用 2008 / 2103——限流维度与文案都不同，复用等于写脏语义字典 */
     PROFILE_VIEW_RATE_LIMITED(2010, 429, "访问过于频繁，请稍后再试"),
+    ACCOUNT_EXPIRED(2011, 403, "账号已注销"),
+    REPORT_DUPLICATED(2012, 429, "24 小时内已举报过该内容"),
+    ACCOUNT_DEACTIVATED(2013, 403, "账号注销中，请先撤销注销"),
 
     STUDENT_VERIFY_FAILED(2101, 400, "学籍信息校验未通过"),
     VERIFY_TICKET_INVALID(2102, 400, "核验票据无效或已过期，请重新核验"),

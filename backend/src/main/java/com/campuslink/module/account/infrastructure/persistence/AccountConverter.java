@@ -43,9 +43,14 @@ public final class AccountConverter {
     }
 
     public static Account toDomain(UserDO d, SensitiveCodec codec) {
+        // 匿名化（CR-082）后 email_enc / student_id_enc 为 NULL：值对象必填，回落合成占位值——
+        // 该账号已不可登录、不再参与任何敏感比对，占位值仅满足聚合重建的类型约束
+        EmailAddress email = d.getEmailEnc() == null
+                ? EmailAddress.of("deactivated-" + d.getId() + "@invalid.local")
+                : EmailAddress.of(codec.decrypt(d.getEmailEnc()));
         return Account.rehydrate(
                 d.getId(),
-                EmailAddress.of(codec.decrypt(d.getEmailEnc())),
+                email,
                 d.getStudentIdEnc() == null ? null : StudentId.of(codec.decrypt(d.getStudentIdEnc())),
                 d.getNickname(),
                 d.getAvatarUrl(),

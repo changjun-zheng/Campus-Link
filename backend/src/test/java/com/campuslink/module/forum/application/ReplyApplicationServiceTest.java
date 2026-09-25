@@ -2,6 +2,7 @@ package com.campuslink.module.forum.application;
 
 import com.campuslink.common.exception.ApiException;
 import com.campuslink.common.markdown.MarkdownRenderer;
+import static org.mockito.Mockito.mock;
 import com.campuslink.common.result.ResultCode;
 import com.campuslink.module.forum.application.cmd.ForumResults.PublishedReply;
 import com.campuslink.module.forum.application.cmd.PublishReplyCommand;
@@ -29,6 +30,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 /**
@@ -47,13 +49,19 @@ class ReplyApplicationServiceTest {
     private ReplyRepository replyRepository;
     @Mock
     private NotificationApplicationService notificationService;
+    @Mock
+    private com.campuslink.module.forum.domain.gateway.ModerationGateway moderationGateway;
+    @Mock
+    private com.campuslink.module.account.application.AccountApplicationService accountApplicationService;
 
     private ReplyApplicationService service;
 
     @BeforeEach
     void setUp() {
+        // lenient：missingPost / removedPost 两条用例在帖子可见性校验即失败，不会走到机审（严格模式下全局桩需放行）
+        lenient().when(moderationGateway.moderate(any())).thenReturn(com.campuslink.module.forum.domain.gateway.ModerationGateway.ModerationVerdict.ok());
         service = new ReplyApplicationService(postRepository, replyRepository, new MarkdownRenderer(),
-                notificationService);
+                notificationService, moderationGateway, accountApplicationService);
     }
 
     @Test
