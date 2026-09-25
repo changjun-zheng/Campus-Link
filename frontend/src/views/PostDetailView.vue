@@ -14,6 +14,7 @@ import {
   type ReplyVo,
 } from '../api/forum'
 import { followUser, getFollowState, unfollowUser } from '../api/follow'
+import { submitReport } from '../api/admin'
 import { ApiError } from '../api/client'
 import SvgIcon from '../components/SvgIcon.vue'
 import TableOfContents from '../components/TableOfContents.vue'
@@ -316,6 +317,47 @@ async function focusFloorFromQuery() {
   el.scrollIntoView({ block: 'center' })
 }
 
+/* ─── 举报（F-SAFE-002 / CR-084）：帖子与楼层入口，对话框收集理由与补充说明 ─── */
+const reportDialogVisible = ref(false)
+const reportTarget = ref<{ type: 'POST' | 'REPLY'; id: number } | null>(null)
+const reportForm = reactive({ reason: 'SPAM', detail: '' })
+const REPORT_REASONS = [
+  { value: 'ILLEGAL', label: '违法违规' },
+  { value: 'HARASS', label: '骚扰广告' },
+  { value: 'COPYRIGHT', label: '侵权' },
+  { value: 'SPAM', label: '低质灌水' },
+  { value: 'OTHER', label: '其他' },
+]
+
+function openReport(type: 'POST' | 'REPLY', id: number) {
+  if (!requireLoginOrRedirect()) return
+  reportTarget.value = { type, id }
+  reportForm.reason = 'SPAM'
+  reportForm.detail = ''
+  reportDialogVisible.value = true
+}
+
+const reporting = ref(false)
+
+async function doReport() {
+  if (!reportTarget.value) return
+  reporting.value = true
+  try {
+    await submitReport({
+      targetType: reportTarget.value.type,
+      targetId: reportTarget.value.id,
+      reason: reportForm.reason,
+      detail: reportForm.detail.trim() || undefined,
+    })
+    ElMessage.success('举报已提交，运营将尽快处理')
+    reportDialogVisible.value = false
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '举报提交失败')
+  } finally {
+    reporting.value = false
+  }
+}
+
 watch(
   postId,
   () => {
@@ -430,6 +472,15 @@ watch(
             >
               删除
             </el-button>
+            <el-button
+              v-else
+              link
+              size="small"
+              :class="{ 'ml-auto': true }"
+              @click="openReport('POST', post.id)"
+            >
+              举报
+            </el-button>
           </div>
         </div>
       </el-card>
@@ -530,6 +581,15 @@ watch(
                   >
                     采纳
                   </el-button>
+                  <el-button
+                    v-if="auth.user?.id !== r.authorId"
+                    link
+                    size="small"
+                    class="ml-1"
+                    @click="openReport('REPLY', r.id)"
+                  >
+                    举报
+                  </el-button>
                 </div>
                 <div class="markdown-body" v-highlight v-html="r.contentHtml" />
               </div>
@@ -599,6 +659,31 @@ watch(
       </el-skeleton>
     </el-card>
   </div>
+
+<!-- 举报对话框（F-SAFE-002 / CR-084）：理由五选一 + 补充说明；24h 同对象去重由后端兜底（429 / 2012） -->
+<el-dialog v-model="reportDialogVisible" title="提交举报" width="440px">
+  <el-form label-position="top">
+    <el-form-item label="举报理由">
+      <el-select v-model="reportForm.reason" class="w-full">
+        <el-option v-for="r in REPORT_REASONS" :key="r.value" :label="r.label" :value="r.value" />
+      </el-select>
+    </el-form-item>
+    <el-form-item label="补充说明（可选）">
+      <el-input
+        v-model="reportForm.detail"
+        type="textarea"
+        :rows="3"
+        maxlength="1024"
+        show-word-limit
+        placeholder="补充问题描述（可选）"
+      />
+    </el-form-item>
+  </el-form>
+  <template #footer>
+    <el-button @click="reportDialogVisible = false">取消</el-button>
+    <el-button type="danger" :loading="reporting" @click="doReport">提交举报</el-button>
+  </template>
+</el-dialog>
 </template>
 
 <style scoped>

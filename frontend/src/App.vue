@@ -112,6 +112,7 @@ function onSearchSubmit() {
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item @click="router.push('/notifications')">通知中心</el-dropdown-item>
+                  <el-dropdown-item v-if="auth.user?.role === 'SUPERADMIN'" divided @click="router.push('/admin')">管理后台</el-dropdown-item>
                 <el-dropdown-item @click="router.push('/me/posts')">我的帖子</el-dropdown-item>
                 <el-dropdown-item @click="router.push('/me/replies')">我的回帖</el-dropdown-item>
                 <el-dropdown-item @click="router.push('/favorites')">我的收藏</el-dropdown-item>

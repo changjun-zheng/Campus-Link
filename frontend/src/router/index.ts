@@ -18,7 +18,7 @@ const router = createRouter({
     { path: '/settings', name: 'settings', component: () => import('../views/SettingsView.vue'), meta: { title: '设置', requiresAuth: true } },
     { path: '/me/posts', name: 'my-posts', component: () => import('../views/MyPostsView.vue'), meta: { title: '我的帖子', requiresAuth: true } },
     { path: '/me/replies', name: 'my-replies', component: () => import('../views/MyRepliesView.vue'), meta: { title: '我的回帖', requiresAuth: true } },
-    { path: '/admin', name: 'admin', component: () => import('../components/Placeholder.vue'), props: { title: '管理后台' }, meta: { title: '后台' } },
+    { path: '/admin', name: 'admin', component: () => import('../views/AdminView.vue'), meta: { title: '管理后台', requiresAuth: true } },
   ],
 })
 
