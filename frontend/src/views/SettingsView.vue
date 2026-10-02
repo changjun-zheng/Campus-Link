@@ -9,7 +9,7 @@
  */
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { updateProfile } from '../api/auth'
+import { deactivateAccount, updateProfile } from '../api/auth'
 import { listMyFavorites, listMyPosts, listMyReplies } from '../api/forum'
 import type { IconName } from '../assets/icons'
 import { useAuthStore } from '../stores/auth'
@@ -125,6 +125,34 @@ async function loadCounts() {
 function logout() {
   auth.logout()
   router.push('/')
+}
+
+/** 注销（F-ACC-003 / CR-082）：手输「注销」二次确认 → deactivate → 冷静期提示 → 退出登录 */
+const deactivating = ref(false)
+
+async function onDeactivate() {
+  try {
+    await ElMessageBox.prompt('此操作进入 7 天冷静期，期满后账号将匿名化且无法恢复。请输入「注销」以确认：', '注销账号', {
+      confirmButtonText: '确认注销',
+      cancelButtonText: '取消',
+      type: 'warning',
+      inputPattern: /^注销$/,
+      inputErrorMessage: '请输入「注销」二字以确认',
+    })
+  } catch {
+    return
+  }
+  deactivating.value = true
+  try {
+    await deactivateAccount()
+    auth.logout()
+    ElMessage.success('账号已进入 7 天冷静期；期间再次登录即自动撤销注销')
+    router.push('/')
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '注销失败')
+  } finally {
+    deactivating.value = false
+  }
 }
 </script>
 
@@ -264,15 +292,12 @@ function logout() {
 
       <div class="mt-4 flex flex-wrap items-center gap-2">
         <el-button @click="logout">退出登录</el-button>
-        <el-tooltip
-          content="注销功能尚未实现：冷静期、内容处理与匿名化细则属基线需求 F-ACC-003，至今零实现"
-          placement="top"
-        >
-          <span>
-            <el-button type="danger" plain disabled>注销账号</el-button>
-          </span>
-        </el-tooltip>
+        <el-button type="danger" plain :loading="deactivating" @click="onDeactivate">注销账号</el-button>
       </div>
+      <p class="mt-2 text-caption leading-body text-ink-meta">
+        注销进入 7 天冷静期：期内再次登录即自动撤销；期满后昵称改为「已注销用户」、
+        邮箱 / 学号等实名信息匿名化，且该账号无法再登录。
+      </p>
     </el-card>
   </div>
 </template>

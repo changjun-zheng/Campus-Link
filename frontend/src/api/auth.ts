@@ -26,3 +26,6 @@ export const fetchMe = () => get<UserInfo>('/users/me')
  */
 export const updateProfile = (payload: { nickname?: string | null; major?: string | null; bio?: string | null }) =>
   put<UserInfo>('/users/me', payload)
+
+/** 注销账号（F-ACC-003 / CR-082）：进入 7 天冷静期，期内登录即撤销注销 */
+export const deactivateAccount = () => post<void>('/users/me/deactivate')
