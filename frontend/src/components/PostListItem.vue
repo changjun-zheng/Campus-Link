@@ -5,6 +5,9 @@
  * - 标题是真实 RouterLink（保留 href：可中键新开 / 右键复制 / 键盘聚焦），行 hover 通栏底色；
  * - 内部版块链接独立可点（@click.stop 阻止冒泡到标题的场景不存在，二者为并列元素）；
  * - 分隔线与内边距在此统一，父卡片 body padding 置 0。
+ *
+ * CR-085：卡片重排为 CSDN / 掘金式——作者行（头像 + 昵称 + 时间）提到标题上方，
+ * 标签 chips 与互动计数（点赞 / 回复 / 阅读）沉到摘要下方，信息层级与参考站一致。
  */
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -60,7 +63,15 @@ async function onLike() {
   >
     <div class="flex gap-3">
       <div class="min-w-0 flex-1">
-        <div class="flex items-center gap-2">
+        <!-- 作者行（CSDN / 掘金式）：头像 + 昵称 + 时间在标题上方（CR-085） -->
+        <div class="flex items-center gap-1.5 text-caption text-ink-meta">
+          <UserAvatar :name="post.authorNickname" :size="20" />
+          <span class="text-ink-regular">{{ post.authorNickname }}</span>
+          <span aria-hidden="true">·</span>
+          <span>{{ formatRelativeTime(post.createdAt) }}</span>
+        </div>
+
+        <div class="mt-1 flex items-center gap-2">
           <el-tag v-if="post.accepted" type="success" effect="light" size="small" class="flex-none">
             已采纳
           </el-tag>
@@ -70,6 +81,13 @@ async function onLike() {
           >
             {{ post.title }}
           </RouterLink>
+          <span
+            class="flex flex-none items-center gap-0.5 rounded-sm bg-code px-1.5 py-px text-caption text-ink-meta"
+            :title="`${post.replyCount} 条回复`"
+          >
+            <SvgIcon name="message-2" :size="12" />
+            {{ post.replyCount }}
+          </span>
         </div>
 
         <p
@@ -86,11 +104,6 @@ async function onLike() {
             </RouterLink>
             <span aria-hidden="true">·</span>
           </template>
-          <UserAvatar :name="post.authorNickname" :size="20" />
-          <span>{{ post.authorNickname }}</span>
-          <span aria-hidden="true">·</span>
-          <span>{{ formatRelativeTime(post.createdAt) }}</span>
-          <span aria-hidden="true">·</span>
           <!--
             就地点赞（CR-080）：用真 button 而非 span+click——键盘可聚焦、aria-pressed 可读出状态。
             按钮不继承字体，故显式 font-inherit + text-caption，与同行 span 同尺寸同色阶。
@@ -114,14 +127,16 @@ async function onLike() {
             {{ post.replyCount }}
           </span>
           <span aria-hidden="true">·</span>
-          <el-tag v-for="t in post.tags?.slice(0, 3)" :key="t" size="small" effect="plain" class="flex-none">
-            {{ t }}
-          </el-tag>
-          <span aria-hidden="true">·</span>
           <span class="inline-flex items-center gap-0.5" title="阅读数">
             <SvgIcon name="eye" :size="12" />
             {{ post.viewCount }}
           </span>
+          <template v-if="post.tags?.length">
+            <span aria-hidden="true">·</span>
+            <el-tag v-for="t in post.tags.slice(0, 3)" :key="t" size="small" effect="plain" class="flex-none">
+              {{ t }}
+            </el-tag>
+          </template>
         </div>
       </div>
       <!-- 封面缩略图（CR-074）：无图帖不占位；仅 https 外链（服务端提取时已限定） -->

@@ -76,7 +76,7 @@ function onSearchSubmit() {
           <img src="/wordmark.png" alt="Campus-Link" class="h-[20px] w-auto" height="20" />
         </RouterLink>
         <div class="order-2 ml-auto flex shrink-0 items-center gap-4 md:order-3 md:ml-0">
-          <div class="hidden w-[200px] md:block">
+          <div class="hidden w-[320px] md:block md:ml-auto md:mr-auto">
             <el-input
               v-model="searchKeyword"
               placeholder="搜索帖子标题 / 标签"
@@ -98,6 +98,9 @@ function onSearchSubmit() {
           >
             <SvgIcon name="search" :size="18" />
           </button>
+          <RouterLink to="/publish" class="hidden md:block">
+            <el-button type="primary" size="small">提问</el-button>
+          </RouterLink>
           <RouterLink to="/notifications" class="text-ink-regular hover:text-link" aria-label="通知中心">
             <el-badge :value="unreadCount" :max="99" :hidden="!unreadCount">
               <SvgIcon name="bell" :size="18" />
