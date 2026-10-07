@@ -38,6 +38,15 @@ public interface ReplyRepository {
     Optional<Reply> findVisibleById(Long id);
 
     /**
+     * 批量按 id 查**可见**的回复（条件与 {@link #findVisibleById} 同源：{@code status='PUBLISHED' AND is_deleted=0}），
+     * 供楼层列表组装引用摘要（F-009 / CR-085）：一页一次取齐被引楼层，不做 N+1。
+     *
+     * <p>与 {@link #findByIds} 的差别同单条版的口径：**引用摘要要渲染给读者，被下架 / 已删除的楼层
+     * 一律不出现**（"内容不可见不外泄"）；未命中的 id 自然不在结果中，由调用方决定回落（quoted=null 不渲染）。
+     */
+    List<Reply> findVisibleByIds(Collection<Long> ids);
+
+    /**
      * 批量按 id 查**未删除**的回复（只过滤 {@code is_deleted=0}，**不过滤 status**）；通知读时组装用（F-SOC-001），
      * 一页一次取齐所属帖与楼层号，不做 N+1。
      *

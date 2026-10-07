@@ -79,14 +79,32 @@ class NotificationApplicationServiceTest {
     }
 
     @Test
-    @DisplayName("自触发抑制：触发人即接收人时不产生通知（5 个入口共用同一兜底）")
+    @DisplayName("自触发抑制：触发人即接收人时不产生通知（6 个入口共用同一兜底）")
     void selfTriggerIsSuppressed() {
         service.postReplied(7L, 11L, 7L);
         service.postLiked(7L, 9L, 7L);
         service.replyLiked(7L, 11L, 7L);
         service.postFavorited(7L, 9L, 7L);
+        service.replyQuoted(7L, 11L, 7L);
 
         verify(notificationRepository, never()).save(any());
+    }
+
+    /** CR-085 / F-009：引用通知与 REPLY 同构——目标是引用方的新楼层，接收人是被引用楼层的作者 */
+    @Test
+    @DisplayName("触发：replyQuoted 落 type=quote 的事实四元组，目标是引用方新楼层")
+    void replyQuotedSavesQuoteNotification() {
+        service.replyQuoted(7L, 456L, RECIPIENT);
+
+        ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(captor.capture());
+        Notification saved = captor.getValue();
+        assertThat(saved.getType()).isEqualTo(NotificationType.QUOTE);
+        assertThat(saved.getTargetType()).isEqualTo(NotificationTargetType.REPLY);
+        assertThat(saved.getTargetId()).isEqualTo(456L);
+        assertThat(saved.getActorId()).isEqualTo(7L);
+        assertThat(saved.getUserId()).isEqualTo(RECIPIENT);
+        assertThat(saved.isRead()).isFalse();
     }
 
     @Test

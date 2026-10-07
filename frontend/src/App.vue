@@ -99,7 +99,10 @@ function onSearchSubmit() {
             <SvgIcon name="search" :size="18" />
           </button>
           <RouterLink to="/publish" class="hidden md:block">
-            <el-button type="primary" size="small">提问</el-button>
+            <el-button type="primary" size="small">
+              <SvgIcon name="pencil" :size="13" class="mr-1" />
+              提问
+            </el-button>
           </RouterLink>
           <RouterLink to="/notifications" class="text-ink-regular hover:text-link" aria-label="通知中心">
             <el-badge :value="unreadCount" :max="99" :hidden="!unreadCount">
@@ -130,7 +133,7 @@ function onSearchSubmit() {
         </div>
         <!-- 窄屏整行铺满并出血到页头边缘：-mx-4 / +2rem 对应 tokens.css 窄屏下的 --el-header-padding: 0 16px -->
         <nav
-          class="order-3 -mx-4 flex w-[calc(100%+2rem)] gap-2 overflow-x-auto bg-page px-4 py-2 md:order-2 md:mx-0 md:w-auto md:flex-1 md:gap-1 md:bg-transparent md:px-0 md:py-0"
+          class="order-3 -mx-4 flex w-[calc(100%+2rem)] gap-2 overflow-x-auto bg-page px-4 py-2 [scrollbar-width:none] md:order-2 md:mx-0 md:w-auto md:flex-1 md:gap-1 md:bg-transparent md:px-0 md:py-0 [&::-webkit-scrollbar]:hidden"
         >
           <RouterLink
             v-for="b in BOARDS"
@@ -158,5 +161,17 @@ function onSearchSubmit() {
       <p class="text-note text-ink-regular">问有所答 · 学有同伴 · 求职有路</p>
       <p class="mt-1 text-caption text-ink-meta">Campus-Link · 重庆工程学院计算机专业学生社区</p>
     </el-footer>
+    <!-- 返回顶部（CR-091，参考站通用交互）：全局窗口滚动，长列表页共用 -->
+    <el-backtop :right="24" :bottom="32" />
   </el-container>
 </template>
+
+<style scoped>
+/* sticky 的前提：滚动容器必须是文档本身。EP 给 .el-main 默认 overflow:auto——即使它从不
+   内部滚动，非 visible 溢出也会使其成为 sticky 的定位参照（规范行为），导致 HomeView 两栏、
+   详情页 TOC 等所有 sticky 侧栏永不吸附、表现为"跟着页面滚走"（CR-091 修复）。
+   scoped 的属性选择器特异性高于 EP 的同名单类规则，可稳定覆盖。 */
+.el-main {
+  overflow: visible;
+}
+</style>

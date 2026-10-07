@@ -21,6 +21,30 @@
       "description": "版块"
     },
     {
+      "name": "admin-user",
+      "description": "用户治理（仅 SUPERADMIN）"
+    },
+    {
+      "name": "admin-report",
+      "description": "举报工单处理（仅 SUPERADMIN）"
+    },
+    {
+      "name": "auth",
+      "description": "学籍核验、注册与登录"
+    },
+    {
+      "name": "follow",
+      "description": "关注关系"
+    },
+    {
+      "name": "post",
+      "description": "帖子"
+    },
+    {
+      "name": "reply",
+      "description": "楼层回复"
+    },
+    {
       "name": "notification",
       "description": "站内通知"
     },
@@ -33,24 +57,12 @@
       "description": "学籍名册导入（仅 SUPERADMIN）"
     },
     {
-      "name": "auth",
-      "description": "学籍核验、注册与登录"
-    },
-    {
-      "name": "follow",
-      "description": "关注关系"
-    },
-    {
       "name": "user",
       "description": "用户"
     },
     {
-      "name": "post",
-      "description": "帖子"
-    },
-    {
-      "name": "reply",
-      "description": "楼层回复"
+      "name": "report",
+      "description": "举报（F-SAFE-002）"
     }
   ],
   "paths": {
@@ -224,6 +236,200 @@
           },
           "401": {
             "description": "未登录（4001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "系统繁忙，请稍后再试（9999）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/users/{id}/status": {
+      "put": {
+        "tags": [
+          "admin-user"
+        ],
+        "summary": "封禁 / 解封（仅 SUPERADMIN）：BANNED 即时生效（登录拒绝、发帖回帖拒绝），全程审计",
+        "operationId": "setStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatusCommand"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseVoid"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数错误（1001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未登录（4001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "无权限（4002）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "用户不存在（2007）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "系统繁忙，请稍后再试（9999）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/reports/{id}": {
+      "put": {
+        "tags": [
+          "admin-report"
+        ],
+        "summary": "工单处理（仅 SUPERADMIN）：action=REMOVE 联动目标处置（下架 / 封禁），DISMISS 驳回；闭环 + 审计",
+        "operationId": "close",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CloseCommand"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseVoid"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数错误（1001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未登录（4001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "无权限（4002）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "资源不存在（3001）",
             "content": {
               "application/json": {
                 "schema": {
@@ -596,6 +802,138 @@
         ]
       }
     },
+    "/api/v1/users/me/deactivate": {
+      "post": {
+        "tags": [
+          "user"
+        ],
+        "summary": "注销账号（需登录）：进入 7 天冷静期；期内登录即撤销注销，期满匿名化",
+        "operationId": "deactivate",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseVoid"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未登录（4001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "用户不存在（2007）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "系统繁忙，请稍后再试（9999）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/reports": {
+      "post": {
+        "tags": [
+          "report"
+        ],
+        "summary": "提交举报（需登录）：24 小时内对同一对象重复举报 → 429 / 2012",
+        "operationId": "submit",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportCommand"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseReportVo"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数错误（1001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未登录（4001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "24 小时内已举报过该内容（2012）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "系统繁忙，请稍后再试（9999）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/v1/posts": {
       "get": {
         "tags": [
@@ -742,6 +1080,16 @@
               }
             }
           },
+          "403": {
+            "description": "账号已被封禁（2006）；账号注销中，请先撤销注销（2013）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
           "500": {
             "description": "系统繁忙，请稍后再试（9999）",
             "content": {
@@ -845,7 +1193,7 @@
         "tags": [
           "reply"
         ],
-        "summary": "回帖（需登录）：返回本次楼层号",
+        "summary": "回帖（需登录）：返回本次楼层号；可带 quotedReplyId 引用同帖楼层（F-009 / CR-085），目标不可见或跨帖一律 404 / 3001",
         "operationId": "reply",
         "parameters": [
           {
@@ -901,6 +1249,16 @@
           },
           "404": {
             "description": "资源不存在（3001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "账号已被封禁（2006）；账号注销中，请先撤销注销（2013）",
             "content": {
               "application/json": {
                 "schema": {
@@ -1502,7 +1860,7 @@
             }
           },
           "403": {
-            "description": "账号已被封禁（2006）",
+            "description": "账号已被封禁（2006）；账号已注销（2011）",
             "content": {
               "application/json": {
                 "schema": {
@@ -2688,6 +3046,102 @@
           }
         }
       }
+    },
+    "/api/v1/admin/reports": {
+      "get": {
+        "tags": [
+          "admin-report"
+        ],
+        "summary": "工单分页（仅 SUPERADMIN）：status 可选 PENDING / CLOSED，缺省全部",
+        "operationId": "page",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponsePageVoAdminReportVo"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数错误（1001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未登录（4001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "无权限（4002）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "系统繁忙，请稍后再试（9999）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -2799,18 +3253,12 @@
           }
         }
       },
-      "ModerationCommand": {
+      "StatusCommand": {
         "type": "object",
         "properties": {
           "status": {
             "type": "string",
-            "minLength": 1,
-            "pattern": "PUBLISHED|REMOVED"
-          },
-          "reason": {
-            "type": "string",
-            "maxLength": 200,
-            "minLength": 0
+            "minLength": 1
           }
         },
         "required": [
@@ -2833,6 +3281,108 @@
           }
         }
       },
+      "CloseCommand": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "maxLength": 16,
+            "minLength": 0
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 512,
+            "minLength": 0
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "ModerationCommand": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "PUBLISHED|REMOVED"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 0
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "ReportCommand": {
+        "type": "object",
+        "properties": {
+          "targetType": {
+            "type": "string",
+            "maxLength": 16,
+            "minLength": 0
+          },
+          "targetId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 0
+          },
+          "detail": {
+            "type": "string",
+            "maxLength": 1024,
+            "minLength": 0
+          }
+        },
+        "required": [
+          "reason",
+          "targetId",
+          "targetType"
+        ]
+      },
+      "ApiResponseReportVo": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/ReportVo"
+          },
+          "traceId": {
+            "type": "string"
+          }
+        }
+      },
+      "ReportVo": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "targetType": {
+            "type": "string"
+          },
+          "targetId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
       "PublishPostCommand": {
         "type": "object",
         "properties": {
@@ -2849,6 +3399,16 @@
             "type": "string",
             "maxLength": 50000,
             "minLength": 0
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 32,
+              "minLength": 0
+            },
+            "maxItems": 5,
+            "minItems": 0
           }
         },
         "required": [
@@ -2891,6 +3451,11 @@
             "type": "string",
             "maxLength": 50000,
             "minLength": 0
+          },
+          "quotedReplyId": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
           }
         },
         "required": [
@@ -3308,6 +3873,12 @@
           "coverUrl": {
             "type": "string"
           },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "summary": {
             "type": "string"
           },
@@ -3435,6 +4006,25 @@
           }
         }
       },
+      "QuotedReplyVo": {
+        "type": "object",
+        "properties": {
+          "replyId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "floorNo": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "authorNickname": {
+            "type": "string"
+          },
+          "excerpt": {
+            "type": "string"
+          }
+        }
+      },
       "ReplyVo": {
         "type": "object",
         "properties": {
@@ -3465,6 +4055,9 @@
           },
           "likedByMe": {
             "type": "boolean"
+          },
+          "quoted": {
+            "$ref": "#/components/schemas/QuotedReplyVo"
           },
           "createdAt": {
             "type": "string",
@@ -3530,6 +4123,12 @@
           "viewCount": {
             "type": "integer",
             "format": "int32"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           },
           "accepted": {
             "type": "boolean"
@@ -3812,6 +4411,91 @@
             "type": "string"
           },
           "sort": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "AdminReportVo": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "reporterId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "targetType": {
+            "type": "string"
+          },
+          "targetId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "resolution": {
+            "type": "string"
+          },
+          "handlerId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "closedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ApiResponsePageVoAdminReportVo": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/PageVoAdminReportVo"
+          },
+          "traceId": {
+            "type": "string"
+          }
+        }
+      },
+      "PageVoAdminReportVo": {
+        "type": "object",
+        "properties": {
+          "list": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminReportVo"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "size": {
             "type": "integer",
             "format": "int32"
           }

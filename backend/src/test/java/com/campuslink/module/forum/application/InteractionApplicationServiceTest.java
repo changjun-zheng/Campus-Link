@@ -128,7 +128,7 @@ class InteractionApplicationServiceTest {
     void crossPostReplyLikeIsNotFound() {
         when(postRepository.findById(9L)).thenReturn(Optional.of(post()));
         when(replyRepository.findVisibleById(11L)).thenReturn(Optional.of(
-                Reply.rehydrate(11L, 8L, 100L, 1, "内容", "<p>内容</p>", false, 0, CREATED_AT)));
+                Reply.rehydrate(11L, 8L, 100L, 1, "内容", "<p>内容</p>", null, false, 0, CREATED_AT)));
 
         assertThatThrownBy(() -> service.toggleReplyLike(42L, 9L, 11L))
                 .isInstanceOfSatisfying(ApiException.class,
@@ -225,6 +225,6 @@ class InteractionApplicationServiceTest {
     }
 
     private static Reply reply() {
-        return Reply.rehydrate(11L, 9L, 100L, 1, "内容", "<p>内容</p>", false, 0, CREATED_AT);
+        return Reply.rehydrate(11L, 9L, 100L, 1, "内容", "<p>内容</p>", null, false, 0, CREATED_AT);
     }
 }

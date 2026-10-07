@@ -151,7 +151,8 @@ public class PostController {
 
     @Operation(summary = "发帖（需登录）：只返回 id，前端据此跳转详情")
     @SecurityRequirement(name = ApiDocs.BEARER_AUTH)
-    @ErrorCodes({ResultCode.NOT_LOGGED_IN, ResultCode.NOT_FOUND})
+    @ErrorCodes({ResultCode.NOT_LOGGED_IN, ResultCode.NOT_FOUND, ResultCode.USER_BANNED,
+            ResultCode.ACCOUNT_DEACTIVATED})
     @PostMapping
     public ApiResponse<PublishedPost> publish(@Valid @RequestBody PublishPostCommand command,
                                               Authentication authentication) {

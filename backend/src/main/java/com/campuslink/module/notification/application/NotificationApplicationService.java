@@ -54,6 +54,15 @@ public class NotificationApplicationService {
         notify(NotificationType.REPLY, replierId, NotificationTargetType.REPLY, replyId, postAuthorId);
     }
 
+    /**
+     * 楼层被引用（F-009 / CR-085）：接收人是被引用楼层的作者，目标是**引用方的新楼层**——
+     * 与 {@link #postReplied} 同构，通知落点永远是"发生互动的新内容"，接收人点进去看到的是引用自己的那条回复。
+     * 自引用抑制沿用 {@code notify()} 既有兜底（引用自己的楼层不打扰自己）。
+     */
+    public void replyQuoted(long quoterId, long newReplyId, long quotedReplyAuthorId) {
+        notify(NotificationType.QUOTE, quoterId, NotificationTargetType.REPLY, newReplyId, quotedReplyAuthorId);
+    }
+
     /** 回复被采纳：接收人是被采纳楼层的作者，目标即该楼层 */
     public void replyAccepted(long askerId, long replyId, long replyAuthorId) {
         notify(NotificationType.ACCEPT, askerId, NotificationTargetType.REPLY, replyId, replyAuthorId);

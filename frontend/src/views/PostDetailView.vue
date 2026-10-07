@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   getPost,
@@ -47,6 +47,8 @@ const acceptingReplyId = ref<number | null>(null)
 const togglingLike = ref(false)
 const togglingFavorite = ref(false)
 const likingReplyId = ref<number | null>(null)
+/** 引用回复（F-009 / CR-085）：当前引用目标；null = 未在引用态。切换帖子时随 watch 重置 */
+const quoting = ref<{ replyId: number; floorNo: number; authorNickname: string } | null>(null)
 /** 从通知跳入时被点名的楼层 id（?floor=），命中则滚动 + 高亮 */
 const focusedFloorId = ref('')
 
@@ -287,9 +289,10 @@ async function submitReply() {
   }
   submitting.value = true
   try {
-    const res = await publishReply(postId.value, contentMd)
+    const res = await publishReply(postId.value, contentMd, quoting.value?.replyId)
     ElMessage.success(`回复成功，你在 ${res.floorNo} 楼`)
     replyMd.value = ''
+    quoting.value = null
     page.value = Math.max(1, Math.ceil(res.floorNo / size))
     await Promise.all([loadReplies(), loadPost()])
   } catch (e) {
@@ -297,6 +300,20 @@ async function submitReply() {
   } finally {
     submitting.value = false
   }
+}
+
+/**
+ * 楼层「引用」（F-009 / CR-085）：记录引用目标并滚到 composer。重复点击即换引用对象（只引用最后一次），
+ * 取消走 cancelQuote；提交后清空，引用块由楼层列表刷新时按服务端数据渲染。
+ */
+function quoteReply(r: ReplyVo) {
+  if (!requireLoginOrRedirect()) return
+  quoting.value = { replyId: r.id, floorNo: r.floorNo, authorNickname: r.authorNickname }
+  document.getElementById('replyComposer')?.scrollIntoView({ block: 'center' })
+}
+
+function cancelQuote() {
+  quoting.value = null
 }
 
 /**
@@ -363,6 +380,7 @@ watch(
   () => {
     page.value = 1
     replyMd.value = ''
+    quoting.value = null
     focusedFloorId.value = ''
     loadPost()
     loadReplies().then(focusFloorFromQuery)
@@ -582,6 +600,15 @@ watch(
                     采纳
                   </el-button>
                   <el-button
+                    v-if="auth.isLoggedIn"
+                    link
+                    size="small"
+                    class="ml-1"
+                    @click="quoteReply(r)"
+                  >
+                    引用
+                  </el-button>
+                  <el-button
                     v-if="auth.user?.id !== r.authorId"
                     link
                     size="small"
@@ -590,6 +617,14 @@ watch(
                   >
                     举报
                   </el-button>
+                </div>
+                <!-- 引用块（F-009 / CR-085）：服务端摘要，被引楼层不可见时 quoted 为 null 不渲染 -->
+                <div
+                  v-if="r.quoted"
+                  class="mb-1.5 rounded-sm border-[0.5px] border-divider bg-code px-2.5 py-1.5 text-caption text-ink-meta"
+                >
+                  <span class="text-ink-regular">引用 #{{ r.quoted.floorNo }} 楼 · {{ r.quoted.authorNickname }}</span>
+                  <span class="ml-1.5">{{ r.quoted.excerpt }}</span>
                 </div>
                 <div class="markdown-body" v-highlight v-html="r.contentHtml" />
               </div>
@@ -608,14 +643,26 @@ watch(
 
           <div class="mx-auto mt-4 max-w-reading px-5 pb-5">
             <template v-if="auth.isLoggedIn">
-              <el-input
-                v-model="replyMd"
-                type="textarea"
-                :rows="narrow ? 4 : 6"
-                maxlength="50000"
-                show-word-limit
-                placeholder="写下你的回复…支持 Markdown（回复发布后按楼层展示）"
-              />
+              <div id="replyComposer">
+                <!-- 引用条（F-009 / CR-085）：点击楼层「引用」后出现，可取消；提交成功后由 submitReply 清空 -->
+                <div
+                  v-if="quoting"
+                  class="mb-2 flex items-center gap-2 rounded-sm border-[0.5px] border-divider bg-code px-2.5 py-1.5 text-caption text-ink-meta"
+                >
+                  <span>
+                    回复 <span class="text-ink-regular">#{{ quoting.floorNo }} 楼 · {{ quoting.authorNickname }}</span>
+                  </span>
+                  <el-button link size="small" class="ml-auto" @click="cancelQuote">取消引用</el-button>
+                </div>
+                <el-input
+                  v-model="replyMd"
+                  type="textarea"
+                  :rows="narrow ? 4 : 6"
+                  maxlength="50000"
+                  show-word-limit
+                  placeholder="写下你的回复…支持 Markdown（回复发布后按楼层展示）"
+                />
+              </div>
               <div class="mt-3 flex justify-end">
                 <el-button type="primary" :loading="submitting" @click="submitReply">回复</el-button>
               </div>
@@ -658,32 +705,34 @@ watch(
         </template>
       </el-skeleton>
     </el-card>
-  </div>
 
-<!-- 举报对话框（F-SAFE-002 / CR-084）：理由五选一 + 补充说明；24h 同对象去重由后端兜底（429 / 2012） -->
-<el-dialog v-model="reportDialogVisible" title="提交举报" width="440px">
-  <el-form label-position="top">
-    <el-form-item label="举报理由">
-      <el-select v-model="reportForm.reason" class="w-full">
-        <el-option v-for="r in REPORT_REASONS" :key="r.value" :label="r.label" :value="r.value" />
-      </el-select>
-    </el-form-item>
-    <el-form-item label="补充说明（可选）">
-      <el-input
-        v-model="reportForm.detail"
-        type="textarea"
-        :rows="3"
-        maxlength="1024"
-        show-word-limit
-        placeholder="补充问题描述（可选）"
-      />
-    </el-form-item>
-  </el-form>
-  <template #footer>
-    <el-button @click="reportDialogVisible = false">取消</el-button>
-    <el-button type="danger" :loading="reporting" @click="doReport">提交举报</el-button>
-  </template>
-</el-dialog>
+    <!-- 举报对话框（F-SAFE-002 / CR-084）：理由五选一 + 补充说明；24h 同对象去重由后端兜底（429 / 2012）。
+         ⚠️ 必须放在根 div 之内：App.vue 用 <Transition mode="out-in"> 包路由组件，多根组件（fragment）
+         无法被过渡渲染成注释节点——CR-084 把对话框写在根外曾导致详情页整页空白，CR-091 修复 -->
+    <el-dialog v-model="reportDialogVisible" title="提交举报" width="440px">
+      <el-form label-position="top">
+        <el-form-item label="举报理由">
+          <el-select v-model="reportForm.reason" class="w-full">
+            <el-option v-for="r in REPORT_REASONS" :key="r.value" :label="r.label" :value="r.value" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="补充说明（可选）">
+          <el-input
+            v-model="reportForm.detail"
+            type="textarea"
+            :rows="3"
+            maxlength="1024"
+            show-word-limit
+            placeholder="补充问题描述（可选）"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="reportDialogVisible = false">取消</el-button>
+        <el-button type="danger" :loading="reporting" @click="doReport">提交举报</el-button>
+      </template>
+    </el-dialog>
+  </div>
 </template>
 
 <style scoped>
@@ -756,6 +805,23 @@ watch(
 
 .markdown-body :deep(.cl-pre-wrap > pre) {
   margin: 0;
+}
+
+/* 语言标注（CR-091，参考 paicoding 的 attr(lang)）：常驻显示在复制按钮左侧；
+   只对带 language-* 的代码块出现（data-lang 由 copyCode.ts 写入），无语言不占位 */
+.markdown-body :deep(.cl-pre-wrap[data-lang])::after {
+  content: attr(data-lang);
+  position: absolute;
+  top: 14px;
+  right: 72px;
+  font-family: ui-monospace, SFMono-Regular, 'JetBrains Mono', Menlo, Consolas, monospace;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  line-height: 1;
+  color: var(--cl-text-meta);
+  opacity: 0.75;
+  pointer-events: none;
+  user-select: none;
 }
 
 .markdown-body :deep(.cl-copy-btn) {

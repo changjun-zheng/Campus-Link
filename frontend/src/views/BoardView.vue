@@ -64,6 +64,8 @@ watch(
 </script>
 
 <template>
+  <!-- TRANSITION-SINGLE-ROOT：App.vue 以 <Transition mode="out-in"> 包路由组件，多根组件（fragment）在该模式下会随机卡死路由切换（CR-091 修复详情页同类问题） -->
+  <div>
   <nav class="mb-3 flex items-center gap-1.5 text-note" aria-label="面包屑">
     <RouterLink to="/">首页</RouterLink>
     <span class="text-ink-meta">/</span>
@@ -135,4 +137,5 @@ watch(
       </div>
     </template>
   </el-card>
+  </div>
 </template>

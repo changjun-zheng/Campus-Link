@@ -11,6 +11,7 @@ import com.campuslink.module.forum.application.cmd.ForumResults.MyReplyItem;
 import com.campuslink.module.forum.application.cmd.ForumResults.PostBrief;
 import com.campuslink.module.forum.application.cmd.ForumResults.PostDetail;
 import com.campuslink.module.forum.application.cmd.ForumResults.PostSummary;
+import com.campuslink.module.forum.application.cmd.ForumResults.QuotedBrief;
 import com.campuslink.module.forum.application.cmd.ForumResults.ReplyBrief;
 import com.campuslink.module.forum.application.cmd.ForumResults.ReplyItem;
 import com.campuslink.module.forum.application.cmd.ForumResults.SimilarPostResult;
@@ -33,8 +34,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -141,14 +144,25 @@ public class ForumQueryApplicationService {
                 likedByMe, favoritedByMe, post.getCreatedAt());
     }
 
-    /** 楼层列表：帖子不可读则不暴露其楼层；viewerId 为 null（匿名）时 likedByMe 恒 false（F-FORUM-005） */
+    /**
+     * 楼层列表：帖子不可读则不暴露其楼层；viewerId 为 null（匿名）时 likedByMe 恒 false（F-FORUM-005）。
+     *
+     * <p>引用摘要（F-009 / CR-085）：被引楼层一页一次批量取（{@code findVisibleByIds}，可见性口径与
+     * 单条版同源），excerpt 走 {@code toPlainSummary} 120 字；被引楼层不可见（下架 / 已删除）即不渲染。
+     * 引用作者的昵称**并入同一批** {@code nicknamesOf}（楼层作者 + 被引楼层作者一次取齐），不做 N+1。
+     */
     public PageResult<ReplyItem> listReplies(Long postId, int page, int size, Long viewerId) {
         requireVisiblePost(postId);
         int currentPage = normalizePage(page);
         int pageSize = normalizeSize(size);
         PageResult<Reply> found = replyRepository.findPageByPostId(postId, currentPage, pageSize);
-        Map<Long, String> nicknames = accountApplicationService.nicknamesOf(
-                found.items().stream().map(Reply::getAuthorId).toList());
+        Map<Long, Reply> quotedVisible = replyRepository.findVisibleByIds(
+                        found.items().stream().map(Reply::getQuotedReplyId)
+                                .filter(Objects::nonNull).collect(Collectors.toSet()))
+                .stream().collect(Collectors.toMap(Reply::getId, Function.identity()));
+        Set<Long> authorIds = new LinkedHashSet<>(found.items().stream().map(Reply::getAuthorId).toList());
+        quotedVisible.values().forEach(quoted -> authorIds.add(quoted.getAuthorId()));
+        Map<Long, String> nicknames = accountApplicationService.nicknamesOf(List.copyOf(authorIds));
         Set<Long> likedReplyIds = viewerId == null ? Set.of()
                 : likeRepository.findLikedTargetIds(viewerId, LikeTargetType.REPLY,
                         found.items().stream().map(Reply::getId).toList());
@@ -156,9 +170,27 @@ public class ForumQueryApplicationService {
                 .map(reply -> new ReplyItem(reply.getId(), reply.getFloorNo(), reply.getContentHtml(),
                         reply.getAuthorId(), nicknames.getOrDefault(reply.getAuthorId(), NICKNAME_FALLBACK),
                         reply.isAccepted(), reply.getLikeCount(),
-                        likedReplyIds.contains(reply.getId()), reply.getCreatedAt()))
+                        likedReplyIds.contains(reply.getId()),
+                        quotedBriefOf(reply, quotedVisible, nicknames), reply.getCreatedAt()))
                 .toList();
         return new PageResult<>(items, found.total(), currentPage, pageSize);
+    }
+
+    /**
+     * 被引用楼层摘要（F-009 / CR-085）：目标不在可见集合（不存在 / 已下架 / 已删除）→ null，
+     * 前端不渲染引用块——"内容不可见不外泄"同 CR-066 通知标题回落的判定思路。
+     */
+    private QuotedBrief quotedBriefOf(Reply reply, Map<Long, Reply> quotedVisible, Map<Long, String> nicknames) {
+        if (reply.getQuotedReplyId() == null) {
+            return null;
+        }
+        Reply target = quotedVisible.get(reply.getQuotedReplyId());
+        if (target == null) {
+            return null;
+        }
+        return new QuotedBrief(target.getId(), target.getFloorNo(),
+                nicknames.getOrDefault(target.getAuthorId(), NICKNAME_FALLBACK),
+                markdownRenderer.toPlainSummary(target.getContentMd(), SUMMARY_MAX_CHARS));
     }
 
     /**

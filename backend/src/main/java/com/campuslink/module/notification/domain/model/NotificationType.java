@@ -5,15 +5,16 @@ package com.campuslink.module.notification.domain.model;
  * （V1 DDL 注释 {@code reply/like/favorite/accept/quote}），与 {@code likes.target_type} 的大写枚举名
  * 分属两套词表，不要混用。
  *
- * <p>{@code QUOTE}（回复被引用）未实现——引用回复不在 MVP，故本枚举不列该值，
- * 待 F-FORUM-009 引用功能落地时再加。
+ * <p>{@code QUOTE}（回复被引用）自 CR-085（F-009）落地：词表是 V1 就预留的值，本轮兑现；
+ * 通知目标是**引用方的新楼层**（与 REPLY 同构，落点永远是发生互动的新内容）。
  */
 public enum NotificationType {
 
     REPLY("reply"),
     LIKE("like"),
     FAVORITE("favorite"),
-    ACCEPT("accept");
+    ACCEPT("accept"),
+    QUOTE("quote");
 
     private final String code;
 

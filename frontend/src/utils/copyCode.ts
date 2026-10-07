@@ -127,12 +127,18 @@ export function injectCopyButtons(container: HTMLElement | null | undefined): nu
     if (pre.parentElement?.classList.contains('cl-pre-wrap')) continue
     // 必须在注入按钮**之前**快照代码文本：若 `<pre>` 没有 `<code>` 子元素，
     // 实时读 `pre.innerText` / `textContent` 会把按钮自身的"复制"文本一起带上。
-    const codeText = ((pre.querySelector('code') || pre).textContent || '').replace(/\n$/, '')
+    const codeEl = pre.querySelector('code')
+    const codeText = ((codeEl || pre).textContent || '').replace(/\n$/, '')
 
     const wrap = document.createElement('div')
     wrap.className = 'cl-pre-wrap'
     // 显式补上定位上下文，避免依赖调用方的 scoped CSS（本工具可能被多个组件复用）
     wrap.style.position = 'relative'
+    // 语言标注（CR-091，参考 paicoding）：读 highlight.js 的 `language-*` 类，写到
+    // wrapper 的 data-lang 上，由 CSS 以 content:attr(data-lang) 常驻显示在复制按钮左侧；
+    // 无语言类（无围栏标注的代码块）不显示。
+    const lang = codeEl?.className.match(/language-([\w+-]+)/)
+    if (lang) wrap.dataset.lang = lang[1].toUpperCase()
     pre.parentNode?.insertBefore(wrap, pre)
     wrap.appendChild(pre)
     wrap.appendChild(createButton(codeText))

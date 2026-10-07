@@ -85,6 +85,7 @@ function onActivate(n: NotificationVo) {
 /** 动作短语：type 决定动词，targetType 决定对象是帖子还是楼层 */
 function actionOf(n: NotificationVo): string {
   if (n.type === 'reply') return '回复了你的帖子'
+  if (n.type === 'quote') return '引用了你的回复'
   if (n.type === 'accept') return '采纳了你的回复'
   if (n.type === 'favorite') return '收藏了你的帖子'
   return n.targetType === 'POST' ? '点赞了你的帖子' : '点赞了你的回复'
@@ -102,11 +103,13 @@ loadNotifications()
 </script>
 
 <template>
+  <!-- TRANSITION-SINGLE-ROOT：App.vue 以 <Transition mode="out-in"> 包路由组件，多根组件（fragment）在该模式下会随机卡死路由切换（CR-091 修复详情页同类问题） -->
+  <div>
   <el-card shadow="never" class="mb-4">
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div>
         <h2 class="text-title-lg font-medium text-ink">通知中心</h2>
-        <p class="mt-1.5 text-note text-ink-meta">回复、采纳、点赞与收藏的站内提醒，仅本人可见</p>
+        <p class="mt-1.5 text-note text-ink-meta">回复、引用、采纳、点赞与收藏的站内提醒，仅本人可见</p>
       </div>
       <div class="flex items-center gap-3">
         <el-radio-group v-model="onlyUnread" @change="onFilterChange">
@@ -208,4 +211,5 @@ loadNotifications()
       </div>
     </template>
   </el-card>
+  </div>
 </template>

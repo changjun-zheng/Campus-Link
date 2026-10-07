@@ -247,7 +247,7 @@ class PostApplicationServiceTest {
     }
 
     private static Reply reply(Long id, Long authorId, Long postId) {
-        return Reply.rehydrate(id, postId, authorId, 1, "内容", "<p>内容</p>", false, 0, null);
+        return Reply.rehydrate(id, postId, authorId, 1, "内容", "<p>内容</p>", null, false, 0, null);
     }
 
     private static Reply reply(Long id, Long authorId) {

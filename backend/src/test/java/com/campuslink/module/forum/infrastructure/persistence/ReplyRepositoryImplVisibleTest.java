@@ -129,6 +129,27 @@ class ReplyRepositoryImplVisibleTest {
         assertThat(result).isEmpty();
     }
 
+    /**
+     * CR-085 引用摘要的批量版：条件必须与单条版 {@code findVisibleById} 同源——
+     * 若少了 status 或 is_deleted，被下架 / 已删除楼层的内容就会经引用块重新外泄给读者。
+     */
+    @Test
+    @DisplayName("findVisibleByIds：IN + status='PUBLISHED' + is_deleted=0 三条件与单条版同源")
+    void visibleIdsQueryCarriesSameConditionsAsSingle() {
+        when(replyMapper.selectList(any())).thenReturn(java.util.List.of());
+        repository.findVisibleByIds(java.util.List.of(11L, 12L));
+
+        ArgumentCaptor<Wrapper<ReplyDO>> captor = ArgumentCaptor.forClass(Wrapper.class);
+        verify(replyMapper).selectList(captor.capture());
+        LambdaQueryWrapper<ReplyDO> query = (LambdaQueryWrapper<ReplyDO>) captor.getValue();
+
+        assertThat(bound(query, STATUS_PARAM)).isEqualTo("PUBLISHED");
+        assertThat(bound(query, IS_DELETED_PARAM)).isEqualTo(false);
+        assertThat(query.getSqlSegment()).contains("IN");
+        assertThat(count(query.getSqlSegment(), "status")).isEqualTo(1);
+        assertThat(count(query.getSqlSegment(), "is_deleted")).isEqualTo(1);
+    }
+
     private int count(String segment, String column) {
         int n = 0;
         for (int i = segment.indexOf(column); i >= 0; i = segment.indexOf(column, i + column.length())) {

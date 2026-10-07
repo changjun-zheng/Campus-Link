@@ -38,7 +38,7 @@ public class AdminUserController {
 
     @Operation(summary = "封禁 / 解封（仅 SUPERADMIN）：BANNED 即时生效（登录拒绝、发帖回帖拒绝），全程审计")
     @SecurityRequirement(name = ApiDocs.BEARER_AUTH)
-    @ErrorCodes({ResultCode.NOT_LOGGED_IN, ResultCode.FORBIDDEN, ResultCode.USER_NOT_FOUND, ResultCode.INVALID_PARAM})
+    @ErrorCodes({ResultCode.NOT_LOGGED_IN, ResultCode.FORBIDDEN, ResultCode.USER_NOT_FOUND})
     @PutMapping("/{id}/status")
     public ApiResponse<Void> setStatus(@PathVariable("id") long id,
                                        @Valid @RequestBody StatusCommand command,

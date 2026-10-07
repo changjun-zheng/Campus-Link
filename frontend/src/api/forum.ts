@@ -75,7 +75,20 @@ export interface ReplyVo {
   accepted: boolean
   /** 当前登录用户是否已点赞该楼层（F-FORUM-005）；匿名请求恒 false */
   likedByMe: boolean
+  /**
+   * 被引用楼层摘要（F-009 / CR-085）：服务端组装的楼层号 + 昵称 + 120 字纯文本摘要。
+   * 无引用、或被引楼层已不可见（下架 / 已删除）时为 null——null 即不渲染引用块。
+   */
+  quoted?: QuotedReplyVo | null
   createdAt: string
+}
+
+/** 被引用楼层摘要（F-009 / CR-085）；excerpt 服务端已去 Markdown 并截断，前端不二次处理 */
+export interface QuotedReplyVo {
+  replyId: number
+  floorNo: number
+  authorNickname: string
+  excerpt: string
 }
 
 export const listBoards = () => get<BoardVo[]>('/boards')
@@ -106,8 +119,12 @@ export const publishPost = (payload: { boardCode: string; title: string; content
  */
 export const deletePost = (id: number | string) => del<void>(`/posts/${id}`)
 
-export const publishReply = (postId: number | string, contentMd: string) =>
-  post<{ id: number; floorNo: number }>(`/posts/${postId}/replies`, { contentMd })
+/**
+ * 回帖（需登录）：quotedReplyId 为引用的目标楼层（F-009 / CR-085），可空；
+ * 目标不存在 / 跨帖时后端 404 / 3001（不区分原因，防按 id 探测）。
+ */
+export const publishReply = (postId: number | string, contentMd: string, quotedReplyId?: number) =>
+  post<{ id: number; floorNo: number }>(`/posts/${postId}/replies`, { contentMd, quotedReplyId })
 
 /** 采纳最佳答案（仅提问者）：可更换（后一次覆盖前一次），不能采纳自己的回复（3003） */
 export const acceptReply = (postId: number | string, replyId: number) =>

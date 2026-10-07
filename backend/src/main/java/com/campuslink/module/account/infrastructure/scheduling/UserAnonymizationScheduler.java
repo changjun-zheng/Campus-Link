@@ -5,6 +5,7 @@ import com.campuslink.module.account.domain.gateway.AccountRepository;
 import com.campuslink.module.account.domain.model.Account;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -17,10 +18,14 @@ import java.util.List;
  *
  * <p>幂等：任务只挑 anonymized = 0 的行，重复执行无二次写。MVP 单实例部署，未加分布式锁
  * （热榜任务的 Redis 锁模式可复用，多实例时再引入——如实登记，实施方案 §2）。
+ *
+ * <p>装配开关 {@code campuslink.account.anonymization.enabled}（CR-090）：缺省即启用
+ * （matchIfMissing = true，既有行为零变化），供 {@code SpringBootContextTest} 关闭调度副作用。
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@ConditionalOnProperty(name = "campuslink.account.anonymization.enabled", havingValue = "true", matchIfMissing = true)
 public class UserAnonymizationScheduler {
 
     private final AccountRepository accountRepository;

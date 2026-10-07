@@ -38,7 +38,7 @@ public class ReportController {
 
     @Operation(summary = "提交举报（需登录）：24 小时内对同一对象重复举报 → 429 / 2012")
     @SecurityRequirement(name = ApiDocs.BEARER_AUTH)
-    @ErrorCodes({ResultCode.NOT_LOGGED_IN, ResultCode.INVALID_PARAM, ResultCode.REPORT_DUPLICATED})
+    @ErrorCodes({ResultCode.NOT_LOGGED_IN, ResultCode.REPORT_DUPLICATED})
     @PostMapping
     public ApiResponse<ReportVo> submit(@Valid @RequestBody ReportCommand command,
                                         Authentication authentication) {

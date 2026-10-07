@@ -29,7 +29,7 @@ import static org.mockito.Mockito.when;
  */
 class ReplyControllerAuthTest {
 
-    private static final PublishReplyCommand COMMAND = new PublishReplyCommand("回复内容");
+    private static final PublishReplyCommand COMMAND = new PublishReplyCommand("回复内容", null);
 
     private final ForumQueryApplicationService forumQueryService = mock(ForumQueryApplicationService.class);
     private final ReplyApplicationService replyApplicationService = mock(ReplyApplicationService.class);

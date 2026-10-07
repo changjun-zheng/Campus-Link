@@ -14,6 +14,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { togglePostLike, type PostSummaryVo } from '../api/forum'
 import { boardNameOf } from '../constants/boards'
 import { useAuthStore } from '../stores/auth'
+import { formatCount } from '../utils/format'
 import { formatRelativeTime } from '../utils/time'
 import SvgIcon from './SvgIcon.vue'
 import UserAvatar from './UserAvatar.vue'
@@ -59,7 +60,7 @@ async function onLike() {
 
 <template>
   <li
-    class="border-b-[0.5px] border-divider px-5 py-3 transition-colors duration-fast ease-standard last:border-b-0 hover:bg-bg-hover"
+    class="border-b-[0.5px] border-divider px-5 py-3.5 transition-colors duration-fast ease-standard last:border-b-0 hover:bg-bg-hover"
   >
     <div class="flex gap-3">
       <div class="min-w-0 flex-1">
@@ -81,36 +82,34 @@ async function onLike() {
           >
             {{ post.title }}
           </RouterLink>
-          <span
-            class="flex flex-none items-center gap-0.5 rounded-sm bg-code px-1.5 py-px text-caption text-ink-meta"
-            :title="`${post.replyCount} 条回复`"
-          >
-            <SvgIcon name="message-2" :size="12" />
-            {{ post.replyCount }}
-          </span>
         </div>
 
+        <!-- 摘要单行截断（CR-091，参考 CSDN 列表项红框样式） -->
         <p
           v-if="showSummary && post.summary"
-          class="mt-1 line-clamp-2 text-note leading-body text-ink-regular"
+          class="mt-1 truncate text-note leading-body text-ink-regular"
         >
           {{ post.summary }}
         </p>
 
-        <div class="mt-1.5 flex flex-wrap items-center gap-1.5 text-caption text-ink-meta">
+        <!-- 元信息行（CR-091，参考 CSDN）：计数改"图标 + 文字 + 数字"并拉宽间距，去点分隔 -->
+        <div class="mt-1.5 flex flex-wrap items-center gap-x-3.5 gap-y-1 text-caption text-ink-meta">
           <template v-if="showBoard">
             <RouterLink :to="`/board/${post.boardCode}`" class="text-link hover:underline">
               {{ post.boardName || boardNameOf(post.boardCode) }}
             </RouterLink>
-            <span aria-hidden="true">·</span>
           </template>
+          <span class="inline-flex items-center gap-1" title="阅读数（同一账号每天只计一次）">
+            <SvgIcon name="eye" :size="12" />
+            阅读 {{ formatCount(post.viewCount) }}
+          </span>
           <!--
             就地点赞（CR-080）：用真 button 而非 span+click——键盘可聚焦、aria-pressed 可读出状态。
             按钮不继承字体，故显式 font-inherit + text-caption，与同行 span 同尺寸同色阶。
           -->
           <button
             type="button"
-            class="inline-flex cursor-pointer items-center gap-0.5 border-0 bg-transparent p-0 font-inherit text-caption transition-colors duration-fast ease-standard"
+            class="inline-flex cursor-pointer items-center gap-1 border-0 bg-transparent p-0 font-inherit text-caption transition-colors duration-fast ease-standard"
             :class="post.likedByMe ? 'font-medium text-primary' : 'text-ink-meta hover:text-link'"
             :aria-pressed="post.likedByMe"
             :aria-label="post.likedByMe ? '取消点赞' : '点赞'"
@@ -119,33 +118,27 @@ async function onLike() {
             @click="onLike"
           >
             <SvgIcon name="thumb-up" :size="12" />
-            {{ post.likeCount }}
+            赞 {{ formatCount(post.likeCount) }}
           </button>
-          <span aria-hidden="true">·</span>
-          <span class="inline-flex items-center gap-0.5" :title="`${post.replyCount} 条回复`">
+          <span class="inline-flex items-center gap-1" :title="`${post.replyCount} 条回复`">
             <SvgIcon name="message-2" :size="12" />
-            {{ post.replyCount }}
-          </span>
-          <span aria-hidden="true">·</span>
-          <span class="inline-flex items-center gap-0.5" title="阅读数">
-            <SvgIcon name="eye" :size="12" />
-            {{ post.viewCount }}
+            回复 {{ formatCount(post.replyCount) }}
           </span>
           <template v-if="post.tags?.length">
-            <span aria-hidden="true">·</span>
             <el-tag v-for="t in post.tags.slice(0, 3)" :key="t" size="small" effect="plain" class="flex-none">
               {{ t }}
             </el-tag>
           </template>
         </div>
       </div>
-      <!-- 封面缩略图（CR-074）：无图帖不占位；仅 https 外链（服务端提取时已限定） -->
+      <!-- 封面缩略图（CR-074）：无图帖不占位；仅 https 外链（服务端提取时已限定）；
+           CR-091 尺寸对齐参考站比例（112×70 ≈ 1.6:1），阅读节奏更接近封面语义 -->
       <img
         v-if="post.coverUrl"
         :src="post.coverUrl"
         alt=""
         loading="lazy"
-        class="h-16 w-24 flex-none rounded-md border-[0.5px] border-line object-cover max-md:hidden"
+        class="h-[70px] w-[112px] flex-none rounded-md border-[0.5px] border-line object-cover max-md:hidden"
       />
     </div>
   </li>

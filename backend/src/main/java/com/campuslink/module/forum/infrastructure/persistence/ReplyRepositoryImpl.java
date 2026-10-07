@@ -74,6 +74,20 @@ public class ReplyRepositoryImpl implements ReplyRepository {
     }
 
     @Override
+    public List<Reply> findVisibleByIds(Collection<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        // 与 findVisibleById 同源的双条件：引用摘要渲染给读者，已下架 / 已删除的楼层不出现（CR-085）
+        return replyMapper.selectList(new LambdaQueryWrapper<ReplyDO>()
+                        .in(ReplyDO::getId, ids)
+                        .eq(ReplyDO::getStatus, STATUS_PUBLISHED)
+                        .eq(ReplyDO::getIsDeleted, false)).stream()
+                .map(ReplyConverter::toDomain)
+                .toList();
+    }
+
+    @Override
     public Optional<ReplyStatus> findStatusById(Long id) {
         // 只读 status 一列：已删行按"不存在"处理（与 findById 的墓碑约定同源），已下架行**必须**能读到
         ReplyDO row = replyMapper.selectOne(new LambdaQueryWrapper<ReplyDO>()

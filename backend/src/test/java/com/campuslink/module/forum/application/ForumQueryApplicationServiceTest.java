@@ -275,6 +275,47 @@ class ForumQueryApplicationServiceTest {
         assertThat(page.total()).isEqualTo(2);
     }
 
+    /**
+     * CR-085 / F-009：引用摘要就地带出——被引楼层一次批量取（可见性口径与单条版同源），
+     * excerpt 走 toPlainSummary 120 字，引用作者的昵称与楼层作者**并入同一批**跨上下文查询。
+     */
+    @Test
+    @DisplayName("引用摘要：楼层就地带出被引楼层的楼层号、昵称与纯文本摘要；无引用楼层 quoted 恒 null")
+    void repliesExposeQuotedBrief() {
+        when(postRepository.findById(9L)).thenReturn(Optional.of(post(9L, 100L)));
+        when(replyRepository.findPageByPostId(9L, 1, 20)).thenReturn(new PageResult<>(
+                List.of(reply(11L, 100L, 1), replyQuoted(12L, 200L, 2, 11L)), 2, 1, 20));
+        when(replyRepository.findVisibleByIds(java.util.Set.of(11L))).thenReturn(List.of(
+                Reply.rehydrate(11L, 9L, 100L, 1, "# 标题\n\n" + "正文".repeat(80), "<p>…</p>",
+                        null, false, 0, CREATED_AT)));
+        when(accountApplicationService.nicknamesOf(any())).thenReturn(Map.of(100L, "张三", 200L, "李四"));
+
+        List<ReplyItem> items = service.listReplies(9L, 1, 20, null).items();
+
+        assertThat(items.get(0).quoted()).isNull();
+        assertThat(items.get(1).quoted()).isNotNull();
+        assertThat(items.get(1).quoted().replyId()).isEqualTo(11L);
+        assertThat(items.get(1).quoted().floorNo()).isEqualTo(1);
+        assertThat(items.get(1).quoted().authorNickname()).isEqualTo("张三");
+        assertThat(items.get(1).quoted().excerpt()).doesNotContain("#").hasSize(120);
+    }
+
+    @Test
+    @DisplayName("引用摘要：被引楼层不可见（下架 / 已删）→ quoted=null 不渲染，且其作者不进昵称批次")
+    void quotedInvisibleYieldsNullBriefAndSkipsItsAuthor() {
+        when(postRepository.findById(9L)).thenReturn(Optional.of(post(9L, 100L)));
+        when(replyRepository.findPageByPostId(9L, 1, 20)).thenReturn(new PageResult<>(
+                List.of(replyQuoted(12L, 200L, 2, 99L)), 1, 1, 20));
+        when(replyRepository.findVisibleByIds(java.util.Set.of(99L))).thenReturn(List.of());
+        when(accountApplicationService.nicknamesOf(List.of(200L))).thenReturn(Map.of(200L, "李四"));
+
+        ReplyItem item = service.listReplies(9L, 1, 20, null).items().getFirst();
+
+        assertThat(item.quoted()).isNull();
+        // 只查了楼层作者：被引楼层的内容已不可见，其作者昵称无从渲染、也不该被批量查询带出
+        verify(accountApplicationService).nicknamesOf(List.of(200L));
+    }
+
     @Test
     @DisplayName("详情登录态回显：viewerId 非空时批量查 likedByMe / favoritedByMe（F-FORUM-005）")
     void detailWithViewerPopulatesMyState() {
@@ -473,7 +514,11 @@ class ForumQueryApplicationServiceTest {
     }
 
     private static Reply reply(Long id, Long authorId, int floorNo) {
-        return Reply.rehydrate(id, 9L, authorId, floorNo, "内容", "<p>内容</p>", false, 0, CREATED_AT);
+        return Reply.rehydrate(id, 9L, authorId, floorNo, "内容", "<p>内容</p>", null, false, 0, CREATED_AT);
+    }
+
+    private static Reply replyQuoted(Long id, Long authorId, int floorNo, Long quotedReplyId) {
+        return Reply.rehydrate(id, 9L, authorId, floorNo, "内容", "<p>内容</p>", quotedReplyId, false, 0, CREATED_AT);
     }
 
     // ── Similar-post recommendation (findSimilarPosts) ──────────────────────────────────────────

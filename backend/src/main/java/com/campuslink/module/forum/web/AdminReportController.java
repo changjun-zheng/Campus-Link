@@ -68,7 +68,7 @@ public class AdminReportController {
 
     @Operation(summary = "工单处理（仅 SUPERADMIN）：action=REMOVE 联动目标处置（下架 / 封禁），DISMISS 驳回；闭环 + 审计")
     @SecurityRequirement(name = ApiDocs.BEARER_AUTH)
-    @ErrorCodes({ResultCode.NOT_LOGGED_IN, ResultCode.FORBIDDEN, ResultCode.NOT_FOUND, ResultCode.INVALID_PARAM})
+    @ErrorCodes({ResultCode.NOT_LOGGED_IN, ResultCode.FORBIDDEN, ResultCode.NOT_FOUND})
     @PutMapping("/{id}")
     public ApiResponse<Void> close(@PathVariable("id") long id,
                                    @Valid @RequestBody CloseCommand command,

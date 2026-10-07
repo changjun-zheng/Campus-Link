@@ -156,6 +156,8 @@ function goLogin() {
 </script>
 
 <template>
+  <!-- TRANSITION-SINGLE-ROOT：App.vue 以 <Transition mode="out-in"> 包路由组件，多根组件（fragment）在该模式下会随机卡死路由切换（CR-091 修复详情页同类问题） -->
+  <div>
   <!-- 非超管（含未登录）：占位与 /admin 既有口径一致，权限边界在后端 -->
   <el-result
     v-if="!isSuperadmin"
@@ -300,6 +302,7 @@ function goLogin() {
       </p>
     </el-card>
   </template>
+  </div>
 </template>
 
 <script lang="ts">

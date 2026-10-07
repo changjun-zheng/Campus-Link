@@ -7,6 +7,7 @@ import com.campuslink.module.account.application.AccountApplicationService;
 import com.campuslink.module.forum.application.cmd.ForumResults.PublishedReply;
 import com.campuslink.module.forum.application.cmd.PublishReplyCommand;
 import com.campuslink.module.forum.domain.exception.PostNotFoundException;
+import com.campuslink.module.forum.domain.exception.QuotedReplyNotFoundException;
 import com.campuslink.module.forum.domain.gateway.ModerationGateway;
 import com.campuslink.module.forum.domain.gateway.PostRepository;
 import com.campuslink.module.forum.domain.gateway.ReplyRepository;
@@ -42,14 +43,25 @@ public class ReplyApplicationService {
         Post post = postRepository.findById(postId)
                 .filter(Post::isVisible)
                 .orElseThrow(PostNotFoundException::new);
+        // 引用校验（F-009 / CR-085）先于机审与楼层号分配：楼层号是计数产物，无效请求不应消耗；
+        // 语义排序与下一条机审注一致——目标不存在 / 跨帖一律 3001（不区分，防按 id 探测他帖楼层）
+        Reply quoted = null;
+        if (command.quotedReplyId() != null) {
+            quoted = replyRepository.findVisibleById(command.quotedReplyId())
+                    .filter(r -> r.getPostId().equals(post.getId()))
+                    .orElseThrow(QuotedReplyNotFoundException::new);
+        }
         // 机审放在帖子可见性校验之后：不可回帖的目标先给出准确的 3001，而不是被 5002 抢占语义
         moderateOrThrow(command.contentMd());
         int floorNo = postRepository.incrementReplyCountAndGet(post.getId());
         Reply reply = Reply.post(post.getId(), authorId, floorNo, command.contentMd(),
-                markdownRenderer.render(command.contentMd()));
+                markdownRenderer.render(command.contentMd()), command.quotedReplyId());
         Long replyId = replyRepository.save(reply).getId();
         // 通知与回帖同事务写入（F-SOC-001）；自问自答不产生通知，抑制逻辑归 notification 侧统一兜底
         notificationService.postReplied(authorId, replyId, post.getAuthorId());
+        if (quoted != null) {
+            notificationService.replyQuoted(authorId, replyId, quoted.getAuthorId());
+        }
         return new PublishedReply(replyId, floorNo);
     }
 

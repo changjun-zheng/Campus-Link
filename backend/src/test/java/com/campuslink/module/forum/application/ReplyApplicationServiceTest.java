@@ -70,9 +70,9 @@ class ReplyApplicationServiceTest {
         when(postRepository.findById(POST_ID)).thenReturn(Optional.of(post(PostStatus.PUBLISHED)));
         when(postRepository.incrementReplyCountAndGet(POST_ID)).thenReturn(1);
         when(replyRepository.save(any())).thenReturn(
-                Reply.rehydrate(456L, POST_ID, AUTHOR_ID, 1, "hi", "<p>hi</p>", false, 0, Instant.now()));
+                Reply.rehydrate(456L, POST_ID, AUTHOR_ID, 1, "hi", "<p>hi</p>", null, false, 0, Instant.now()));
 
-        PublishedReply result = service.reply(POST_ID, AUTHOR_ID, new PublishReplyCommand("**hi**"));
+        PublishedReply result = service.reply(POST_ID, AUTHOR_ID, new PublishReplyCommand("**hi**", null));
 
         assertThat(result.id()).isEqualTo(456L);
         assertThat(result.floorNo()).isEqualTo(1);
@@ -92,7 +92,7 @@ class ReplyApplicationServiceTest {
     void missingPostIsNotFound() {
         when(postRepository.findById(POST_ID)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.reply(POST_ID, AUTHOR_ID, new PublishReplyCommand("hi")))
+        assertThatThrownBy(() -> service.reply(POST_ID, AUTHOR_ID, new PublishReplyCommand("hi", null)))
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
 
@@ -105,11 +105,84 @@ class ReplyApplicationServiceTest {
     void removedPostIsNotRepliable() {
         when(postRepository.findById(POST_ID)).thenReturn(Optional.of(post(PostStatus.REMOVED)));
 
-        assertThatThrownBy(() -> service.reply(POST_ID, AUTHOR_ID, new PublishReplyCommand("hi")))
+        assertThatThrownBy(() -> service.reply(POST_ID, AUTHOR_ID, new PublishReplyCommand("hi", null)))
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
 
         verifyNoInteractions(replyRepository);
+    }
+
+    @Test
+    @DisplayName("带引用回帖（CR-085）：落库携带 quotedReplyId，帖子作者与被引用楼层作者各收一条通知")
+    void replyWithQuoteSavesReferenceAndNotifiesBoth() {
+        when(postRepository.findById(POST_ID)).thenReturn(Optional.of(post(PostStatus.PUBLISHED)));
+        when(replyRepository.findVisibleById(11L)).thenReturn(Optional.of(quoted(7L)));
+        when(postRepository.incrementReplyCountAndGet(POST_ID)).thenReturn(2);
+        when(replyRepository.save(any())).thenReturn(
+                Reply.rehydrate(456L, POST_ID, AUTHOR_ID, 2, "hi", "<p>hi</p>", 11L, false, 0, Instant.now()));
+
+        PublishedReply result = service.reply(POST_ID, AUTHOR_ID, new PublishReplyCommand("hi", 11L));
+
+        assertThat(result.floorNo()).isEqualTo(2);
+        ArgumentCaptor<Reply> captor = ArgumentCaptor.forClass(Reply.class);
+        verify(replyRepository).save(captor.capture());
+        assertThat(captor.getValue().getQuotedReplyId()).isEqualTo(11L);
+        verify(notificationService).postReplied(AUTHOR_ID, 456L, 7L);
+        verify(notificationService).replyQuoted(AUTHOR_ID, 456L, 7L);
+    }
+
+    @Test
+    @DisplayName("引用目标不可见（不存在 / 已下架 / 已删除）→ 3001，且不分配楼层、不落库、不发通知")
+    void invisibleQuotedReplyIsNotFound() {
+        when(postRepository.findById(POST_ID)).thenReturn(Optional.of(post(PostStatus.PUBLISHED)));
+        when(replyRepository.findVisibleById(11L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.reply(POST_ID, AUTHOR_ID, new PublishReplyCommand("hi", 11L)))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
+
+        verify(postRepository, never()).incrementReplyCountAndGet(any());
+        verify(replyRepository, never()).save(any());
+        verifyNoInteractions(notificationService);
+    }
+
+    @Test
+    @DisplayName("引用他帖楼层 → 同一个 3001（不区分原因，防按 id 探测他帖内容），零副作用")
+    void crossPostQuotedReplyIsNotFound() {
+        when(postRepository.findById(POST_ID)).thenReturn(Optional.of(post(PostStatus.PUBLISHED)));
+        when(replyRepository.findVisibleById(11L)).thenReturn(Optional.of(
+                Reply.rehydrate(11L, 8L, 7L, 1, "内容", "<p>内容</p>", null, false, 0, Instant.now())));
+
+        assertThatThrownBy(() -> service.reply(POST_ID, AUTHOR_ID, new PublishReplyCommand("hi", 11L)))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
+
+        verify(postRepository, never()).incrementReplyCountAndGet(any());
+        verify(replyRepository, never()).save(any());
+        verifyNoInteractions(notificationService);
+    }
+
+    /**
+     * 楼层号是 {@code reply_count} 计数产物、机审是 fail-closed 安全门——引用校验必须排在两者之前，
+     * 否则"引用目标不存在"这种确定性错误会被 5002 / 楼层号消耗抢在前面，语义就错了。
+     */
+    @Test
+    @DisplayName("引用校验先于机审：引用目标缺失时 3001 抢在 5002 之前给出，机审从未被触达")
+    void quoteCheckRunsBeforeModeration() {
+        when(postRepository.findById(POST_ID)).thenReturn(Optional.of(post(PostStatus.PUBLISHED)));
+        when(replyRepository.findVisibleById(11L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.reply(POST_ID, AUTHOR_ID, new PublishReplyCommand("hi", 11L)))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
+
+        verify(moderationGateway, never()).moderate(any());
+        verify(postRepository, never()).incrementReplyCountAndGet(any());
+        verifyNoInteractions(notificationService);
+    }
+
+    private static Reply quoted(Long authorId) {
+        return Reply.rehydrate(11L, POST_ID, authorId, 1, "被引内容", "<p>被引内容</p>", null, false, 0, Instant.now());
     }
 
     private static Post post(PostStatus status) {

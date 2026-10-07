@@ -28,10 +28,17 @@ public final class ForumResults {
                              Instant createdAt) {
     }
 
-    /** 楼层项（设计 §3.5）：authorId / accepted 供前端渲染采纳按钮与已采纳标识（F-QA-001）；likeCount / likedByMe 供楼层点赞回显（F-FORUM-005），likedByMe 仅登录时填充 */
+    /** 楼层项（设计 §3.5）：authorId / accepted 供前端渲染采纳按钮与已采纳标识（F-QA-001）；likeCount / likedByMe 供楼层点赞回显（F-FORUM-005），likedByMe 仅登录时填充；quoted 为被引用楼层摘要（F-009 / CR-085），无引用或被引楼层不可见时为 null */
     public record ReplyItem(Long id, int floorNo, String contentHtml, long authorId,
                             String authorNickname, boolean accepted, int likeCount,
-                            boolean likedByMe, Instant createdAt) {
+                            boolean likedByMe, QuotedBrief quoted, Instant createdAt) {
+    }
+
+    /**
+     * 被引用楼层摘要（F-009 / CR-085）：excerpt 为服务端去 Markdown 后的 120 字纯文本（口径同列表摘要）。
+     * 载体刻意只含"渲染引用块"四件事——被引楼层的正文原文、点赞数等不下发。
+     */
+    public record QuotedBrief(long replyId, int floorNo, String authorNickname, String excerpt) {
     }
 
     /** 发帖结果：只回 id，前端据此跳详情（设计 §3.3） */

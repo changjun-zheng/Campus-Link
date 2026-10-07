@@ -64,7 +64,7 @@ public class AccountController {
     }
 
     @Operation(summary = "登录：邮箱 + 验证码")
-    @ErrorCodes({ResultCode.LOGIN_FAILED, ResultCode.USER_BANNED})
+    @ErrorCodes({ResultCode.LOGIN_FAILED, ResultCode.USER_BANNED, ResultCode.ACCOUNT_EXPIRED})
     @PublicEndpoint
     @PostMapping("/login")
     public ApiResponse<AuthResponse> login(@Valid @RequestBody LoginCommand command) {

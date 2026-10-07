@@ -94,7 +94,7 @@ class ForumPublicReadTest {
     @DisplayName("楼层列表：匿名可读")
     void repliesAreReadableAnonymously() {
         when(forumQueryService.listReplies(1L, 1, 20, null)).thenReturn(new PageResult<>(
-                List.of(new ReplyItem(11L, 1, "<p>一</p>", 42L, "张三", false, 0, false, CREATED_AT)), 1, 1, 20));
+                List.of(new ReplyItem(11L, 1, "<p>一</p>", 42L, "张三", false, 0, false, null, CREATED_AT)), 1, 1, 20));
 
         var response = replyController.list(1L, 1, 20, null);
 
