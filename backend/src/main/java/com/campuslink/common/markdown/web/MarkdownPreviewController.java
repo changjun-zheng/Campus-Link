@@ -40,7 +40,6 @@ public class MarkdownPreviewController {
 
     @Operation(summary = "Markdown 预览（公开）：返回服务端渲染并净化的 HTML，供发帖页实时预览")
     @PublicEndpoint
-    @ErrorCodes({ResultCode.INVALID_PARAM})
     @PostMapping("/preview")
     public ApiResponse<PreviewResult> preview(@Valid @RequestBody PreviewCommand command) {
         return ApiResponse.ok(new PreviewResult(markdownRenderer.render(command.contentMd())));

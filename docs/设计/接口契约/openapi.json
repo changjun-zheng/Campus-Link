@@ -57,6 +57,10 @@
       "description": "学籍名册导入（仅 SUPERADMIN）"
     },
     {
+      "name": "markdown",
+      "description": "Markdown 渲染（预览，F-012）"
+    },
+    {
       "name": "user",
       "description": "用户"
     },
@@ -1697,6 +1701,57 @@
             "bearerAuth": []
           }
         ]
+      }
+    },
+    "/api/v1/markdown/preview": {
+      "post": {
+        "tags": [
+          "markdown"
+        ],
+        "summary": "Markdown 预览（公开）：返回服务端渲染并净化的 HTML，供发帖页实时预览",
+        "operationId": "preview",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewCommand"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponsePreviewResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数错误（1001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "系统繁忙，请稍后再试（9999）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/auth/verify-student": {
@@ -3534,6 +3589,45 @@
         "required": [
           "replyId"
         ]
+      },
+      "PreviewCommand": {
+        "type": "object",
+        "properties": {
+          "contentMd": {
+            "type": "string",
+            "maxLength": 50000,
+            "minLength": 0
+          }
+        },
+        "required": [
+          "contentMd"
+        ]
+      },
+      "ApiResponsePreviewResult": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/PreviewResult"
+          },
+          "traceId": {
+            "type": "string"
+          }
+        }
+      },
+      "PreviewResult": {
+        "type": "object",
+        "properties": {
+          "html": {
+            "type": "string"
+          }
+        }
       },
       "VerifyStudentCommand": {
         "type": "object",
