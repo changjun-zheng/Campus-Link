@@ -101,8 +101,6 @@ class AccountApplicationServiceNicknameTest {
     }
 
     private static Account account(Long id, String nickname) {
-        return Account.rehydrate(id, EmailAddress.of("u" + id + "@example.com"), null, nickname,
-                null, null, null, null, null,
-                AccountRole.USER, AccountStatus.ACTIVE, true, false, null, null, null);
+        return Account.rehydrate(id, EmailAddress.of("u" + id + "@example.com"), null, null, nickname, null, null, null, null, null, AccountRole.USER, AccountStatus.ACTIVE, true, false, null, null, null);
     }
 }

@@ -2,7 +2,6 @@ package com.campuslink.module.account.application.cmd;
 
 import com.campuslink.common.validation.FieldRules;
 import com.campuslink.module.account.domain.model.Account;
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -27,13 +26,25 @@ public final class AccountCommands {
         public record VerifyStudentResult(String ticket) {
         }
 
+        /**
+         * 发送验证码（CR-093 / F-011）：target 为**邮箱或手机号**二合一——
+         * 格式门是两条正则的并集（HTML5 email 同族 ∪ 大陆手机号），分流归应用服务
+         * （PhoneNumber.looksLike 分流，避免对 11 位数字误走邮箱解析）。
+         */
         public record CaptchaCommand(
-                        @NotBlank @Email(message = "邮箱格式不正确") String target) {
+                        @NotBlank(message = "target 不能为空")
+                        @Pattern(regexp = "(?:^1[3-9]\\d{9}$)|(?:^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$)",
+                                message = "target 须为邮箱或手机号")
+                        String target) {
         }
 
+        /** 注册（CR-093 / F-011）：contact 为**邮箱或手机号**二合一（与登录的 account 同一格式门） */
         public record RegisterCommand(
                         @NotBlank(message = "核验票据不能为空") String ticket,
-                        @NotBlank @Email(message = "邮箱格式不正确") String email,
+                        @NotBlank(message = "邮箱 / 手机号不能为空")
+                        @Pattern(regexp = "(?:^1[3-9]\\d{9}$)|(?:^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$)",
+                                message = "contact 须为邮箱或手机号")
+                        String contact,
                         @NotBlank @Pattern(regexp = "\\d{6}", message = "验证码为 6 位数字") String code,
                         @NotBlank @Size(min = FieldRules.NICKNAME_MIN_CHARS, max = FieldRules.NICKNAME_MAX_CHARS,
                                 message = "昵称长度 2~32")
@@ -62,8 +73,12 @@ public final class AccountCommands {
                         String bio) {
         }
 
+        /** 登录（CR-093 / F-011）：account 为**邮箱或手机号**二合一（原 email 字段更名，契约破坏性变更已登记） */
         public record LoginCommand(
-                        @NotBlank @Email(message = "邮箱格式不正确") String email,
+                        @NotBlank(message = "账号不能为空")
+                        @Pattern(regexp = "(?:^1[3-9]\\d{9}$)|(?:^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$)",
+                                message = "账号须为邮箱或手机号")
+                        String account,
                         @NotBlank @Pattern(regexp = "\\d{6}", message = "验证码为 6 位数字") String code) {
         }
 

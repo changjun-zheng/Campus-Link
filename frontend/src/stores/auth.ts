@@ -33,11 +33,12 @@ export const useAuthStore = defineStore('auth', {
     isLoggedIn: (state) => !!state.token,
   },
   actions: {
-    async login(email: string, code: string) {
-      const res = await loginApi(email, code)
+    /** 登录（F-011 / CR-093）：account 为邮箱或手机号 */
+    async login(account: string, code: string) {
+      const res = await loginApi(account, code)
       this.setSession(res.token, res.user, res.expiresAtEpochSeconds)
     },
-    async register(payload: { ticket: string; email: string; code: string; nickname: string }) {
+    async register(payload: { ticket: string; contact: string; code: string; nickname: string }) {
       const res = await registerApi(payload)
       this.setSession(res.token, res.user, res.expiresAtEpochSeconds)
     },

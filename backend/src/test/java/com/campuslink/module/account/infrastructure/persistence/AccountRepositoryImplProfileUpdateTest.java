@@ -120,7 +120,6 @@ class AccountRepositoryImplProfileUpdateTest {
     }
 
     private static Account account(String nickname, String major, String bio, AccountStatus status) {
-        return Account.rehydrate(USER_ID, EmailAddress.of("dev-stu-01@dev.campuslink.local"), StudentId.of("888800001"),
-                nickname, null, null, major, null, bio, AccountRole.USER, status, true, false, null, null, null);
+        return Account.rehydrate(USER_ID, EmailAddress.of("dev-stu-01@dev.campuslink.local"), null, StudentId.of("888800001"), nickname, null, null, major, null, bio, AccountRole.USER, status, true, false, null, null, null);
     }
 }

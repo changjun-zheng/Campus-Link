@@ -13,10 +13,12 @@ export const verifyStudent = (studentId: string, name: string) =>
 
 export const sendCaptcha = (target: string) => post<void>('/auth/captcha', { target })
 
-export const register = (payload: { ticket: string; email: string; code: string; nickname: string }) =>
+/** 注册（F-011 / CR-093）：contact 为邮箱**或**手机号（后端按形态分流） */
+export const register = (payload: { ticket: string; contact: string; code: string; nickname: string }) =>
   post<AuthResponse>('/auth/register', payload)
 
-export const login = (email: string, code: string) => post<AuthResponse>('/auth/login', { email, code })
+/** 登录（F-011 / CR-093）：account 为邮箱或手机号 */
+export const login = (account: string, code: string) => post<AuthResponse>('/auth/login', { account, code })
 
 export const fetchMe = () => get<UserInfo>('/users/me')
 

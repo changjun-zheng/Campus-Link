@@ -6,7 +6,7 @@ import com.campuslink.config.AppProperties;
 import com.campuslink.module.account.domain.gateway.CaptchaStore;
 import com.campuslink.module.account.domain.gateway.CodeSender;
 import com.campuslink.module.account.domain.gateway.SensitiveCodec;
-import com.campuslink.module.account.domain.model.EmailAddress;
+import com.campuslink.module.account.domain.model.Contact;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,8 +41,9 @@ public class CaptchaService {
         }
     }
 
+    /** 发送（CR-093 / F-011）：target 为邮箱**或**手机号二合一，存取键 = 规范化 contact 的 HMAC */
     public void send(String target) {
-        String targetKey = codec.hash(EmailAddress.of(target).value());
+        String targetKey = captchaKey(target);
 
         if (!captchaStore.tryAcquireSendSlot(targetKey,
                 Duration.ofSeconds(props.getCaptcha().getResendIntervalSeconds()))) {
@@ -64,12 +65,17 @@ public class CaptchaService {
     }
 
     public boolean verify(String target, String code) {
-        return captchaStore.loadCode(codec.hash(EmailAddress.of(target).value()))
+        return captchaStore.loadCode(captchaKey(target))
                 .map(saved -> saved.equals(code))
                 .orElse(false);
     }
 
     public void consume(String target) {
-        captchaStore.deleteCode(codec.hash(EmailAddress.of(target).value()));
+        captchaStore.deleteCode(captchaKey(target));
+    }
+
+    /** 存取键统一从"邮箱或手机号"二合一解析（CR-093）：发送 / 校验 / 消费三处同键，不因渠道分裂 */
+    private String captchaKey(String target) {
+        return codec.hash(Contact.parse(target).normalized());
     }
 }

@@ -20,6 +20,8 @@ public class Account {
 
     private Long id;
     private final EmailAddress email;
+    /** 手机号（CR-093 / F-011）：注册渠道为手机号的账号才有；email 与 phone **至少其一**存在 */
+    private final PhoneNumber phone;
     private final StudentId studentId;
     /** 注册后由资料编辑用例改写（F-ACC-007a），故不再是 final；写入只经 {@link #updateProfile}，无公开 setter */
     private String nickname;
@@ -36,11 +38,15 @@ public class Account {
     private final Instant createdAt;
     private Instant updatedAt;
 
-    private Account(Long id, EmailAddress email, StudentId studentId, String nickname, String avatarUrl,
+    private Account(Long id, EmailAddress email, PhoneNumber phone, StudentId studentId, String nickname, String avatarUrl,
                     String school, String major, String grade, String bio, AccountRole role, AccountStatus status,
                     boolean verified, boolean anonymized, Instant deleteAt, Instant createdAt, Instant updatedAt) {
+        if (email == null && phone == null) {
+            throw new IllegalArgumentException("email 与 phone 至少其一存在");
+        }
         this.id = id;
         this.email = email;
+        this.phone = phone;
         this.studentId = studentId;
         this.nickname = nickname;
         this.avatarUrl = avatarUrl;
@@ -57,18 +63,23 @@ public class Account {
         this.updatedAt = updatedAt;
     }
 
-    /** 工厂方法：注册即已完成学籍核验的新账号（F-ACC-004 是注册前置，聚合不存在“未核验”态） */
+    /** 工厂方法：注册即已完成学籍核验的新账号（F-ACC-004 是注册前置，聚合不存在“未核验”态）；邮箱渠道（CR-093 前既有形态） */
     public static Account registered(EmailAddress email, StudentId studentId, String nickname) {
-        return new Account(null, email, studentId, nickname.trim(), null, null, null, null, null,
+        return registered(email, null, studentId, nickname);
+    }
+
+    /** 工厂方法重载（CR-093 / F-011）：手机号渠道——email 与 phone **恰好其一**由调用方保证，聚合只拦双空 */
+    public static Account registered(EmailAddress email, PhoneNumber phone, StudentId studentId, String nickname) {
+        return new Account(null, email, phone, studentId, nickname.trim(), null, null, null, null, null,
                 AccountRole.USER, AccountStatus.ACTIVE, true, false, null, null, null);
     }
 
     /** 仓储重建入口（infrastructure 适配器调用） */
-    public static Account rehydrate(Long id, EmailAddress email, StudentId studentId, String nickname,
+    public static Account rehydrate(Long id, EmailAddress email, PhoneNumber phone, StudentId studentId, String nickname,
                                     String avatarUrl, String school, String major, String grade, String bio,
                                     AccountRole role, AccountStatus status, boolean verified, boolean anonymized,
                                     Instant deleteAt, Instant createdAt, Instant updatedAt) {
-        return new Account(id, email, studentId, nickname, avatarUrl, school, major, grade, bio,
+        return new Account(id, email, phone, studentId, nickname, avatarUrl, school, major, grade, bio,
                 role, status, verified, anonymized, deleteAt, createdAt, updatedAt);
     }
 
@@ -78,7 +89,7 @@ public class Account {
      * 这是 {@link #registered} 之外唯一的建号入口，role 显式给定，不依赖注册链路。
      */
     public static Account provisioned(EmailAddress email, String nickname, AccountRole role) {
-        return new Account(null, email, null, nickname.trim(), null, null, null, null, null,
+        return new Account(null, email, null, null, nickname.trim(), null, null, null, null, null,
                 role, AccountStatus.ACTIVE, true, false, null, null, null);
     }
 

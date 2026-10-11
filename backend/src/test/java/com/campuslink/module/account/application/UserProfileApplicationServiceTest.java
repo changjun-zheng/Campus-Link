@@ -156,8 +156,6 @@ class UserProfileApplicationServiceTest {
     }
 
     private static Account account() {
-        return Account.rehydrate(USER_ID, EmailAddress.of("dev-stu-01@dev.campuslink.local"), null,
-                "张三同学", null, null, "软件工程", null, "在写代码",
-                AccountRole.USER, AccountStatus.ACTIVE, true, false, null, CREATED_AT, null);
+        return Account.rehydrate(USER_ID, EmailAddress.of("dev-stu-01@dev.campuslink.local"), null, null, "张三同学", null, null, "软件工程", null, "在写代码", AccountRole.USER, AccountStatus.ACTIVE, true, false, null, CREATED_AT, null);
     }
 }

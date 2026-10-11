@@ -20,7 +20,7 @@ import com.campuslink.module.account.domain.gateway.VerificationTicketStore;
 import com.campuslink.module.account.domain.model.Account;
 import com.campuslink.module.account.domain.model.AccountRole;
 import com.campuslink.module.account.domain.model.AccountStatus;
-import com.campuslink.module.account.domain.model.EmailAddress;
+import com.campuslink.module.account.domain.model.Contact;
 import com.campuslink.module.account.domain.model.StudentId;
 import com.campuslink.module.account.domain.service.StudentVerificationService;
 import lombok.RequiredArgsConstructor;
@@ -71,46 +71,66 @@ public class AccountApplicationService {
         return new VerifyStudentResult(ticket);
     }
 
-    /** 注册（F-ACC-001 + F-ACC-004）：验证码 → 消费票据 → 建号 → 占用名册学号（事务） → 发布领域事件 */
+    /**
+     * 注册（F-ACC-001 + F-ACC-004，CR-093 起支持手机号渠道）：验证码 → 消费票据 → 建号 → 占用名册学号（事务） → 发布领域事件。
+     * {@code contact} 为邮箱**或**手机号（二合一，格式门在 web 侧 @Pattern）：验证码存取键与冲突预检都走规范化后的 contact。
+     */
     @Transactional
     public LoginResult register(RegisterCommand command) {
-        EmailAddress email = EmailAddress.of(command.email());
-        if (!captchaService.verify(email.value(), command.code())) {
+        Contact contact = Contact.parse(command.contact());
+        if (!captchaService.verify(contact.normalized(), command.code())) {
             throw new ApiException(ResultCode.CAPTCHA_INVALID);
         }
         // 票据载荷是加密后的学号（VerificationTicketStore 约定：不含明文学号），此处必须解密还原
         String studentId = ticketStore.consume(command.ticket())
                 .map(codec::decrypt)
                 .orElseThrow(() -> new ApiException(ResultCode.VERIFY_TICKET_INVALID));
-        if (accountRepository.existsByEmailHash(codec.hash(email.value()))) {
+        if (contact.hasEmail() && accountRepository.existsByEmailHash(codec.hash(contact.email().value()))) {
             throw new ApiException(ResultCode.EMAIL_EXISTS);
+        }
+        if (contact.hasPhone() && accountRepository.existsByPhoneHash(codec.hash(contact.phone().value()))) {
+            throw new ApiException(ResultCode.PHONE_EXISTS);
         }
 
         Account account;
         try {
-            account = accountRepository.save(Account.registered(email, StudentId.of(studentId), command.nickname()));
+            account = accountRepository.save(Account.registered(
+                    contact.email(), contact.phone(), StudentId.of(studentId), command.nickname()));
         } catch (AccountConflictException e) {
-            // 邮箱冲突可明确提示（邮箱非名册信息）；学号冲突必须与其它核验失败**同提示**，
+            // 邮箱 / 手机号冲突可明确提示（二者均非名册信息）；学号冲突必须与其它核验失败**同提示**，
             // 否则可据提示差异枚举出"哪些学号在名册中且已被占用"（PRD F-ACC-004 防名册枚举）
-            throw new ApiException(e.field() == AccountConflictException.Field.EMAIL
-                    ? ResultCode.EMAIL_EXISTS
-                    : ResultCode.STUDENT_VERIFY_FAILED);
+            throw new ApiException(switch (e.field()) {
+                case EMAIL -> ResultCode.EMAIL_EXISTS;
+                case PHONE -> ResultCode.PHONE_EXISTS;
+                case STUDENT_ID -> ResultCode.STUDENT_VERIFY_FAILED;
+            });
         }
         if (!rosterGateway.occupy(codec.hash(studentId), account.getId())) {
             // 并发注册占用冲突：抛出使整个事务回滚（含刚插入的账号）
             throw new ApiException(ResultCode.STUDENT_VERIFY_FAILED);
         }
 
-        captchaService.consume(email.value());
+        captchaService.consume(contact.normalized());
         eventPublisher.publishEvent(new AccountRegisteredEvent(account.getId(), account.getNickname(), Instant.now()));
         return toResult(account);
     }
 
-    /** 登录：统一提示不区分“账号不存在”与“验证码错误”；封禁账号拒绝 */
+    /**
+     * 登录（CR-093 / F-011）：{@code account} 为邮箱**或**手机号，据形态分流查找通道；
+     * 统一提示不区分“账号不存在”与“验证码错误”；封禁账号拒绝。
+     */
     public LoginResult login(LoginCommand command) {
-        EmailAddress email = EmailAddress.of(command.email());
-        Account account = accountRepository.findByEmailHash(codec.hash(email.value())).orElse(null);
-        if (account == null || !captchaService.verify(email.value(), command.code())) {
+        Contact contact;
+        try {
+            contact = Contact.parse(command.account());
+        } catch (IllegalArgumentException e) {
+            // @Pattern 已在 web 侧拦格式，此处兜底：格式非法按登录失败统一提示（与防枚举同口径）
+            throw new ApiException(ResultCode.LOGIN_FAILED);
+        }
+        Account account = (contact.hasPhone()
+                ? accountRepository.findByPhoneHash(codec.hash(contact.phone().value()))
+                : accountRepository.findByEmailHash(codec.hash(contact.email().value()))).orElse(null);
+        if (account == null || !captchaService.verify(contact.normalized(), command.code())) {
             throw new ApiException(ResultCode.LOGIN_FAILED);
         }
         if (account.getStatus() == AccountStatus.DEACTIVATED) {
@@ -118,7 +138,7 @@ public class AccountApplicationService {
             if (account.getDeleteAt() != null && account.getDeleteAt().isAfter(Instant.now())) {
                 accountRepository.updateStatus(account.getId(), AccountStatus.ACTIVE, null);
                 auditService.record(account.getId(), "ACCOUNT_REACTIVATE", "users", account.getId(), null);
-                captchaService.consume(email.value());
+                captchaService.consume(contact.normalized());
                 // 回读刷新状态：撤销后响应里的 status 必须是 ACTIVE，而不是内存里的 DEACTIVATED
                 Account reactivated = accountRepository.findById(account.getId()).orElse(account);
                 return toResult(reactivated);
@@ -128,7 +148,7 @@ public class AccountApplicationService {
         if (!account.isActive()) {
             throw new ApiException(ResultCode.USER_BANNED);
         }
-        captchaService.consume(email.value());
+        captchaService.consume(contact.normalized());
         return toResult(account);
     }
 

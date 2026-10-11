@@ -20,16 +20,19 @@ const values: { icon: IconName; title: string; desc: string }[] = [
   { icon: 'briefcase', title: '求职有路', desc: '面经、实习与校招信息不再迷路' },
 ]
 
-const loginForm = reactive({ email: '', code: '' })
+const loginForm = reactive({ account: '', code: '' })
 const reg = reactive({
   step: 1 as 1 | 2,
   ticket: '',
   studentId: '',
   name: '',
-  email: '',
+  contact: '',
   code: '',
   nickname: '',
 })
+
+/** 联系方式输入提示（F-011 / CR-093）：邮箱与手机号二合一 */
+const contactLabel = '邮箱 / 手机号'
 
 const loginCaptcha = useCountdown()
 const regCaptcha = useCountdown()
@@ -40,7 +43,7 @@ function errorMessage(e: unknown, fallback: string) {
 
 async function doLogin() {
   try {
-    await auth.login(loginForm.email, loginForm.code)
+    await auth.login(loginForm.account, loginForm.code)
     ElMessage.success('登录成功')
     router.push(String(route.query.redirect || '/'))
   } catch (e) {
@@ -62,7 +65,7 @@ async function doVerify() {
 
 async function doRegister() {
   try {
-    await auth.register({ ticket: reg.ticket, email: reg.email, code: reg.code, nickname: reg.nickname })
+    await auth.register({ ticket: reg.ticket, contact: reg.contact, code: reg.code, nickname: reg.nickname })
     ElMessage.success('注册成功')
     router.push('/')
   } catch (e) {
@@ -109,15 +112,15 @@ async function doRegister() {
         <el-tabs v-model="tab">
           <el-tab-pane label="登录" name="login">
             <el-form label-position="top" @submit.prevent>
-              <el-form-item label="邮箱">
-                <el-input v-model="loginForm.email" placeholder="注册时使用的邮箱" />
+              <el-form-item :label="contactLabel">
+                <el-input v-model="loginForm.account" placeholder="注册时使用的邮箱或手机号" />
               </el-form-item>
               <el-form-item label="验证码">
                 <div class="flex w-full gap-2">
                   <el-input v-model="loginForm.code" placeholder="6 位验证码" maxlength="6" />
                   <el-button
                     :disabled="loginCaptcha.remaining.value > 0 || loginCaptcha.sending.value"
-                    @click="loginCaptcha.run(() => sendCaptcha(loginForm.email))"
+                    @click="loginCaptcha.run(() => sendCaptcha(loginForm.account))"
                   >
                     {{ loginCaptcha.remaining.value > 0 ? `${loginCaptcha.remaining.value}s` : '发送验证码' }}
                   </el-button>
@@ -134,7 +137,7 @@ async function doRegister() {
           <el-tab-pane label="注册" name="register">
             <el-steps :active="reg.step - 1" finish-status="success" class="mb-4">
               <el-step title="学籍核验" />
-              <el-step title="邮箱验证" />
+              <el-step title="邮箱 / 手机号验证" />
             </el-steps>
 
             <el-form v-if="reg.step === 1" label-position="top" @submit.prevent>
@@ -148,19 +151,22 @@ async function doRegister() {
                   中文名（2~16 汉字，可含 ·）或外文名，须与学籍信息一致
                 </p>
               </el-form-item>
-              <el-button type="primary" class="w-full" @click="doVerify">下一步：邮箱验证</el-button>
+              <el-button type="primary" class="w-full" @click="doVerify">下一步：邮箱 / 手机号验证</el-button>
             </el-form>
 
             <el-form v-else label-position="top" @submit.prevent>
-              <el-form-item label="邮箱">
-                <el-input v-model="reg.email" placeholder="用于登录与找回，仅本人可见" />
+              <el-form-item :label="contactLabel">
+                <el-input v-model="reg.contact" placeholder="邮箱或手机号，用于登录，仅本人可见" />
+                <p class="mt-1 w-full text-caption text-ink-meta">
+                  支持邮箱或 11 位手机号；验证码将发送到对应渠道
+                </p>
               </el-form-item>
               <el-form-item label="验证码">
                 <div class="flex w-full gap-2">
                   <el-input v-model="reg.code" placeholder="6 位验证码" maxlength="6" />
                   <el-button
                     :disabled="regCaptcha.remaining.value > 0 || regCaptcha.sending.value"
-                    @click="regCaptcha.run(() => sendCaptcha(reg.email))"
+                    @click="regCaptcha.run(() => sendCaptcha(reg.contact))"
                   >
                     {{ regCaptcha.remaining.value > 0 ? `${regCaptcha.remaining.value}s` : '发送验证码' }}
                   </el-button>

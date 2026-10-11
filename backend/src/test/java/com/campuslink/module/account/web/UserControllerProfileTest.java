@@ -88,7 +88,6 @@ class UserControllerProfileTest {
     }
 
     private static Account account(String nickname, AccountStatus status) {
-        return Account.rehydrate(42L, EmailAddress.of("dev-stu-01@dev.campuslink.local"), StudentId.of("888800001"),
-                nickname, null, null, null, null, null, AccountRole.USER, status, true, false, null, null, null);
+        return Account.rehydrate(42L, EmailAddress.of("dev-stu-01@dev.campuslink.local"), null, StudentId.of("888800001"), nickname, null, null, null, null, null, AccountRole.USER, status, true, false, null, null, null);
     }
 }

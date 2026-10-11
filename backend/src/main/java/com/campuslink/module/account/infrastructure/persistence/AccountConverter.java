@@ -5,6 +5,7 @@ import com.campuslink.module.account.domain.model.Account;
 import com.campuslink.module.account.domain.model.AccountRole;
 import com.campuslink.module.account.domain.model.AccountStatus;
 import com.campuslink.module.account.domain.model.EmailAddress;
+import com.campuslink.module.account.domain.model.PhoneNumber;
 import com.campuslink.module.account.domain.model.StudentId;
 
 /**
@@ -19,8 +20,15 @@ public final class AccountConverter {
     public static UserDO toDo(Account account, SensitiveCodec codec) {
         UserDO d = new UserDO();
         d.setId(account.getId());
-        d.setEmailEnc(codec.encrypt(account.getEmail().value()));
-        d.setEmailHash(codec.hash(account.getEmail().value()));
+        // 手机号渠道账号（CR-093）无邮箱：email_enc/hash 留 NULL（V1 本就可空，唯一索引允许多 NULL）
+        if (account.getEmail() != null) {
+            d.setEmailEnc(codec.encrypt(account.getEmail().value()));
+            d.setEmailHash(codec.hash(account.getEmail().value()));
+        }
+        if (account.getPhone() != null) {
+            d.setPhoneEnc(codec.encrypt(account.getPhone().value()));
+            d.setPhoneHash(codec.hash(account.getPhone().value()));
+        }
         d.setNickname(account.getNickname());
         d.setAvatarUrl(account.getAvatarUrl());
         d.setSchool(account.getSchool());
@@ -44,13 +52,18 @@ public final class AccountConverter {
 
     public static Account toDomain(UserDO d, SensitiveCodec codec) {
         // 匿名化（CR-082）后 email_enc / student_id_enc 为 NULL：值对象必填，回落合成占位值——
-        // 该账号已不可登录、不再参与任何敏感比对，占位值仅满足聚合重建的类型约束
+        // 该账号已不可登录、不再参与任何敏感比对，占位值仅满足聚合重建的类型约束。
+        // 手机号渠道账号（CR-093）的 email_enc 同样为 NULL，占位值不参与登录（其登录走 phone_hash）。
         EmailAddress email = d.getEmailEnc() == null
                 ? EmailAddress.of("deactivated-" + d.getId() + "@invalid.local")
                 : EmailAddress.of(codec.decrypt(d.getEmailEnc()));
+        PhoneNumber phone = d.getPhoneEnc() == null
+                ? null
+                : PhoneNumber.of(codec.decrypt(d.getPhoneEnc()));
         return Account.rehydrate(
                 d.getId(),
                 email,
+                phone,
                 d.getStudentIdEnc() == null ? null : StudentId.of(codec.decrypt(d.getStudentIdEnc())),
                 d.getNickname(),
                 d.getAvatarUrl(),

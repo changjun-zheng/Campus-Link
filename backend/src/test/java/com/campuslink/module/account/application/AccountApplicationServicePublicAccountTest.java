@@ -113,9 +113,6 @@ class AccountApplicationServicePublicAccountTest {
     }
 
     private static Account account(AccountStatus status) {
-        return Account.rehydrate(USER_ID, EmailAddress.of("dev-stu-01@dev.campuslink.local"), null,
-                "张三同学", null, null, "软件工程", null, "在写代码",
-                AccountRole.USER, status, true, false, null,
-                Instant.parse("2026-09-01T08:00:00Z"), null);
+        return Account.rehydrate(USER_ID, EmailAddress.of("dev-stu-01@dev.campuslink.local"), null, null, "张三同学", null, null, "软件工程", null, "在写代码", AccountRole.USER, status, true, false, null, Instant.parse("2026-09-01T08:00:00Z"), null);
     }
 }

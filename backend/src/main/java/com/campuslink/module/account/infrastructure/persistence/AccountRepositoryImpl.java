@@ -27,6 +27,7 @@ public class AccountRepositoryImpl implements AccountRepository {
     /** 唯一索引名取自 db/migration/V1__init_schema.sql，用于识别冲突字段 */
     private static final String UK_STUDENT_ID = "uk_users_student_id_hash";
     private static final String UK_EMAIL = "uk_users_email_hash";
+    private static final String UK_PHONE = "uk_users_phone_hash";
 
     private final UserMapper userMapper;
     private final SensitiveCodec codec;
@@ -50,6 +51,9 @@ public class AccountRepositoryImpl implements AccountRepository {
         }
         if (message.contains(UK_EMAIL)) {
             return new AccountConflictException(AccountConflictException.Field.EMAIL, "邮箱已被占用", e);
+        }
+        if (message.contains(UK_PHONE)) {
+            return new AccountConflictException(AccountConflictException.Field.PHONE, "手机号已被占用", e);
         }
         // 未预期的约束冲突：不猜测业务语义，原样抛出按系统异常处理
         return e;
@@ -83,9 +87,22 @@ public class AccountRepositoryImpl implements AccountRepository {
     }
 
     @Override
+    public boolean existsByPhoneHash(String phoneHash) {
+        return userMapper.selectCount(new LambdaQueryWrapper<UserDO>()
+                .eq(UserDO::getPhoneHash, phoneHash)) > 0;
+    }
+
+    @Override
     public Optional<Account> findByEmailHash(String emailHash) {
         return Optional.ofNullable(userMapper.selectOne(new LambdaQueryWrapper<UserDO>()
                         .eq(UserDO::getEmailHash, emailHash)))
+                .map(d -> AccountConverter.toDomain(d, codec));
+    }
+
+    @Override
+    public Optional<Account> findByPhoneHash(String phoneHash) {
+        return Optional.ofNullable(userMapper.selectOne(new LambdaQueryWrapper<UserDO>()
+                        .eq(UserDO::getPhoneHash, phoneHash)))
                 .map(d -> AccountConverter.toDomain(d, codec));
     }
 

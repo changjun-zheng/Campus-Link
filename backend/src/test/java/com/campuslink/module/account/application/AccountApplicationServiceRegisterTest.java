@@ -126,12 +126,79 @@ class AccountApplicationServiceRegisterTest {
                 .satisfies(e -> assertThat(e.getCode()).isEqualTo(ResultCode.EMAIL_EXISTS));
     }
 
-    /** 桩到 save 之前所需的全部依赖（两个冲突用例共用） */
+    /** 桩到 save 之前所需的全部依赖（邮箱渠道冲突用例共用） */
     private void stubReachingSave() {
         when(codec.decrypt(ENCRYPTED_STUDENT_ID)).thenReturn(PLAIN_STUDENT_ID);
         when(codec.hash(anyString())).thenAnswer(inv -> "H(" + inv.getArgument(0) + ")");
         when(ticketStore.consume("ticket-1")).thenReturn(Optional.of(ENCRYPTED_STUDENT_ID));
         when(captchaService.verify(anyString(), anyString())).thenReturn(true);
         when(accountRepository.existsByEmailHash(anyString())).thenReturn(false);
+    }
+
+    // ── 手机号渠道（CR-093 / F-011）─────────────────────────────────────────
+
+    @Test
+    @DisplayName("注册：手机号渠道走 existsByPhoneHash / phone_hash 预检，聚合携带 PhoneNumber")
+    void phoneRegistrationPersistsPhoneAndChecksPhoneConflict() {
+        when(codec.decrypt(ENCRYPTED_STUDENT_ID)).thenReturn(PLAIN_STUDENT_ID);
+        when(codec.hash(anyString())).thenAnswer(inv -> "H(" + inv.getArgument(0) + ")");
+        when(ticketStore.consume("ticket-1")).thenReturn(Optional.of(ENCRYPTED_STUDENT_ID));
+        when(captchaService.verify(anyString(), anyString())).thenReturn(true);
+        when(accountRepository.existsByPhoneHash(anyString())).thenReturn(false);
+        when(accountRepository.save(any(Account.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(rosterGateway.occupy(anyString(), any())).thenReturn(true);
+        when(tokenIssuer.issue(any(), anyString())).thenReturn("jwt-token");
+        when(tokenIssuer.ttlSeconds()).thenReturn(604800L);
+
+        LoginResult result = service.register(
+                new RegisterCommand("ticket-1", "13800138000", "123456", "张三"));
+
+        // 手机号预检走 phone_hash 通道，而非 email_hash
+        org.mockito.Mockito.verify(accountRepository).existsByPhoneHash("H(13800138000)");
+        assertThat(result.account().getPhone().value()).isEqualTo("13800138000");
+        // 手机号渠道账号 email 侧为空（聚合允许 email 与 phone 至少其一）
+        assertThat(result.account().getEmail()).isNull();
+    }
+
+    @Test
+    @DisplayName("注册：手机号唯一键冲突 -> 明确提示手机号已注册（2014）")
+    void phoneConflictMapsToPhoneExists() {
+        stubReachingSavePhone();
+        when(accountRepository.save(any(Account.class))).thenThrow(
+                new AccountConflictException(AccountConflictException.Field.PHONE, "手机号已被占用", null));
+
+        assertThatExceptionOfType(ApiException.class)
+                .isThrownBy(() -> service.register(
+                        new RegisterCommand("ticket-1", "13800138000", "123456", "张三")))
+                .satisfies(e -> assertThat(e.getCode()).isEqualTo(ResultCode.PHONE_EXISTS));
+    }
+
+    @Test
+    @DisplayName("注册：contact 同时缺省与双通道并存由 web 侧 @Pattern 拦截；预检各走各的哈希通道")
+    void emailAndPhonePrechecksUseTheirOwnHashChannels() {
+        when(codec.decrypt(ENCRYPTED_STUDENT_ID)).thenReturn(PLAIN_STUDENT_ID);
+        when(codec.hash(anyString())).thenAnswer(inv -> "H(" + inv.getArgument(0) + ")");
+        when(ticketStore.consume("ticket-1")).thenReturn(Optional.of(ENCRYPTED_STUDENT_ID));
+        when(captchaService.verify(anyString(), anyString())).thenReturn(true);
+        when(accountRepository.existsByEmailHash(anyString())).thenReturn(false);
+        when(accountRepository.save(any(Account.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(rosterGateway.occupy(anyString(), any())).thenReturn(true);
+        when(tokenIssuer.issue(any(), anyString())).thenReturn("jwt-token");
+        when(tokenIssuer.ttlSeconds()).thenReturn(604800L);
+
+        service.register(new RegisterCommand("ticket-1", "someone@example.com", "123456", "张三"));
+
+        org.mockito.Mockito.verify(accountRepository).existsByEmailHash("H(someone@example.com)");
+        org.mockito.Mockito.verify(accountRepository, org.mockito.Mockito.never())
+                .existsByPhoneHash(anyString());
+    }
+
+    /** 手机号渠道桩到 save 之前所需的全部依赖 */
+    private void stubReachingSavePhone() {
+        when(codec.decrypt(ENCRYPTED_STUDENT_ID)).thenReturn(PLAIN_STUDENT_ID);
+        when(codec.hash(anyString())).thenAnswer(inv -> "H(" + inv.getArgument(0) + ")");
+        when(ticketStore.consume("ticket-1")).thenReturn(Optional.of(ENCRYPTED_STUDENT_ID));
+        when(captchaService.verify(anyString(), anyString())).thenReturn(true);
+        when(accountRepository.existsByPhoneHash(anyString())).thenReturn(false);
     }
 }

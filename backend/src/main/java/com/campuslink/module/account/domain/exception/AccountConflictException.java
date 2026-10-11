@@ -17,7 +17,7 @@ public class AccountConflictException extends RuntimeException {
 
     /** 发生冲突的唯一键 */
     public enum Field {
-        EMAIL, STUDENT_ID
+        EMAIL, PHONE, STUDENT_ID
     }
 
     private final transient Field field;

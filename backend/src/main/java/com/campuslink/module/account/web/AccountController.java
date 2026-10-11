@@ -45,7 +45,7 @@ public class AccountController {
         return ApiResponse.ok(accountApplicationService.verifyStudent(command, IpUtil.clientIp(http)));
     }
 
-    @Operation(summary = "发送邮箱验证码（60s 重发间隔，单账号日上限 10 条）")
+    @Operation(summary = "发送验证码（F-011 / CR-093：target 为邮箱或手机号；60s 重发间隔，单账号日上限 10 条）")
     @ErrorCodes({ResultCode.CAPTCHA_TOO_FREQUENT, ResultCode.CAPTCHA_EXCEEDED})
     @PublicEndpoint
     @PostMapping("/captcha")
@@ -54,9 +54,9 @@ public class AccountController {
         return ApiResponse.ok();
     }
 
-    @Operation(summary = "注册：需先通过学籍核验并携带票据")
+    @Operation(summary = "注册：需先通过学籍核验并携带票据；contact 为邮箱或手机号（F-011 / CR-093）")
     @ErrorCodes({ResultCode.CAPTCHA_INVALID, ResultCode.VERIFY_TICKET_INVALID,
-            ResultCode.STUDENT_VERIFY_FAILED, ResultCode.EMAIL_EXISTS})
+            ResultCode.STUDENT_VERIFY_FAILED, ResultCode.EMAIL_EXISTS, ResultCode.PHONE_EXISTS})
     @PublicEndpoint
     @PostMapping("/register")
     public ApiResponse<AuthResponse> register(@Valid @RequestBody RegisterCommand command) {

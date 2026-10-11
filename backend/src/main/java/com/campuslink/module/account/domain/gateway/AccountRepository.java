@@ -38,7 +38,13 @@ public interface AccountRepository {
 
     boolean existsByEmailHash(String emailHash);
 
+    /** 手机号占用预检（CR-093 / F-011）：HMAC 哈希等值查询，与邮箱侧同规矩 */
+    boolean existsByPhoneHash(String phoneHash);
+
     Optional<Account> findByEmailHash(String emailHash);
+
+    /** 手机号登录查找（CR-093 / F-011）：HMAC 哈希等值查询 */
+    Optional<Account> findByPhoneHash(String phoneHash);
 
     Optional<Account> findById(Long id);
 

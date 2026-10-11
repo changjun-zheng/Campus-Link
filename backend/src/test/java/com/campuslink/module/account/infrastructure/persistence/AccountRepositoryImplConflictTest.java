@@ -75,9 +75,20 @@ class AccountRepositoryImplConflictTest {
     }
 
     @Test
+    @DisplayName("手机号唯一键冲突 -> AccountConflictException(PHONE)（CR-093）")
+    void translatesPhoneConflict() {
+        when(userMapper.insert(any(UserDO.class))).thenThrow(duplicateOn("uk_users_phone_hash"));
+
+        assertThatExceptionOfType(AccountConflictException.class)
+                .isThrownBy(() -> repository.save(newAccount()))
+                .satisfies(e -> assertThat(e.field()).isEqualTo(AccountConflictException.Field.PHONE));
+    }
+
+    @Test
     @DisplayName("未预期的约束冲突 -> 原样抛出，不猜测业务语义")
     void rethrowsUnexpectedConstraintViolation() {
-        when(userMapper.insert(any(UserDO.class))).thenThrow(duplicateOn("uk_users_phone_hash"));
+        // CR-093 起 phone_hash 已被翻译为 PHONE，"未预期"的示例换成将来才可能存在的约束名
+        when(userMapper.insert(any(UserDO.class))).thenThrow(duplicateOn("uk_users_nickname_hash"));
 
         assertThatExceptionOfType(DuplicateKeyException.class)
                 .isThrownBy(() -> repository.save(newAccount()));
