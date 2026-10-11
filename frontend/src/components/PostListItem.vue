@@ -92,8 +92,9 @@ async function onLike() {
           {{ post.summary }}
         </p>
 
-        <!-- 元信息行（CR-091，参考 CSDN）：计数改"图标 + 文字 + 数字"并拉宽间距，去点分隔 -->
-        <div class="mt-1.5 flex flex-wrap items-center gap-x-3.5 gap-y-1 text-caption text-ink-meta">
+        <!-- 元信息行（CR-091，参考 CSDN）：计数改"图标 + 文字 + 数字"并拉宽间距，去点分隔；
+             tabular-nums（CR-102）让数字等宽，点赞数变化时不抖动 -->
+        <div class="mt-1.5 flex flex-wrap items-center gap-x-3.5 gap-y-1 text-caption text-ink-meta tabular-nums">
           <template v-if="showBoard">
             <RouterLink :to="`/board/${post.boardCode}`" class="text-link hover:underline">
               {{ post.boardName || boardNameOf(post.boardCode) }}

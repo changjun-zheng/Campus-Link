@@ -712,3 +712,30 @@
     font-weight: 500;
   }
 }
+
+/* ---- 全局细滚动条（CR-102 质感打磨）：自滚区域（首页三栏 / 列表容器）与窗口统一 8px 圆角细条。
+   Firefox 走 scrollbar-width/color，WebKit 走伪元素；伪元素不参与 @layer 层叠竞争，留在层外。
+   颜色引用令牌：常态 --cl-border-base、悬停 --cl-text-meta，轨道透明贴卡片底色 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--cl-border-base) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: 8px;
+  background: var(--cl-border-base);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--cl-text-meta);
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}

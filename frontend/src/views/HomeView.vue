@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { listFollowingPosts, listPosts, type PostSort, type PostSummaryVo } from '../api/forum'
 import { BOARDS } from '../constants/boards'
 import { useAuthStore } from '../stores/auth'
@@ -29,11 +29,12 @@ const page = ref(1)
 const size = 6
 const loading = ref(false)
 const loadError = ref('')
-/** 触底加载（CR-091，参考 CSDN）：滚动监听驱动——sentinel 进入视口下方 320px 即续载 */
+/** 触底加载（CR-091）：每批 6 条，距列表容器底部 320px 内自动续载 */
 const loadingMore = ref(false)
 const moreError = ref(false)
-const sentinelRef = ref<HTMLElement | null>(null)
-/** 门（CR-091）：首屏 6 条时 sentinel 天然在视口内，必须等用户真的往下滑过才续载 */
+/** 列表自滚容器（CR-100）：桌面端窗口不滚，触底判定与滚动门都挂在这个元素上 */
+const listWrapRef = ref<HTMLElement | null>(null)
+/** 门（CR-091）：首屏 6 条时容器可能无溢出，必须等用户真的滚过列表才续载 */
 let userScrolled = false
 const hasMore = computed(() => posts.value.length < total.value)
 
@@ -103,19 +104,33 @@ function retryMore() {
   maybeLoadMore()
 }
 
-/** 滚动驱动的续载判定：用户已滚动过 + sentinel 进入视口下方 320px + 还有更多 */
+/**
+ * 触底续载判定（CR-100 改挂列表容器）：距底 320px 内 + 还有更多即追加。
+ * ⚠️ 首屏 6 条几乎填满容器（仅溢出几十 px，滚不动）时若仍要求"用户先滚过"会死锁——
+ * 容器无溢出（distance ≤ 0）必须自动续载直到可滚；有溢出后保留用户滚动门（CR-091 防抖语义）。
+ */
 function maybeLoadMore() {
-  if (loading.value || loadingMore.value || moreError.value || !hasMore.value || !userScrolled) return
-  if (!sentinelRef.value) return
-  if (sentinelRef.value.getBoundingClientRect().top > innerHeight + 320) return
+  if (loading.value || loadingMore.value || moreError.value || !hasMore.value) return
+  const el = listWrapRef.value
+  if (!el) return
+  const distance = el.scrollHeight - el.scrollTop - el.clientHeight
+  if (distance > 320 || (distance > 0 && !userScrolled)) return
   void loadMore()
 }
 
-function markUserScrolled() {
-  if (window.scrollY > 0) {
-    userScrolled = true
-    maybeLoadMore()
-  }
+/** 列表容器滚动（模板 @scroll）：滚过即开门、跟踪位置驱动回到顶部、做触底判定 */
+const listScrollTop = ref(0)
+
+function onListScroll() {
+  const el = listWrapRef.value
+  if (!el) return
+  listScrollTop.value = el.scrollTop
+  if (el.scrollTop > 0) userScrolled = true
+  maybeLoadMore()
+}
+
+function scrollListTop() {
+  listWrapRef.value?.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 watch(sort, () => {
@@ -142,11 +157,6 @@ onMounted(() => {
   void loadFirst()
   loadHotTop()
   loadLatest()
-  window.addEventListener('scroll', markUserScrolled, { passive: true })
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('scroll', markUserScrolled)
 })
 
 const myEntries = [
@@ -156,13 +166,13 @@ const myEntries = [
 </script>
 
 <template>
-  <!-- 三栏布局（滚动设计参考 CSDN，CR-091）：两 aside self-stretch 拉伸到与中栏等高——
-       左栏卡片 h-full 成为贯穿整页的"全高白条"（滚动时恒在，贴 CSDN 左菜单）；
-       右栏前两个挂件随页面滚动，关于卡 sticky 接力（≈CSDN 滚后出现的活动日历位） -->
-  <div class="flex items-stretch gap-5">
-    <!-- ─── 左栏：版块导航（lg 以上显示） ─── -->
-    <aside class="hidden w-[200px] flex-none self-stretch lg:block">
-      <el-card shadow="never" class="h-full" :body-style="{ padding: '8px' }">
+  <!-- 三栏固定框架（CR-100，应用式布局）：lg+ 整框 sticky 钉满视口（顶栏下沿到底），左右栏与排序条
+       完全不动，滚轮只让中栏帖子列表在自身容器内滚动（触底加载改挂列表容器 scroll 事件）；
+       窄屏无固定高度，回退整页滚动 -->
+  <div class="flex gap-5 lg:sticky lg:top-[60px] lg:h-[calc(100vh-60px)]">
+    <!-- ─── 左栏：版块导航（lg 以上显示，栏内自滚） ─── -->
+    <aside class="hidden w-[200px] flex-none lg:block lg:overflow-y-auto">
+      <el-card shadow="never" :body-style="{ padding: '8px' }">
         <nav aria-label="版块导航">
           <RouterLink
             v-for="b in BOARDS"
@@ -193,9 +203,9 @@ const myEntries = [
       </el-card>
     </aside>
 
-    <!-- ─── 中栏：信息流 ─── -->
-    <main class="min-w-0 flex-1">
-      <el-card shadow="never" :body-style="{ padding: 0 }">
+    <!-- ─── 中栏：信息流（定高列，帖子列表在卡片体内自滚） ─── -->
+    <main class="relative flex min-w-0 flex-1 flex-col">
+      <el-card shadow="never" class="sort-card min-h-0 flex-1" :body-style="{ padding: 0 }">
         <template #header>
           <!-- 排序 Tab（CR-091）：文字型自有 Tab，选中态主色 + 底部指示条（参考站分类 Tab 风格）；
                真按钮保留键盘可达与 aria-pressed -->
@@ -234,38 +244,62 @@ const myEntries = [
 
         <div v-else-if="loadError" class="p-5">
           <el-alert type="error" :closable="false" show-icon :title="loadError">
-            <el-button size="small" @click="loadList">重新加载</el-button>
+            <el-button size="small" @click="loadFirst">重新加载</el-button>
           </el-alert>
         </div>
 
-        <div v-else-if="!posts.length" class="py-10 text-center">
-          <p class="text-body text-ink-regular">
-            {{ sort === 'following' ? '还没有关注任何作者，去帖子详情页点「＋ 关注」吧' : '还没有帖子，来发第一帖吧' }}
+        <div v-else-if="!posts.length" class="flex flex-col items-center py-16 text-center">
+          <span class="flex h-14 w-14 items-center justify-center rounded-full bg-primary-soft text-primary">
+            <SvgIcon name="messages" :size="26" />
+          </span>
+          <p class="mt-4 text-body font-medium text-ink">
+            {{ sort === 'following' ? '还没有关注任何作者' : '还没有帖子' }}
           </p>
-          <RouterLink to="/publish">
-            <el-button type="primary" class="mt-4">去发第一帖</el-button>
+          <p class="mt-1 text-note text-ink-meta">
+            {{ sort === 'following' ? '去帖子详情页点「＋ 关注」，TA 的新帖会出现在这里' : '来发第一帖，让同学看到你的问题' }}
+          </p>
+          <RouterLink v-if="sort !== 'following'" to="/publish" class="mt-5">
+            <el-button type="primary">去发第一帖</el-button>
           </RouterLink>
         </div>
 
         <template v-else>
-          <ul>
-            <PostListItem v-for="p in posts" :key="p.id" :post="p" show-board />
-          </ul>
-          <!-- 触底加载（CR-091，参考 CSDN）：sentinel 进入视口下方 320px 即续载下一批并追加 -->
-          <div ref="sentinelRef" class="px-5 py-4 text-center text-caption text-ink-meta">
-            <template v-if="moreError">
-              加载失败 ·
-              <el-link type="primary" :underline="false" @click="retryMore">重试</el-link>
-            </template>
-            <span v-else-if="loadingMore">正在加载…</span>
-            <span v-else-if="!hasMore && posts.length">已经到底了 · 共 {{ total }} 条</span>
+          <!-- 列表自滚容器（CR-100）：触底加载改挂本容器 scroll 事件（窗口在桌面端不再滚动） -->
+          <div ref="listWrapRef" class="relative h-full overflow-y-auto" @scroll="onListScroll">
+            <ul>
+              <PostListItem v-for="p in posts" :key="p.id" :post="p" show-board />
+            </ul>
+            <!-- 触底加载（CR-091，参考 CSDN）：距底 320px 内续载下一批并追加 -->
+            <div class="flex items-center gap-3 px-5 py-4 text-caption text-ink-meta">
+              <span aria-hidden="true" class="h-[0.5px] flex-1 bg-divider" />
+              <template v-if="moreError">
+                加载失败 ·
+                <el-link type="primary" :underline="false" @click="retryMore">重试</el-link>
+              </template>
+              <span v-else-if="loadingMore">正在加载…</span>
+              <span v-else-if="!hasMore && posts.length" class="tabular-nums">
+                已经到底了 · 共 {{ total }} 条
+              </span>
+              <span aria-hidden="true" class="h-[0.5px] flex-1 bg-divider" />
+            </div>
           </div>
         </template>
       </el-card>
+      <!-- 回到顶部（CR-102）：固定框架下窗口不滚、全局 backtop（App.vue，监听窗口）在首页永不出现。
+           挂在不滚动的中栏列上 absolute 定位（挂进滚动容器会随内容坐标系跑偏），滚过 400px 浮现 -->
+      <button
+        v-show="listScrollTop > 400"
+        type="button"
+        class="absolute bottom-5 right-5 z-10 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border-[0.5px] border-line bg-card text-ink-regular transition-colors duration-fast ease-standard hover:border-primary hover:text-primary"
+        aria-label="回到顶部"
+        @click="scrollListTop"
+      >
+        <SvgIcon name="chevron-down" :size="16" class="rotate-180" />
+      </button>
     </main>
 
-    <!-- ─── 右栏：热榜 + 最新发布 + 站点卡（xl 以上显示）；关于卡 sticky 接力 ─── -->
-    <aside class="hidden w-[300px] flex-none self-stretch xl:block">
+    <!-- ─── 右栏：热榜 + 最新发布 + 站点卡（xl 以上显示，栏内自滚） ─── -->
+    <aside class="hidden w-[300px] flex-none xl:block xl:overflow-y-auto">
       <el-card shadow="never" :body-style="{ padding: '16px' }">
         <template #header>
           <div class="flex items-center justify-between">
@@ -277,12 +311,12 @@ const myEntries = [
           <li
             v-for="(p, i) in hotTop5"
             :key="p.id"
-            class="flex items-start gap-2 border-b-[0.5px] border-divider py-2 last:border-b-0"
+            class="-mx-2 flex items-start gap-2 rounded-md border-b-[0.5px] border-divider px-2 py-2 transition-colors duration-fast ease-standard last:border-b-0 hover:bg-bg-hover"
           >
-            <!-- 前三名徽章化（CR-091，参考 paicoding 热榜前三同色系强调）：底色 + 主色字；其余灰字 -->
+            <!-- 前三名徽章分级（CR-102）：第 1 实心主色白字、2/3 浅底主色，其余灰字——层级一眼可读 -->
             <span
-              class="inline-flex h-5 w-5 flex-none items-center justify-center rounded-sm text-caption"
-              :class="i < 3 ? 'bg-primary-soft font-medium text-primary' : 'text-ink-meta'"
+              class="inline-flex h-5 w-5 flex-none items-center justify-center rounded-sm text-caption tabular-nums"
+              :class="i === 0 ? 'bg-primary font-medium text-white' : i < 3 ? 'bg-primary-soft font-medium text-primary' : 'text-ink-meta'"
             >
               {{ i + 1 }}
             </span>
@@ -305,7 +339,7 @@ const myEntries = [
           <li
             v-for="p in latestTop5"
             :key="p.id"
-            class="border-b-[0.5px] border-divider py-2 last:border-b-0"
+            class="-mx-2 rounded-md border-b-[0.5px] border-divider px-2 py-2 transition-colors duration-fast ease-standard last:border-b-0 hover:bg-bg-hover"
           >
             <RouterLink :to="`/post/${p.id}`" class="block truncate text-note text-ink-regular hover:text-link">
               {{ p.title }}
@@ -316,8 +350,8 @@ const myEntries = [
         <p v-else class="text-note text-ink-meta">还没有帖子</p>
       </el-card>
 
-      <!-- 关于卡 sticky 接力（CR-091）：前两个挂件滚走后钉在右上，滚动后视口恒有内容（≈CSDN 活动日历位） -->
-      <div class="sticky top-4 mt-4">
+      <!-- 关于卡：整栏已 sticky 钉住（CR-098），此处回归普通排布 -->
+      <div class="mt-4">
         <el-card shadow="never" :body-style="{ padding: '16px' }">
           <h3 class="text-title-sm font-medium text-ink">关于 Campus-Link</h3>
           <p class="mt-2 text-note leading-body text-ink-regular">
@@ -331,3 +365,16 @@ const myEntries = [
     </aside>
   </div>
 </template>
+
+<style scoped>
+/* 排序卡弹性列（CR-100）：卡片在定高中栏里撑满，卡片体（帖子列表）成为唯一滚动容器；
+   排序 header 不再 sticky——卡片自身不滚，header 天然固定 */
+.sort-card {
+  display: flex;
+  flex-direction: column;
+}
+.sort-card :deep(.el-card__body) {
+  flex: 1;
+  min-height: 0;
+}
+</style>

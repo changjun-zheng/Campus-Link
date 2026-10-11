@@ -53,7 +53,7 @@ function onSearchSubmit() {
       <div class="mx-auto flex h-full max-w-page items-center justify-between max-md:py-4">
         <!-- 品牌字样用主色：WCAG 对 logo / 品牌名的文字不计对比度要求 -->
         <RouterLink to="/" class="flex shrink-0 items-center gap-2 text-title font-medium text-primary">
-          <img src="/logo.png" alt="" class="h-[22px] w-auto" height="22" />
+          <img src="/logo.svg" alt="" class="h-[22px] w-auto" height="22" />
           <img src="/wordmark.png" alt="Campus-Link" class="h-[20px] w-auto" height="20" />
         </RouterLink>
         <RouterLink to="/" class="flex items-center gap-1 text-body">
@@ -72,11 +72,13 @@ function onSearchSubmit() {
       <div class="mx-auto flex h-full max-w-page flex-wrap items-center gap-x-5 gap-y-1 max-md:py-2">
         <!-- 品牌字样用主色：WCAG 对 logo / 品牌名的文字不计对比度要求 -->
         <RouterLink to="/" class="order-1 flex shrink-0 items-center gap-2 text-title font-medium text-primary">
-          <img src="/logo.png" alt="" class="h-[22px] w-auto" height="22" />
+          <img src="/logo.svg" alt="" class="h-[22px] w-auto" height="22" />
           <img src="/wordmark.png" alt="Campus-Link" class="h-[20px] w-auto" height="20" />
         </RouterLink>
         <div class="order-2 ml-auto flex shrink-0 items-center gap-4 md:order-3 md:ml-0">
-          <div class="hidden w-[320px] md:block md:ml-auto md:mr-auto">
+          <div
+            class="hidden w-[320px] transition-[width] duration-fast ease-standard md:block md:ml-auto md:mr-auto md:focus-within:w-[380px]"
+          >
             <el-input
               v-model="searchKeyword"
               placeholder="搜索帖子标题 / 标签"
