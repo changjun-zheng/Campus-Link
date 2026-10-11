@@ -7,125 +7,107 @@ description: 重庆工程学院计算机专业学生交流论坛（Spring Boot 4
 
 编码代理在本工作区工作的上下文入口。**沟通用中文；代码、命令、变量名、文件路径保持英文。**
 
+> 本文件只写**当前有效的规则与事实**，不记录沿革——"某结论何时成立、为什么"看 [`docs/变更日志/变更台账.md`](docs/变更日志/变更台账.md)。**项目状态只维护台账 §1 + [进度驾驶舱](docs/进度驾驶舱.html) 两处**（CR-029 收口规则），本文件不复制状态。
+
 ## 首要阅读（新会话启动顺序）
 
 1. **本文件** —— 工作约定与红线；
-2. **[`docs/进度驾驶舱.html`](docs/进度驾驶舱.html)** —— 项目进度 / 问题 / 待办的聚合视图（浏览器打开，快照日期见页头「最后更新」）；
-3. **[`docs/下一步行动.md`](docs/下一步行动.md)** —— "现在该干什么"的单一入口（阻塞项 / 并行项 / 三件事）；
-4. 本任务涉及的专项文档，按下方「必读文档」表**按需加载**，不要一次读完全部文档。
+2. **[`docs/下一步行动.md`](docs/下一步行动.md)** —— "现在该干什么"（阻塞项 / 并行项 / 三件事）；
+3. **[`docs/进度驾驶舱.html`](docs/进度驾驶舱.html)** —— 进度 / 问题 / 待办聚合视图（浏览器打开；数据可能滞后，以事实源文档为准）；
+4. 专项文档按「必读文档」表**按需加载**，不要一次读完全部。
 
-在核对实际本地配置之前，不要假设通用约定——端口、命令、开关以本文件「常用命令」为准。
+端口、命令、开关以「常用命令」为准；核对本地实际配置前不要假设通用约定。
 
 ## 项目定位
 
-- **产品**：面向**重庆工程学院计算机专业学生**的垂直交流论坛（"问有所答、学有同伴、求职有路"）；
-- **核心功能**：固定 6 版块（技术问答 / 学习资源 / 面经求职 / 竞赛交流 / 课程交流 / 闲聊灌水）、Markdown 帖子与代码高亮、问答最佳答案采纳、站内通知与搜索、**学籍核验注册（限本校，学号 + 姓名比对）**；
+- **产品**：面向重庆工程学院计算机专业学生的垂直交流论坛（固定 6 版块、Markdown 帖子与代码高亮、最佳答案采纳、通知与搜索、**学籍核验注册**——限本校，学号 + 姓名比对）；
 - **技术栈**：后端 Spring Boot 4.1 + Java 21 + MyBatis-Plus 3.5.17（Boot4 starter）+ MySQL 8 + Redis 7；前端 Vue 3 + Vite + TS + Pinia + Element Plus（按需自动引入）；
 - **架构**：模块化单体 + DDD 四层（ADR-012），限界上下文 `module/{account,forum,...}`；
-- **流程**：企业七阶段流程（BRD → PRD → 设计 → 开发 → …），基线级变更走 CR 台账；单人项目 + AI 协作，流程偏离已由发起人签署（W-01 ~ W-07）。
+- **流程**：企业七阶段流程，基线级变更走 CR 台账（一行式）；单人项目 + AI 协作。
 
-## 项目状态速览（快照 2026-09-19；每次收尾更新，细节看驾驶舱）
-
-> ⚠️ **〔2026-09-27 速览补注（[CR-089](docs/变更日志/变更台账.md#cr-089)）：上列快照停在 CR-072 时代，其后六轮已改变多项结论，冲突处以本注与[台账 §1](docs/变更日志/变更台账.md) 为准**——**CR-082** 交付治理主线：**机审网关（fail-closed 5002）+ 举报（2012 去重）+ 工单闭环 + 封禁（2006）+ 注销 7 天冷静期**（**F-ACC-003 不再是"零端点"**：`POST /users/me/deactivate` + 设置页已接线 + 每小时匿名化任务）；**CR-083** 标签闭环（F-007 关闭）；**CR-084** 举报前端 + `/admin` 实页（工单列表 + 处置台）；**CR-085** 引用回复（**F-009 关闭**，`quoted_reply_id` 首个写入口 + `QUOTE` 通知）；**CR-086** 首页三栏改版；**CR-087** Markdown 预览端点（F-012 后端就位，**前端 PublishView 接线仍待做**）；**CR-088** 根 README 公开化重写。**单测基线 346 → 354**（CR-085 +8 例）、**契约快照 v1.15 → v1.16**（40 端点 / 35 路径 / 63 schema，116501 字节）——下文速览中"注销仍零端点""F-006 只到 🟡""机审未实现"等表述自此过时；剩余欠账：机审真实服务商（A3-8）、B1/B2 名册、提测门工程项（W-05）、隐私政策〕
-
-- **阶段四开发中**：Sprint 1 ✅（账号链路，T1~T9）；Sprint 2 ✅（论坛最小 MVP，M1~M6、A1~A5 真机验收通过）；**Sprint 3 五项功能已全部交付**（[CR-043](docs/变更日志/变更台账.md) 采纳最佳答案 · [CR-048](docs/变更日志/变更台账.md) 点赞收藏 · [CR-049](docs/变更日志/变更台账.md) 站内搜索 · [CR-050](docs/变更日志/变更台账.md) 通知中心 · [CR-058](docs/变更日志/变更台账.md) 热榜定时任务 + `sort=hot`）；⚠️ **CR-058 只是 F-FORUM-003 双排序的后端一半**——前端首页「最新 / 热门」切换 UI **尚未做**（该轮前端由并发会话占用），不得声称双排序已上线；〔2026-09-19 注（[CR-072](docs/变更日志/变更台账.md#cr-072)）：切换 UI 已补齐（HomeView `el-radio-group` → `sort=latest|hot`），API 冒烟通过，浏览器验收待发起人〕；**无 `Sprint3计划.md`**——Sprint 3 以各 CR 的[实施方案](docs/开发/实施方案/说明与模板.md)为执行依据。**Sprint 3 之后的第一项：[CR-065](docs/变更日志/变更台账.md#cr-065) 帖子删除（PRD F-FORUM-006）后端已交付**——`DELETE /api/v1/posts/{id}`（**仅作者**、软删走既有墓碑 `posts.is_deleted=1`、**零迁移**、同事务记 `POST_DELETE` 审计、二次删除幂等 `404 / 3001`）；⚠️ **只有 API、页面上没有删除入口**（该轮 `frontend/` 由并发会话占用），故 **F-FORUM-006 的用户可见验收不签、[问题清单](docs/项目现有问题清单.md) F-004 只到 🟡「后端已交付」**；〔2026-09-19 注（[CR-072](docs/变更日志/变更台账.md#cr-072)）：删除入口已补（PostDetailView 作者「删除」按钮 + 幂等 404 收尾），F-004 余下仅计数列，浏览器验收待发起人〕；PRD 该条的"计数回收"在现库**没有作用对象**（`boards` / `users` 均无 `*_count` 列），按落码偏差登记、未静默放过；**不挂任何 Sprint 号**（`Sprint4计划.md` 尚未编写）；**第二项：[CR-066](docs/变更日志/变更台账.md#cr-066) 内容处置「下架 / 恢复」后端一支已交付（2026-09-18）**——`PUT /api/v1/admin/posts/{id}/status` 与 `…/replies/{id}/status`（**仅 SUPERADMIN**，PRD F-ADMIN-001 原文把"处置"归超级管理员）、body `{status: PUBLISHED|REMOVED, reason?≤200}`、**零迁移 / 零新依赖 / 零配置项**，写 `status` 而**不碰 `is_deleted` 作者墓碑**——"平台处置"与"作者自助删除"自此在数据上分得开（下架帖作者调 `DELETE` 得 `404 / 3001`，不能绕过处置）；同事务记 `POST_REMOVE` / `POST_RESTORE` / `REPLY_REMOVE` / `REPLY_RESTORE` 审计 ⇒ **生产红线第 4 项"内容处置必须写审计"自此才有真实调用方**；**同状态重复调用幂等 200 且不记审计**；⚠️ **只有 API、页面上没有处置入口**，**PRD F-SAFE-003 验收第三句"作者收到通知"明确不做**（需新增通知 type + 前端硬编码文案链，`frontend/` 由并发会话占用）⇒ **F-SAFE-003 与 [问题清单](docs/项目现有问题清单.md) F-006 只到 🟡「一支五件之一、只有 API」**（举报 / 工单 / 禁言封禁 / 运营后台四支未动）。**它同时是既有读侧过滤的生产者**：取证事实是 **`PostStatus.REMOVED` 与 `replies.status` 自 V1 就位却全仓无写入口**（状态能读不能写，CR-059 / CR-060 铺的可见性过滤因此"当前不可触发"），本条补上写入口后那套过滤才真正生效，**列表 / 搜索 / 热榜 / 详情页的 status 条件一行未改**（下架即掉出热榜也是 `resetHotScoresBefore` 既有条件的自然结果）。**（登记轮原话保留：该条立项时只到方案、等发起人确认，本轮零代码 / 零契约改动）**，且 **PRD 该条验收第三句"作者收到通知"明确不做**（需新增通知 type + 前端文案链，`frontend/` 由并发会话占用），封禁 / 举报 / 机审 / 处置台 UI 也均不在该轮）；**第三项：[CR-068](docs/变更日志/变更台账.md) 处置问题清单 E-011（2026-09-19）**——`ArchitectureGuardTest` 新增 **G9**，凡有效路径落在 `/api/v1/admin/**` 的映射方法必须真的调用 `CurrentUser.requireRole`，"把 `requireRole` 静默摘成 `requireId`"自此会让守护测试变红（**本轮零生产代码改动**、单测 **248 → 249**、契约零 diff，验证靠两支反证复跑，详见「测试约定」与[技术方案 §2.4](docs/设计/技术方案.md)）；**第四项：[CR-071](docs/变更日志/变更台账.md#cr-071) 个人中心第一轮（F-ACC-007）前后端已交付（2026-09-19，登记与实施同批）**——`PUT /api/v1/users/me`（`nickname` / `major` / `bio`，**传 null 不改、传空串清空（昵称除外）**，**只定向 UPDATE 变化列**故 `role` / `status` / `email_*` 物理上不可能被这条语句碰到，同事务 `PROFILE_UPDATE` 审计、**幂等重放零审计但限流配额照扣** ⇒ 前端"无变化即禁用保存"，第 11 次 `429 / 2008`）+ `GET /api/v1/posts/mine` / `GET /api/v1/replies/mine`（⚠️ **"我的"视角与全站视角可见性口径相反**：自删的不出现、**被平台下架的要出现并带 `status`**，故出参不复用 `PostSummaryVo` 而是新建窄载体）；新迁移 **`V3__my_content_indexes.sql`**（两条作者索引，真实启动执行过、`SHOW INDEX` 核对列序）；前端 `/settings`（资料编辑 / 只读回显 / 我的内容 / 账号）+ `/me/posts` + `/me/replies` + 顶栏四入口；⚠️ **一条行为收紧必须知道**：`common/validation/FieldRules` 的禁则字符集**同批加到了注册侧**（"编辑拒 `<`、注册不拒"等于唯一防线漏一半），**含尖括号的昵称自本 CR 起注册即 `400 / 1001`**；⚠️ **注销（F-ACC-003）仍零端点**——设置页那格是 `disabled` 占位，**不得读成"注销已实现"**，**他人主页 `/u/:id` 也未做**（[问题清单](docs/项目现有问题清单.md) F-003 只回置 🟡「本人视角已交付」）；**「届」徽章未渲染**，原因不是漏做而是 `studentId` 服务端从不下发、客户端无料可推（见[方案 §8](docs/开发/实施方案/CR-071-个人中心第一轮.md)）；
-- **B4 / B5（= A3-9 / A3-10）已于 2026-09-12 由 [CR-028](docs/变更日志/变更台账.md) 完成**：ArchUnit `ArchitectureGuardTest`（初版 10 用例，[CR-031](docs/变更日志/变更台账.md) 增至 11）把 ADR-012 四层规则**首次变为机器强制**（规则吸收复评 R-1 / R-2 / R-3；R-1 裁决：禁止 web 注入 domain 端口，`UserController` 已改经 application）；**N-4 闭环**（每个映射方法必须显式 `@PublicEndpoint` 或 `@SecurityRequirement`，受保护者必须调用 `CurrentUser` 统一入口）；F-1 / F-3 / F-4 与 N-5 / N-6 同批处置；单测 87 → **107** 全绿。**同日 [CR-031](docs/变更日志/变更台账.md) 补上框架级路径鉴权**（消除当时登记的"`SecurityConfig` 仍 `permitAll()`、路径级拦截未做"残留）：`EndpointAuthorizationManager` 在过滤器链按端点注解裁决（`module` 端点未声明即 fail-closed），401 / 403 出口沿用 `ApiError` 外壳，单测 **107 → 117** 全绿、真机 4 个受保护端点匿名 / 非法 token 一律 401；**W-02 / W-07 的关闭前置已成立，状态为"可关闭、待发起人签署"（任何文档不代签）**；〔**2026-09-19 更新（[CR-069](docs/变更日志/变更台账.md)）：上句"待发起人签署"已履行——发起人指示「提交，全部签署」，W-02 与 W-07 由发起人本人正式签署关闭**（**不是代签**，"任何文档不代签"这条规则本身不变、仍适用后续），**让步放行结案 3 / 7（W-02 / W-06 / W-07）、开放 4（W-01 / W-03 / W-04 / W-05）**；⚠️ 签署**不改变**下方"提测准入门 4 项未满足"与[问题清单](docs/项目现有问题清单.md) E-002 / E-003 / E-004 / E-005 四行〕；
-- **CR-032 之后（2026-09-13 ~ 09-16）的收敛概述**（逐条见 [台账](docs/变更日志/变更台账.md) §1，本文不重复）：设计门 **A3-5（ER 图与量级预估）/ A3-7（检查清单）已闭环**，**开放项只剩 A3-6（UI 走查，仅剩补偿③ 逐页走查）与 A3-8（部署与机审选型，须发起人决策）**；除 Sprint 3 五个功能外，另有全库时间戳时区口径修复（[CR-051](docs/变更日志/变更台账.md)，闭环台账外问题 L-6）、前端界面美化与优化（[CR-052](docs/变更日志/变更台账.md) / [CR-055](docs/变更日志/变更台账.md)）、移动端验证暂缓（[CR-053](docs/变更日志/变更台账.md)）、学籍名册模拟数据 45 名 + 开发测试账号清单（[CR-054](docs/变更日志/变更台账.md)）、**[CR-058](docs/变更日志/变更台账.md) 热榜定时任务（ADR-006）——本仓首次引入 `@Scheduled` / `@EnableScheduling`**。**单测基线已由 117 升至 185**（[CR-058](docs/变更日志/变更台账.md) 新增 21 例：算分策略 8 / 热榜用例 6 / 触发器 3 / Redis 锁 2 / `sort` 校验 2），**2026-09-18 由 [CR-060](docs/变更日志/变更台账.md) 升至 192**（楼层可见性守卫：适配器 3 例 + 应用层 2 例零副作用断言），**同日由 [CR-063](docs/变更日志/变更台账.md#cr-063) 升至 208**（生产安全配置启动即校验：`ProductionSafetyGuardTest` 16 例，**本仓首次出现 `@Profile` 与 profile 配置文件** `application-prod.yml`），**再由 [CR-065](docs/变更日志/变更台账.md#cr-065) 升至 220**（帖子删除：墓碑 UPDATE 3 + **收藏读侧 2** + 应用层 5 + 控制器 2）；〔**契约快照 2026-09-18 起为 **24 端点 / 21 路径 / 41 schema / 9 tag / 15 受保护**（v1.12），最近一次再生成是 CR-066 的两个受保护 PUT（diff **+232 / −16**——⚠️ 旧判据"删除行为零即纯新增"本轮失效，`ApiResponseVoid` 因新引用被 springdoc 换位重排，改判据为"删除行逐行归因 + 结构化比对"，实测 40 个既有 schema 与全部既有 operation 零变化）；**上一版为 CR-065 的 v1.11（22 端点 / 19 路径 / 40 schema / 13 受保护，diff **+85 / −0 纯新增**，新增受保护 operation `DELETE /api/v1/posts/{id}`）——原句"仍为 21 端点、最近一次为 CR-058 的 v1.10（规模零变化）"保留为当时的快照。⚠️ 该快照来源**仍是未提交的工作区**（CR-064 + CR-065 的代码都在其中），**「提交后核对」待提交后补做**〕；〔**2026-09-18 提交后注**：上句方括号里的"未提交"已被取代——CR-064 + CR-065 由发起人**合并提交为 `8216843` 并推送 origin/main**，快照的代码来源自此可追溯到提交；⚠️ 但**「提交后核对」本身仍未执行**（须跑已提交源码重抓 `openapi.json` 逐字节比对并回填[契约 README](docs/设计/接口契约/README.md) §2「代码来源」格），所以"当前快照与 `8216843` 一致"这一条**目前是断言、不是实测**〕；〔**2026-09-19 注（[CR-071](docs/变更日志/变更台账.md#cr-071)）：契约快照现行值为 **v1.13 = 27 操作 / 23 路径 / 48 schema / 9 tag / 18 受保护、79158 字节**（`sha256 b76663ae8878e348…37db6b8`），最近一次再生成是个人中心第一轮新增的 3 个受保护 operation——diff **+462 / −49 非纯新增**，49 行删除已逐行归因 + 结构化比对（**真正被改写的只有 2 行**：`GET /users/me` 的过时 summary、`RegisterCommand.nickname` 展开 `pattern`），沿用 v1.12 立的重排判据；**单测基线现为 294**（249 → 294，+45 例逐类归因在方案 §8）；⚠️ **本次快照来源又是未提交的工作区 ⇒「提交后核对」义务已重新挂上**（下面 v1.72 注闭环的是 v1.11 + v1.12 两轮，不适用于 v1.13）；另记一条 springdoc 极限：**可重复的 `@Pattern` 一个都不会输出到契约**，故"昵称不能为空白"这条规则只能靠代码与单测证明；还有一条**本轮误判已撤回**：`flyway_schema_history.installed_on` 看着比业务表晚 8 小时，实为 `timestamp` 列按会话时区换算的正确行为、**不是缺陷**（核对时间口径请先 `SET SESSION time_zone='+00:00'`，否则会把 L-6 再"发现"一次）**〕；〔**2026-09-21 注（CR-074 的快照补做轮，抓取在 2026-09-20）：上句"现行快照"已被取代**——CR-074 落地时把再生成挂账了，本轮补做，现行快照为 **v1.14 = 31 操作 / 26 路径 / 50 schema / 10 tag / 22 受保护、88437 字节**（`sha256 3e7f377c4b20f006…c579da71`；新增 4 个受保护 operation：`POST` / `DELETE /api/v1/users/{targetId}/follow`、`GET /api/v1/users/{targetId}/follow-state`、`GET /api/v1/posts/following`，**tag 首次由 9 增至 10（新增 `follow`）**，`PostSummaryVo` 加 `viewCount` / `coverUrl`、`PostDetailVo` 加 `viewCount`；diff **+357 / −1**——**唯一一条删除行是 `GET /api/v1/posts/{id}` 的 `summary` 文案改写**，故本轮是历次最接近纯新增的一次，无需再动用"换位重排"判据）；⚠️ **一条读侧事实**：「关注」Feed 是**独立路径** `GET /api/v1/posts/following`，不是 `GET /posts?sort=following`（`sort` 参数口径一字未变，故 `GET /posts` 的 operation 零 diff）；**另记一条契约表达极限**：错误码在快照里只以 `description` 文本出现（如"参数错误（1001）；不能关注自己（2009）"），`code` 值不是结构化字段 ⇒ 想机器校验错误码仍只能解析文案（真机已复核 2009→400、2007→404、匿名→401 与声明一致）〕；〔**2026-09-24 注（[CR-080](docs/变更日志/变更台账.md#cr-080) 的快照轮，同批补做 CR-077 / CR-078 欠的契约同步）：上句"现行快照 v1.14"已被取代**——⚠️ **先记一条取证**：v1.14 之后落地的 [CR-077](docs/变更日志/变更台账.md) / [CR-078](docs/变更日志/变更台账.md) **没有再生成快照**，于是 `GET /posts/similar`、`GET /users/{id}`、`GET /users/{id}/posts`、`POST /notifications/{id}/read` **四个 operation 在归档快照里根本不存在**（本档此前"快照与代码一致"的说法对这三天的代码是不成立的，不是漂移、是漏做），本轮补上；现行快照为 **v1.15 = 35 操作 / 30 路径 / 54 schema / 10 tag / 24 受保护、99031 字节**（`sha256 997a2802d9f3e2a9…eef053e6`，diff **+435 / −31**：−31 逐行归因后是 **2 处 `summary` 文案改写 + 29 行 `MyReplyVo` 系列 schema 换位重排**，既有 operation 与 schema 无实质删改）；**本轮自己唯一的契约改动只有 `PostSummaryVo.likedByMe` 一个字段**（列表项就地回显已赞状态用）；⚠️ **来源＝未提交的工作区 ⇒「提交后核对」义务重新挂上**（v1.14 是本仓唯一一次无此义务的快照）；另修掉一条历次重犯的契约瑕疵：`GET /posts/similar` 的 400 description 原为 `参数错误（1001）；参数错误（1001）`——`@ErrorCodes` 里显式写 `INVALID_PARAM` 与自动补的通用 400 撞车（CR-049 v1.8 记过、CR-071 自修过一次、CR-077 又犯，第三次）〕；〔**2026-09-19 注（[台账 v1.72](docs/变更日志/变更台账.md)）：上句"仍未执行 / 是断言"已不成立**——CR-066 + CR-068 随 `f58ef73` 提交后，本轮自**该已提交树** `mvn -o package` 重建（顺带复验 **249 全绿**）、临时端口 **8097** 以 `localhost` 重抓 `openapi.json`、`servers` 归一回 8088，与归档快照**逐字节一致**（68470 字节 / `sha256 28327bc89910d9c1…19266cfb`）、`git diff` 为空 ⇒ **v1.11 + v1.12 两轮「提交后核对」一并闭环，快照来源自此可追溯到提交**（⚠️ v1.11 未单独回跑，是"当前树含其全部契约改动且产物一致"的推论）。**但 `openapi.json` 仍无任何机器校验**——这条核对只能靠人跑，纳入 CI 比对属提测准入门欠账（[W-05](docs/流程偏离记录.md) 不得关闭），原句保留为当时的敞口登记〕；
-- **流程已降密度（[CR-029](docs/变更日志/变更台账.md)）**：CR 自 CR-030 起改一行式登记；**项目状态只维护 change-log §1 + 进度驾驶舱两处**；取消凭证回填仪式（凭证 = commit message 写 CR 号）；AI 遵守下方「汇报约定」；
-- **唯一外部依赖**：B1 / B2 学籍名册——**真实名册仍未到位，但自 [CR-054](docs/变更日志/变更台账.md)（2026-09-15）起已不再阻塞开发**：库内已有 45 名全合成学生（批次 `dev-sim-45`）+ 45 个开发测试账号，`bypass=false` 下的注册链路可实测可复现（清单见「常用命令」段）；**正式导入路径与生产红线一条未放宽**（`bypass` 生产必须 `false`、dev 固定验证码生产必须留空；**自 [CR-063](docs/变更日志/变更台账.md#cr-063) 起这三条以 `prod` profile 启动即校验强制**，见「常用命令」与「红线」两段）；
-- **提测准入门 7 项中 4 项未满足**（单测覆盖率不可测 / **CI 缺静态扫描环节** / Code Review 未闭环 / 静态扫描未接入——7 项清单见 [`Sprint1计划.md`](docs/开发/Sprint1计划.md) §出口自查）；让步放行 W-01 ~ W-07 中**仅 W-06 已关闭**，**W-02 / W-07 关闭前置已成立（[CR-028](docs/变更日志/变更台账.md)）但待发起人签署、不得代签**；〔**2026-09-19 更新（[CR-069](docs/变更日志/变更台账.md)）：上句已过时**——发起人本人指示「提交，全部签署」，**W-02 / W-07 正式关闭 ⇒ 结案 3 条（W-02 / W-06 / W-07）、开放 4 条（W-01 / W-03 / W-04 / W-05）**。**本条前半段"提测准入门 7 项中 4 项未满足"一字不改、签署不消任何一项**：`backend/pom.xml` 仍无 jacoco（覆盖率不可测）、CI 两个 workflow 仍无扫描步骤（静态扫描未接入）、Code Review 仍未闭环（零份书面归档）——**这三行正是 W-05 的未做前置，本版实测确认**；**"不得代签"规则本身不变**，本轮是发起人本人的签署指示而非 AI 代签；⚠️ **UI 走查不在这 7 项内**——它属设计门 **A3-6**（[W-03](docs/流程偏离记录.md) 补偿③），两笔欠账不要混算；
-- **需求侧（2026-09-19）**：第 7 份增量 PRD 草案 [产品需求文档-个人中心设置.md](docs/需求/产品需求文档-个人中心设置.md)（**F-ACC-007**，预留 **CR-067**；⚠️ **CR-068 已被处置 E-011 的 G9 轮取用，下一个自由编号为 CR-069**；〔**2026-09-19 注**：CR-069 已被[签署轮](docs/变更日志/变更台账.md#cr-069)取用 ⇒ **下一个自由编号为 CR-070**〕）已交付、**待发起人评审、通过前不得开工**——它把基线 §5.1 页面清单里"我的（帖子 / 收藏 / **设置** / **注销**）"那一格从未展开的状态展开成可测需求（P0 五格：资料编辑 `PUT /users/me` / 我的帖子 / 我的回帖 / 设置页结构 / 限流与审计）；**同批草案升 v0.2：发起人提供身份卡概念图并定展示口径「只展示届、不展示级」**——该徽章定义权在 CR-036 草案，本轮**只点名 R-6 不代改**（该草案原降级方向"混合编码则留级砍届"与本口径**相反**），图归档 [docs/设计/UI规范/概念图/](docs/设计/UI规范/概念图/profile-card-concept-2026-09-19.png)、[界面规范](docs/设计/UI规范/界面规范.md) 升 v1.9 新增 §8.4「参考性视觉稿（**非验收依据、不计入 W-03 补偿② 截图**）」；⚠️ 一条反直觉事实已入档：**砍掉「级」不降低对 Q1 学号编码核实的依赖**（届 = 前两位 + 4，反而多一层假设；成立条件是推导读时计算、不落库）；**两轮零代码 / 零契约 / 零迁移**，并据实新登记问题清单 **E-012**（基线 §4 三格与实测不符）与 **E-013**（昵称与签名无机审词表覆盖）；〔**2026-09-19 评审轮更新（[CR-070](docs/变更日志/变更台账.md#cr-070)）：上句"待发起人评审"对 F-ACC-007 已不再成立，对另六份也只是"换了一种不通过的方式"**——七份草案已逐份评审，结论落在新建的[增量PRD评审纪要](docs/评审/增量PRD评审纪要.md) v1.0：**✅ F-ACC-007 有条件通过 ⇒ 本轮进入实施（CR-071，一轮含前端）**；🟡 CR-033 只有 **F-AI-001a 纯检索版**可排（语义版等服务商决策）、🟡 CR-042 只有 **006c 纯文档**可做（006a 的迁移宿主不存在，`db/migration` 实测只有 V1/V2）；⛔ **CR-036 / CR-037 / CR-038 / CR-039 不通过或不排期**（学号口径循环取证 / `tags` 全库 0 行 / 面经实测 1 篇 6 字且机审零实现 ⇒ 会外发未审 UGC / 三条上线门槛实测全不满足）。⚠️ **两条纪律级事实**：Ⅰ. **本轮评审由 AI 会话执行、六份草案又由该会话起草 ⇒ 独立评审性为零**，比 [W-01](docs/流程偏离记录.md) 补偿② 要求的外部性还弱一档，**"经正式变更评审"仍 0 次**，按草案动手前先确认其结论是否被人工复核过；Ⅱ. **`frontend/` 不再归并发会话独占**（发起人原话「我没有说你一直不能动前端」）⇒ F-ACC-007 的 N12 与"两轮制声明"已作废加注，设置页与两个"我的"列表页并入 CR-071 一轮；⚠️ 但 **CR-055 批次④（中文字体分片自托管）仍在途**，改 `tokens.css` 字体栈会让那批要回退的东西回不去，**动前端不等于动字体**。**下一自由编号 CR-072**；〔**2026-09-19 实施轮注（[CR-071](docs/变更日志/变更台账.md#cr-071)）：F-ACC-007 的"只有需求文档"已不成立**——第一轮四格（007a 资料编辑 / 007b 我的帖子 / 007c 我的回帖 / 007d 设置页结构 + 007e 限流与审计）**前后端已交付并实测**，草案随之升 **v0.4** 并在文末新增「实施状态回写」节（逐条写明**哪些验收可签、哪些不签及原因**：注销一格与 007f~007j 一律不签）；⚠️ 但**其余六份草案的状态不因本轮改变**（CR-036 / 037 / 038 / 039 仍是不通过或不排期）〕；另据实登记 **E-014**（AI 服务商从未有决策项 ⇒ **A3-8 判内容进路、AI 服务商是 UGC 出路，签了 A3-8 不等于 AI 依赖已解决**）〕；
-- ⚠️ 以上任何一项变化后，**须更新驾驶舱**（见「工作收尾约定」）。
-
-## 仓库结构（单仓库 monorepo）
+## 仓库结构
 
 - 根目录即**唯一** git 仓库（默认分支 `main`），git 操作在根目录进行；
-- `docs/` —— 流程手册与全部项目文档（含 [`docs/进度驾驶舱.html`](docs/进度驾驶舱.html) 进度驾驶舱）；
-- `backend/` —— Spring Boot 4.1 + Java 21 + MyBatis-Plus；
-- `frontend/` —— Vue 3 + Vite + TS。
+- `docs/` —— 流程手册与全部项目文档；`backend/` —— Spring Boot；`frontend/` —— Vue 3。
 
 ## 必读文档（按需加载）
 
 | 文档 | 什么时候读 |
 |------|-----------|
-| [`docs/进度驾驶舱.html`](docs/进度驾驶舱.html) | 想一眼看清进度 / 问题 / 待办全貌（聚合视图；**数据可能滞后，以事实源文档为准**） |
 | [`docs/README.md`](docs/README.md) | **文档版本号唯一登记处**（§2）+ 阶段门状态表（§1）；新增文档必须在此登记 |
-| [`docs/下一步行动.md`](docs/下一步行动.md) | 动工前：阻塞项（B1~B5）、并行项、当前该做的三件事 |
-| [`docs/变更日志/变更台账.md`](docs/变更日志/变更台账.md) | 任何基线级变更**登记前**；想知道某次变更的来龙去脉（§1 汇总表先看） |
+| [`docs/下一步行动.md`](docs/下一步行动.md) | 动工前：阻塞项、并行项、当前该做的三件事 |
+| [`docs/变更日志/变更台账.md`](docs/变更日志/变更台账.md) | 任何基线级变更**登记前**；查某次变更的来龙去脉（§1 汇总表先看） |
 | [`docs/流程偏离记录.md`](docs/流程偏离记录.md) | 涉及流程裁剪 / 偏离时（W-xxx / T-xxx 单一登记处） |
 | [`docs/流程手册.md`](docs/流程手册.md) | 流程规则本身：4.2 变更登记、4.5 文档归档、5.1 裁剪指南 |
 | [`docs/设计/技术方案.md`](docs/设计/技术方案.md) | 技术选型与 **ADR-001~012**；接口清单与错误码分段见 §5 |
-| [`docs/设计/接口契约/README.md`](docs/设计/接口契约/README.md) | 改接口 / 错误码 / 鉴权**之后**重生成快照（§2 命令）；N-1 ~ N-6 六项缺口的处置与残留见 §6.2（**N-4 已由 [CR-028](docs/变更日志/变更台账.md) 闭环**） |
-| [`docs/设计/UI规范/界面规范.md`](docs/设计/UI规范/界面规范.md) · [`前端界面素材选型.md`](docs/设计/UI规范/前端界面素材选型.md) | 新增 / 修改前端页面前：令牌表、组件与交互约定（W-03 补偿①落点）；**要引入任何外部素材（组件库 / 图标 / 字体 / 插画 / 动效）前，先查选型文档 §3「禁区汇总」**——多数素材已被规范排除，均带"想用先改规范"的解禁路径 |
-| [`docs/开发/Sprint2计划.md`](docs/开发/Sprint2计划.md) · [`docs/开发/Sprint2增量设计.md`](docs/开发/Sprint2增量设计.md) | 做论坛相关任务时：IN/OUT 范围、六端点契约、三条人工自查（§4）、落码偏差（§8 P-1~P-8） |
-| [`docs/开发/实施方案/说明与模板.md`](docs/开发/实施方案/说明与模板.md) | 要做「够大」的改动前：先按模板写 `CR-xxx-主题.md` 并**停下等确认**（门槛见「实施方案约定」） |
-| [`docs/需求/产品需求文档-*.md`](docs/需求/产品需求文档.md) · [`docs/评审/增量PRD评审纪要.md`](docs/评审/增量PRD评审纪要.md) | ⚠️ **7 份增量 PRD 草案**（[CR-033](docs/变更日志/变更台账.md) / [CR-036](docs/变更日志/变更台账.md)~[CR-039](docs/变更日志/变更台账.md) / [CR-042](docs/变更日志/变更台账.md) / [CR-067](docs/变更日志/变更台账.md)）已于 2026-09-19 逐份评审（[CR-070](docs/变更日志/变更台账.md#cr-070)，结论在评审纪要）：**只有 F-ACC-007「有条件通过」并进入实施（CR-071）**，CR-033 / CR-042 各只有一半可做，CR-036 / 037 / 038 / 039 **判为不通过或不排期**；原句"全部待发起人评审、通过前不得开工"保留为草案期事实。⚠️ **该轮是 AI 自评自稿 ⇒ 独立评审性为零**，人工复核可逐条推翻，**按任何一份草案动手前先确认其当前结论与是否被复核**——个人主页 `/u/:id`、头像体系、账号类型与身份体系都压在这些草案上 |
-| [`docs/设计/数据模型ER图与量级预估.md`](docs/设计/数据模型ER图与量级预估.md) | 要查表结构 / 字段 / 量级时（**以 V1 迁移 12 张表为唯一事实源**，[CR-035](docs/变更日志/变更台账.md)） |
-| [`docs/开发/开发测试账号清单.md`](docs/开发/开发测试账号清单.md) | 需要开发测试账号、做批量登录核验时（45 个合成账号，[CR-054](docs/变更日志/变更台账.md)） |
-| [`docs/评审/gate-*.md`](docs/评审/立项门纪要.md) · [`docs/评审/技术方案追认纪要.md`](docs/评审/技术方案追认纪要.md) · [`docs/评审/部署与机审选型决策材料.md`](docs/评审/部署与机审选型决策材料.md) | 追溯评审结论与行动项（A1-*/A2-*/A3-* 状态、F-1~F-7、R-1~R-3）；最后一份是 A3-8 的决策备料（**只备料、不代决策**） |
+| [`docs/设计/接口契约/README.md`](docs/设计/接口契约/README.md) | 改接口 / 错误码 / 鉴权**之后**重生成快照（§2 命令与现行版本） |
+| [`docs/设计/UI规范/界面规范.md`](docs/设计/UI规范/界面规范.md) · [`前端界面素材选型.md`](docs/设计/UI规范/前端界面素材选型.md) | 新增 / 修改前端页面前：令牌表、组件与交互约定；**引入任何外部素材（组件库 / 图标 / 字体 / 插画 / 动效）前先查选型文档 §3「禁区汇总」** |
+| [`docs/开发/实施方案/说明与模板.md`](docs/开发/实施方案/说明与模板.md) | 要做「够大」的改动前：先写 `CR-xxx-主题.md` 并**停下等确认** |
+| [`docs/设计/数据模型ER图与量级预估.md`](docs/设计/数据模型ER图与量级预估.md) | 查表结构 / 字段 / 量级时（以 V1 迁移为唯一事实源） |
+| [`docs/开发/开发测试账号清单.md`](docs/开发/开发测试账号清单.md) | 需要开发测试账号时（45 个合成账号） |
 | [`docs/需求/产品需求文档.md`](docs/需求/产品需求文档.md) | 需求基线（学籍核验 F-ACC-004 为 P0） |
+| [`docs/评审/`](docs/评审/增量PRD评审纪要.md)（立项 / 需求 / 设计门纪要 · 技术方案追认纪要 · 增量PRD评审纪要 · 部署与机审选型决策材料） | 追溯评审结论与行动项（A1-*/A2-*/A3-*、F-1~F-7、R-1~R-3、七份增量 PRD 草案结论） |
 
 ## 常用命令
 
-> **开发期依赖栈用本机原生服务，不用 Docker**（[CR-011](docs/变更日志/变更台账.md)）；`docker-compose.dev.yml` 保留，发布阶段（阶段六）再启用。
-> Redis：`D:\Workspace\TechResources\Redis\Redis-8.6.2-Windows-x64-msys2-with-Service\redis-server.exe`（在自身目录下以 `redis.conf` 启动，监听 127.0.0.1:6379，无密码）。
-> MySQL：本机 `127.0.0.1:3306`，库 `campuslink`（开发账号 `campuslink/campuslink`，见 `application.yml` 的 `DB_USER` / `DB_PASSWORD` 默认值）。**表结构不用手工导入**：Flyway 在后端启动时自动执行迁移（[CR-014](docs/变更日志/变更台账.md)）。⚠️ **用原生 CLI 核对时间口径前必须先 `SET SESSION time_zone='+00:00';`**——CLI 默认会话是 `SYSTEM`（本机 UTC+8），而 `timestamp` 列读时按会话时区换算、`datetime` 列按字面读，**混着看会把正确行为读成"+8 偏移缺陷"**（[CR-051](docs/变更日志/变更台账.md) 修的是 `DATETIME` 侧；本轮就误判过一次 `flyway_schema_history.installed_on`，见[方案 §8](docs/开发/实施方案/CR-071-个人中心第一轮.md)）。
+> **开发期依赖栈用本机原生服务，不用 Docker**（`docker-compose.dev.yml` 留给发布阶段）。
+> Redis：`D:\Workspace\TechResources\Redis\Redis-8.6.2-Windows-x64-msys2-with-Service\redis-server.exe`（在自身目录下以 `redis.conf` 启动，127.0.0.1:6379，无密码）。
+> MySQL：`127.0.0.1:3306`，库 `campuslink`（开发账号 `campuslink/campuslink`）。**表结构不手工导入**——Flyway 启动时自动迁移，仅首次需要先建库（见下）。
+> ⚠️ **原生 CLI 核对时间口径前必须先 `SET SESSION time_zone='+00:00';`**——CLI 会话默认 SYSTEM 时区，`timestamp` 列按会话时区换算、`datetime` 按字面读，混看会把正确行为读成"+8 偏移缺陷"。
 
-**backend/**（构建需 **JDK 21**；本机在 **cmd.exe** 下执行 `set "JAVA_HOME=D:\develop\Java\jdk-21"`，**在 git-bash 下须改写为 `export JAVA_HOME="D:/develop/Java/jdk-21"`**——`set` 不会导出环境变量，照 cmd 语法在 bash 里跑会报「不支持发行版本 21」〔2026-09-19 实测踩过一次〕）：
+**backend/**（构建需 **JDK 21**：cmd.exe 下 `set "JAVA_HOME=D:\develop\Java\jdk-21"`；git-bash 下须改写为 `export JAVA_HOME="D:/develop/Java/jdk-21"`——`set` 不导出环境变量）：
 
 ```bash
-# 仅首次需要：库必须先存在，Flyway 才能连上（建库属基础设施引导，不归 Flyway 管）
+# 仅首次：库必须先存在，Flyway 才能连上
 mysql -h127.0.0.1 -uroot -p -e "CREATE DATABASE IF NOT EXISTS campuslink DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;"
 
-mvn verify            # 编译 + 单测（合码前必须全绿，当前基线 358 个（其中 4 例为 CR-090 的 SPRING_IT 条件集成测试、默认 SKIPPED；编号沿革：CR-068 的 G9 后 249 → CR-071 后 294 → CR-074 后 298 → CR-077 / CR-078 后 343（**该值只写进了 `b4ecb5e` 的提交说明、从未回填本档**，本轮据实测补记）→ CR-080 后 346 → CR-085 后 354〔2026-09-27 注（CR-089）：+8 例逐类归因见其方案〕→ CR-090 后 358〔+4 例 @SpringBootTest 集成测试：SPRING_IT=true 真机 4/4、默认 SKIPPED；jacoco 行覆盖 66.4% 过 60% check 开闸、module 61.9% 缺口登记 E-002〕）；含架构守护测试）
+mvn verify            # 编译 + 单测 + 架构守护 + jacoco 行覆盖 60% check；合码前必须全绿
+                      # 当前基线 366（其中 4 例 SPRING_IT 集成测试默认 SKIPPED）——改基线数只改本注释这一处
 mvn spring-boot:run   # 启动：8088（SERVER_PORT 可覆盖）；健康检查 /actuator/health，OpenAPI /api/docs
 
-# 生产 profile（CR-063 起，本仓唯一的环境判定入口；下面三轮取证跑在临时端口 8098）：
+# 生产 profile：5 个凭据变量一个都不能省（各 ≥32 字节，HASH / CRYPT 两把不得相同），
+# 漏配任一 → 启动即失败（config/ProductionSafetyGuard 抢在数据源之前逐条点名）。
 SPRING_PROFILES_ACTIVE=prod JWT_SECRET=… APP_HASH_KEY=… APP_CRYPT_KEY=… DB_USER=… DB_PASSWORD=… \
   mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Dserver.port=8098"
-#   5 个凭据变量一个都不能省（各 ≥32 字节，且 HASH / CRYPT 两把不得相同）。
-#   漏配任何一个 → 进程起不来，第一条异常就是「生产安全配置校验未通过（N 项）」并逐条点名，
-#   由 config/ProductionSafetyGuard 抢在数据源 / Flyway / JwtService 之前拦（真机 A/B/C 三轮已验）。
-#   ⚠️ 别指望"占位符不留默认值"能中止启动：绑定 @ConfigurationProperties 走非严格解析，
-#      解析不了会把 ${DB_USER} 字面量原样注入（实测报的是 MySQL Access denied for user '${DB_USER}'）。
 ```
 
 **frontend/**：
 
 ```bash
 npm install
-npm run dev           # 5173，/api 代理到 8088（可用 VITE_API_TARGET 覆盖）
+npm run dev           # 5173，/api 代理到 8088（VITE_API_TARGET 可覆盖）
 npm run build
 ```
 
-**联调冒烟（账号链路）**：浏览器打开 `http://localhost:5173/login`，注册 Tab：学籍核验 → 邮箱验证码 → 注册 → 登录 → 顶栏出现昵称。
-**联调冒烟（论坛主链路）**：登录后走 首页版块列表 → 进版块 → 发帖（Markdown + 代码块）→ 帖子详情 → 楼层回帖，刷新后数据仍在；**匿名访问 `POST /api/v1/posts` 必须 401**。
-**联调冒烟（Sprint 3 四条链路）**：① **采纳最佳答案**——发帖 / 回帖后由**楼主**在详情页点「采纳」（`POST /api/v1/posts/{id}/accept`），最佳答案楼层置顶、列表出「已采纳」标识；② **点赞收藏**——列表 / 详情页点赞与收藏 toggle，收藏页 `/favorites/mine` 可见；③ **站内搜索**——顶栏搜索框 → `/search`（`keyword` 2~50 字，`days` 取 7 / 30 / 90）；④ **通知中心**——`/notifications` 页 + 顶栏铃铛角标，`unread` 可筛选。
-**帖子删除（[CR-065](docs/变更日志/变更台账.md#cr-065)，F-FORUM-006 后端一半）**：**只能走 API 冒烟**——作者 `DELETE /api/v1/posts/{id}` → `200`，随后全站列表 / 版块列表 / `sort=hot` / 搜索 / 详情 / 楼层列表 / 回帖 / 点赞 / 收藏 / 采纳**十一处**一律读不到或 `404 / 3001`，"我的收藏"里也不再出现（这条读侧过滤是本轮真机抓出的缺陷后补的），二次删除幂等 `404 / 3001` 且 `audit_logs` **不新增行**；匿名 → `401 / 4001`、他人 → `403 / 4002`。**⚠️ 页面上没有删除按钮**（该轮 `frontend/` 由并发会话占用），**F-FORUM-006 的用户可见验收不签**，"前端删不掉"不是缺陷、是未做的入口。〔2026-09-19 注（CR-072）：删除按钮已补，404 / 3001 幂等在前端按"已删除"收尾并返回版块页。〕
-**内容处置（[CR-066](docs/变更日志/变更台账.md#cr-066)，F-SAFE-003 后端一支）**：**同样只能走 API 冒烟**——`admin@campuslink.local` 登录取 SUPERADMIN 令牌 → `PUT /api/v1/admin/posts/{id}/status` body `{"status":"REMOVED","reason":"…"}` → `200`，随后**十二处**逐项实测：全站列表 / 版块列表 / `sort=hot` / 搜索 / 详情 / 楼层列表 / 回帖 / 点赞 / 收藏 / 采纳 / "我的收藏" / **通知标题**（回落「内容已删除」**且不再下发 `postId`**）；SQL 侧核对 `status=REMOVED` 而 `is_deleted` 仍为 0（**处置与作者删除是两列**）、`audit_logs` +1 行 `POST_REMOVE`；**同状态再调一次 → 200 且审计不增行**；`{"status":"PUBLISHED"}` 走同一端点即恢复、四处读侧与通知标题全部回归；楼层侧 `PUT /api/v1/admin/replies/{id}/status` 同构（下架后楼层消失、不可点赞 / 采纳，恢复后**楼层号不变**）。鉴权：**匿名 → 401 / 4001、普通用户（含作者本人）→ 403 / 4002、非法 `status` → 400 / 1001、目标不存在或已删 → 404 / 3001**。⚠️ **验证下架对热榜的影响时须记得默认 `campuslink.hot.lock-ttl-seconds=300` 大于临时缩短的刷新周期**——锁不显式释放，只调 `HOT_REFRESH_INTERVAL_MS` 并不会真的缩短周期，要 `redis-cli DEL campuslink:hot:refresh:lock` 或同时临时抬高该 TTL（本仓无对应环境变量占位符）。⚠️ **页面上没有处置台入口**、**"作者收到通知"未实现**（PRD 该条第三句明确不做），**F-SAFE-003 的用户可见验收不签、问题清单 F-006 只到 🟡**。
-**热榜（[CR-058](docs/变更日志/变更台账.md#cr-058)，本仓首个定时任务）**：`posts.hot_score` 由 `@Scheduled` 定时刷新（公式 `互动分 × exp(-λ × 小时龄)`，ADR-006），读取走 `GET /api/v1/posts?sort=hot`（缺省 `latest`，非法值 `400 / 1001`）。**调参只改 `application.yml` 的 `campuslink.hot.*`，不改代码**：权重 `reply-weight=3 / like-weight=1 / favorite-weight=2`、`decay-per-hour=0.05`、`window-days=30`（窗口外置 0）、`batch-size=500`、`lock-ttl-seconds=300`（⚠️ **须 ≤ 刷新周期**——锁靠 TTL 兜底不显式释放，TTL 比周期长会把实际周期变成 TTL）。**验证时用 `HOT_REFRESH_INTERVAL_MS=20000` / `HOT_INITIAL_DELAY_MS=5000` 临时缩短周期**（默认 600000 / 15000；这两项只被 `@Scheduled` 占位符消费，**刻意不绑定到 `AppProperties`**，避免两个事实源），看 1 行 INFO「热榜刷新完成：写回 N 条、置零 M 条、耗时 X ms」；Redis 侧只应出现 `campuslink:hot:refresh:lock` 一个键。⚠️ **目前只有后端能力，前端首页「最新 / 热门」切换 UI 尚未做**（F-FORUM-003 的后端一半），页面上看不到热榜不是缺陷。〔2026-09-19 注（CR-072）：切换 UI 已补并接通 `sort=hot`；热榜分数仍由定时任务刷新（`HOT_REFRESH_INTERVAL_MS` 可临时缩短验证）。〕
-**验证码**：默认固定 `123456`（`campuslink.captcha.fixed-code`，启动打 WARN）；留空恢复随机 6 位（`CODE_SENDER_MODE=log` 下只打日志，行格式 `[DEV] captcha for <邮箱> => <6位码>`）。
-**测试名册**（仅 `campuslink.roster.bypass=true` 生效，学号须 **9 位数字**）：`249971346/张三`、`249971347/李四`、`249971348/王五`、`249971349/赵六`。
-**开发测试账号（45 个，[CR-054](docs/变更日志/变更台账.md#cr-054) 已灌入本机开发库）**：清单见 [`docs/开发/开发测试账号清单.md`](docs/开发/开发测试账号清单.md)——学号保留段 `888800001`~`888800045`、邮箱 `dev-stu-01@dev.campuslink.local`~`dev-stu-45@…`、昵称 `模拟学生01`~`模拟学生45`，**全合成身份、仅限本机开发库**；登录 = **邮箱 + 验证码 `123456`**（**本系统没有密码字段**）。重建走数据轨脚本 `backend/scripts/data/D001__seed_dev_roster_45.py`（默认 dry-run，须指向 `APP_ROSTER_BYPASS=false` 的实例）；批量核验时把 `campuslink.verify.ip-hourly-limit` 用 **`VERIFY_IP_HOURLY_LIMIT=<n>`** 临时抬高（**默认仍 10 次/小时/IP、对外行为不变**）。**这不等于 B1 / B2 真实名册已到位**，后者仍是未闭环的外部依赖。
-**管理员账号**（dev-only 种子，与 bypass 同门控）：`admin@campuslink.local`，任意邮箱方式 + 验证码 `123456`，角色 `SUPERADMIN`，可调用 `/api/v1/admin/roster/import`；**无学号、不走学籍核验**。
-**入参格式**：学号 `^\d{9}$`；姓名限中文名（2~16 汉字，可含 `·`）或外文名（字母起头，可含空格 / `-` / `'` / `.`）；`nickname` 2~32 自由文本。
+**联调冒烟**：新链路合入前必须真实起栈（MySQL / Redis / 后端 / 前端）并**浏览器实测**，不能只依赖单测。主链路：注册（学籍核验 → 验证码）→ 登录 → 发帖（Markdown）→ 回帖 → 采纳 / 点赞 / 收藏 / 搜索 / 通知；**匿名 `POST /api/v1/posts` 必须 401**。
+
+**开发测试数据**：
+
+- **验证码**默认固定 `123456`（`campuslink.captcha.fixed-code`；留空恢复随机 6 位，`CODE_SENDER_MODE=log` 下只打日志，行格式 `[DEV] captcha for <邮箱> => <6位码>`）；
+- **测试名册**（仅 `campuslink.roster.bypass=true` 生效，学号 9 位数字）：`249971346/张三` ~ `249971349/赵六`；
+- **45 个开发账号**（全合成身份、仅限本机开发库；清单见[开发测试账号清单](docs/开发/开发测试账号清单.md)）：学号 `888800001`~`888800045`、邮箱 `dev-stu-01@dev.campuslink.local`~、登录 = **邮箱 + 验证码 `123456`**（**本系统没有密码字段**；接口自 CR-093 起"邮箱或手机号"二合一，开发账号只有邮箱）；批量核验用 `VERIFY_IP_HOURLY_LIMIT=<n>` 临时抬高 IP 限流（默认 10 次/小时/IP，对外行为不变）；
+- **管理员**（dev-only 种子）：`admin@campuslink.local` + 验证码 `123456`，角色 `SUPERADMIN`，无学号、不走学籍核验；
+- **入参格式**：学号 `^\d{9}$`；姓名限中文名（2~16 汉字可含 `·`）或外文名（字母起头可含空格 / `-` / `'` / `.`）；`nickname` 2~32 自由文本。
+
+**热榜**：`posts.hot_score` 由 `@Scheduled` 定时刷新（公式与权重唯一事实源在 domain 的 `HotScorePolicy`），读取走 `GET /api/v1/posts?sort=hot`（缺省 `latest`，非法值 `400 / 1001`）。**调参只改 `application.yml` 的 `campuslink.hot.*`，不改代码**；⚠️ `lock-ttl-seconds`（默认 300）须 ≤ 刷新周期——锁靠 TTL 兜底不显式释放，TTL 比周期长会把实际周期变成 TTL；验证时用 `HOT_REFRESH_INTERVAL_MS` / `HOT_INITIAL_DELAY_MS` 临时缩短周期（这两项只被 `@Scheduled` 占位符消费，刻意不绑定 `AppProperties`）。
 
 ## 架构与编码约定
 
 ### 后端分层（ADR-012，强制）
 
-- 限界上下文 `module/{account,forum,...}`，上下文内四层：`domain`（聚合根 / 值对象 / 领域服务 / **端口 gateway** / 领域事件）→ `application`（用例编排 + Command）→ `infrastructure`（MyBatis-Plus 仓储、Redis、通知等适配器）→ `web`（Controller + VO）；
+- 限界上下文 `module/{account,forum,...}`，上下文内四层：`domain`（聚合根 / 值对象 / 领域服务 / **端口 gateway** / 领域事件）→ `application`（用例编排 + Command）→ `infrastructure`（MyBatis-Plus 仓储、Redis、定时任务触发器等适配器）→ `web`（Controller + VO）；
 - 依赖方向：**web / infrastructure → application → domain**；端口定义在 domain、实现在 infrastructure（DIP）；**跨上下文只允许调用对方 application 服务**；
-- **`infrastructure` 同时承载入站适配器（[CR-058](docs/变更日志/变更台账.md) 首次出现）**：定时任务触发器（`@Scheduled`，如 `module/forum/infrastructure/scheduling/HotScoreRefreshScheduler`）放 infrastructure 并**调用同上下文的 `application` 服务**——该方向（`infrastructure → application`）**本就是上一条与守护测试 G1 放行的方向**，不是违规（`ArchitectureGuardTest` 11 例实测全绿；〔2026-09-19 注：现 **12 例**，[CR-068](docs/变更日志/变更台账.md) 新增 G9〕）；但触发器里**不写业务规则**（只负责"何时跑 + 取锁 + 记日志"），算分口径只在 `domain` 的领域服务里（`HotScorePolicy` 是公式的唯一事实源，SQL 侧不重复表达）。`@EnableScheduling` 与调度线程池在 `config/SchedulingConfig`（**不在 `CampusLinkApplication`**）；
-- MyBatis-Plus Mapper 统一放 `*.mapper` 包；`@MapperScan` 的值**恰为单值** `{"com.campuslink.**.mapper"}`（2026-09-12 [CR-028](docs/变更日志/变更台账.md) 将 `AuditMapper` 移入 `common/audit/mapper/` 后收窄，**并由守护测试断言"恰为单值"——再加特例即测试失败**）；
-- ✅ **四层与跨上下文规则自 [CR-028](docs/变更日志/变更台账.md)（A3-9）起由 `ArchitectureGuardTest` 机器强制**（ArchUnit，**12 用例**——[CR-028](docs/变更日志/变更台账.md) 落 10 例，[CR-031](docs/变更日志/变更台账.md) 新增 G8，[CR-068](docs/变更日志/变更台账.md) 新增 G9）：分层依赖方向 / domain 不依赖框架（lombok 放行、`domain → common` 放行）/ **web 不得注入 `domain.gateway` 端口、不得调 `domain.service`（R-1），允许对 `domain.model` 与不可变载体做只读类型引用（R-2）** / 跨上下文只调对方 `application` / 端口实现必须在同上下文 `infrastructure` / Mapper 实现必须在 `..mapper..` 包 / N-4 声明一致性 / **G8：`SecurityConfig` 必须依赖 `EndpointAuthorizationManager` 且不得再调 `permitAll()`（路径级鉴权不被摘除）** / **G9：`/api/v1/admin/**` 的映射方法必须调 `CurrentUser.requireRole`（角色判定不被静默摘除，见「测试约定」）**。**改依赖结构前先读 [技术方案 §2.4](docs/设计/技术方案.md)（规则已与该节双向绑定，任一侧改动须同步）**；新增上下文最有效做法仍为**照抄 `module/{account,forum}` 的结构**（范式可复制性已由 A3-11 复评确认，结论见追认纪要 §8）。
+- **`@Scheduled` 定时任务触发器放 infrastructure**、调用同上下文 application 服务（该方向合法）；触发器里**不写业务规则**（只管"何时跑 + 取锁 + 记日志"），口径在 domain 领域服务；`@EnableScheduling` 与调度线程池在 `config/SchedulingConfig`（**不在** `CampusLinkApplication`）；
+- MyBatis-Plus Mapper 统一放 `*.mapper` 包；`@MapperScan` 的值**恰为单值** `{"com.campuslink.**.mapper"}`（守护测试断言，加特例即失败）；
+- 以上全部由 ArchUnit `ArchitectureGuardTest`（**12 用例**）机器强制：分层依赖方向 / domain 不依赖框架（lombok 与 `domain → common` 放行）/ **web 不得注入 `domain.gateway` 端口、不得调 `domain.service`**（允许对 `domain.model` 与不可变载体做只读类型引用）/ 跨上下文只调对方 application / 端口实现必须在同上下文 infrastructure / Mapper 归位 / N-4 声明一致性 / **G8**（`SecurityConfig` 必须依赖 `EndpointAuthorizationManager` 且不得 `permitAll()`）/ **G9**（`/api/v1/admin/**` 映射方法必须调 `CurrentUser.requireRole`）。**改依赖结构前先读[技术方案 §2.4](docs/设计/技术方案.md)**（规则与该节双向绑定）；新增上下文**照抄 `module/{account,forum}` 结构**。
 
-### 错误响应与契约声明（[CR-021](docs/变更日志/变更台账.md) 起）
+### 错误响应与契约声明
 
-- 错误外壳 `common/result/ApiError{code,message,traceId}`（**无 `data`**，与成功外壳 `ApiResponse` 分开）；**所有 ≥400 的响应只能由 `GlobalExceptionHandler` 产出**，Controller 只 `throw new ApiException(ResultCode.X)`，不自己拼错误体；
+- 错误外壳 `common/result/ApiError{code,message,traceId}`（**无 `data`**）；**所有 ≥400 的响应只能由 `GlobalExceptionHandler` 产出**，Controller 只 `throw new ApiException(ResultCode.X)`，不自己拼错误体；
 - **HTTP 状态码不另行约定**——每个 `ResultCode` 自带 `httpStatus`，改状态码只改枚举一处；
-- 契约里的错误响应由 `OpenApiErrorResponseCustomizer` 从 `ResultCode` **单点派生**：端点用项目自有注解 `@ErrorCodes({ResultCode.X, ...})` 声明业务错误码（通用 400/500 自动补，不必声明）；**鉴权声明（N-4 闭环，[CR-028](docs/变更日志/变更台账.md)；自 [CR-031](docs/变更日志/变更台账.md) 起同时是运行时拦截的唯一依据）**：`module/*/web` 下**每个 HTTP 映射方法必须显式二选一**——公开端点标 `@PublicEndpoint`、受保护端点标 `@SecurityRequirement(name = ApiDocs.BEARER_AUTH)` **且方法体真的调用 `common/web/CurrentUser`**（`requireId` / `requireRole`，统一抛 `NOT_LOGGED_IN` / `FORBIDDEN`）——漏写即守护测试失败；**`security/EndpointAuthorizationManager` 在过滤器链按同一组注解裁决**（公开放行 / 受保护要求登录 / module 端点未声明即 fail-closed），框架只区分"登录 / 未登录"，角色与资源级授权仍归业务代码；**不要加全局 security**（会把公开端点错标为需鉴权）；**禁止用 swagger 的 `@ApiResponses` 手写错误响应**（事实存两份，改错误码必然漂移）；
-- **日志分档**：业务错误不记日志、框架级客户端错误记 1 行 WARN 不打全栈、只有兜底 `Exception` 记 ERROR + 全栈（客户端错误进 ERROR 会污染 5xx 监控——N-3 缺陷成因）。
+- 契约错误响应由 `OpenApiErrorResponseCustomizer` 从 `ResultCode` **单点派生**：端点用项目自有注解 `@ErrorCodes({ResultCode.X, ...})` 声明业务错误码（通用 400/500 自动补，不必声明；**显式声明通用码会与自动补撞车出重复 description**）；**禁止用 swagger `@ApiResponses` 手写错误响应**（事实存两份必漂移）；
+- **鉴权声明（同时是运行时拦截依据）**：`module/*/web` 下**每个 HTTP 映射方法必须显式二选一**——公开标 `@PublicEndpoint`；受保护标 `@SecurityRequirement(name = ApiDocs.BEARER_AUTH)` **且方法体真的调用 `common/web/CurrentUser`**（`requireId` / `requireRole`）——漏写即守护测试失败。`security/EndpointAuthorizationManager` 在过滤器链按同一组注解裁决（module 端点未声明即 fail-closed）；**框架只区分"登录 / 未登录"，角色与资源级授权归业务代码**；**不要加全局 security**（会把公开端点错标为需鉴权）；
+- **日志分档**：业务错误不记日志、框架级客户端错误记 1 行 WARN 不打全栈、只有兜底 `Exception` 记 ERROR + 全栈（客户端错误进 ERROR 会污染 5xx 监控）。
 
 ### 数据与迁移
 
@@ -135,39 +117,36 @@ npm run build
 ### 安全
 
 - **敏感信息**（邮箱 / 手机号 / 学号）：明文一律 AES-GCM 加密存 `*_enc`，等值查询用 HMAC 哈希 `*_hash`；任何接口不得返回 `*_enc` / `*_hash`；密钥只从环境变量读取（`APP_HASH_KEY` / `APP_CRYPT_KEY`），**源码、示例、测试不得写入可用凭据字面量**；
-- **学籍核验**：三种失败（学号不存在 / 姓名不匹配 / 已注册）统一提示，防名册枚举；`campuslink.roster.bypass` 仅限开发联调，**生产必须为 false**（上线检查清单项）；
-- **Markdown 渲染唯一出口** `common/markdown/MarkdownRenderer`（flexmark + jsoup 白名单）；flexmark 扩展须**同时注册到 Parser 与 HtmlRenderer**，否则解析成功渲染为空；代码高亮由前端 `highlight.js` 完成（**已于 [CR-055](docs/变更日志/变更台账.md) 批次① 落地**：`frontend/src/utils/highlight.ts` + `src/styles/hljs.css`；**只对服务端已渲染的 `pre code` 的 `textContent` 着色，不二次渲染 Markdown、不拼接 HTML、不做前端净化兜底**——ADR-005 与此项欠账就此闭环）；任何渲染改动必须保持 `MarkdownRendererTest` 全绿；
-- **Redis 键命名**：所有键必须带 `campuslink:` 前缀（走 `common/redis/RedisKeys.of(...)`）；**前缀只在 infrastructure 适配器补**，应用层只传逻辑键；新增适配器须走 `RedisKeys`（`RedisKeyNamespaceTest` 有 3 个适配器断言，无编译期强制）。
+- **学籍核验**三种失败（学号不存在 / 姓名不匹配 / 已注册）统一提示，防名册枚举；`campuslink.roster.bypass` 仅限开发联调，**生产必须 false**（`ProductionSafetyGuard` 强制）；
+- **Markdown 渲染唯一出口** `common/markdown/MarkdownRenderer`（flexmark + jsoup 白名单）；flexmark 扩展须**同时注册到 Parser 与 HtmlRenderer**，否则解析成功渲染为空；任何渲染 / 白名单改动**先补用例再改实现**，保持 `MarkdownRendererTest` 全绿；
+- **Redis 键命名**：所有键必须带 `campuslink:` 前缀（走 `common/redis/RedisKeys.of(...)`）；**前缀只在 infrastructure 适配器补**，应用层只传逻辑键。
 
 ### 前端
 
 - 页面按 PRD 5.1 清单实现；**Element Plus 按需自动引入**（unplugin-auto-import / unplugin-vue-components，勿回退全量引入）；
-- **样式体系（[CR-023](docs/变更日志/变更台账.md) 建立、[CR-024](docs/变更日志/变更台账.md) 调色）**：`src/styles/tokens.css` 是**设计令牌唯一来源**——主色 `#409eff`、**正文链接色 `#1a6fc4` 独立于主色**（`#409eff` 白底 2.78:1 不适合小号文字）、字号阶梯、间距为 4 的倍数、圆角三档、0.5px 细边框、去默认阴影 / 渐变；以 `:root:root` 覆写 EP 的 `--el-*`；**改主色只改 `--cl-color-primary` 一个值，但 `--el-color-primary-rgb` 须手工同步**（链接色不派生、不随动）；`src/styles/tailwind.css` 提供工具类（`@theme inline` 映射令牌），两者在 `main.ts` 一次性引入；
-- **层叠边界（强制约定，无 lint 强制）**：Tailwind v4 输出在 `@layer` 内、EP 样式不带 layer，**无层恒胜有层——EP 组件一律通过 CSS 变量调样式，自有元素才用工具类**；新增 / 修改页面前先查 [ui-guideline](docs/设计/UI规范/界面规范.md)；
-- **代码高亮（[CR-055](docs/变更日志/变更台账.md) 批次① 已落地）**：`src/utils/highlight.ts` 用 `highlight.js/lib/core` 按需注册语言，`src/styles/hljs.css` 只提供 `--cl-code-*` 色板（**不整份引入 github 主题 CSS**——那含字面 hex，会破"颜色只来自令牌"）；
-- ⏳ **进行中**：[CR-055](docs/变更日志/变更台账.md) 五批中**仅批次①（代码高亮）已落地**；批次② 头像占位 / ③ Tabler 图标 / ④ 中文字体分片自托管 / ⑤ 桌面走查**均尚未落地**（选型已随方案确认）——**不得声称"图标 / 字体已统一"**，`@element-plus/icons-vue` 与（未来的）Tabler 是**混用体系**；- API 统一走 `src/api/client.ts`（`ApiError` + JWT 注入 + 后端错误消息直接透出 UI）；可复用逻辑放 `src/composables/`，共享常量放 `src/constants/`。
+- **`src/styles/tokens.css` 是设计令牌唯一来源**：主色 `#409eff`、**正文链接色 `#1a6fc4` 独立于主色**（不派生、不随动）、字号阶梯、间距为 4 的倍数、圆角三档、0.5px 细边框、去默认阴影 / 渐变；以 `:root:root` 覆写 EP 的 `--el-*`；**改主色只改 `--cl-color-primary`，但 `--el-color-primary-rgb` 须手工同步**；`src/styles/tailwind.css` 提供工具类（`@theme inline` 映射令牌），两者在 `main.ts` 一次性引入；
+- **层叠边界（强制约定，无 lint 强制）**：Tailwind v4 输出在 `@layer` 内、EP 样式不带 layer，**无层恒胜有层——EP 组件一律通过 CSS 变量调样式，自有元素才用工具类**；改页面前先查[界面规范](docs/设计/UI规范/界面规范.md)；
+- **图标统一走 `components/SvgIcon.vue`**（Tabler 线性图标，构建期内联静态 SVG；自带 `.cl-icon` 容器防 EP `fill: currentColor` 覆写描边）；**不复用 `el-icon`**；
+- **代码高亮**：`src/utils/highlight.ts`（highlight.js/lib/core 按需注册语言）**只对服务端已渲染的 `pre code` 的 `textContent` 着色**，不二次渲染 Markdown、不拼接 HTML、不做前端净化兜底；`src/styles/hljs.css` 只提供 `--cl-code-*` 色板（**不整份引入主题 CSS**——那含字面 hex，会破"颜色只来自令牌"）；
+- API 统一走 `src/api/client.ts`（`ApiError` + JWT 注入 + 后端错误消息直接透出 UI）；可复用逻辑放 `src/composables/`，共享常量放 `src/constants/`。
 
 ## 测试约定
 
-- **单测**：`mvn verify` 必须全绿（**当前基线 358 个（其中 4 例 SPRING_IT 条件集成测试、默认 SKIPPED）**（[CR-066](docs/变更日志/变更台账.md#cr-066) 后 208 → 220 → 248，[CR-068](docs/变更日志/变更台账.md) 加 G9 后 249，[CR-071](docs/变更日志/变更台账.md#cr-071) 个人中心第一轮后 294（新增 7 个测试类 35 例 + 改动 3 个类 +10 例，逐类归因见[方案 §8](docs/开发/实施方案/CR-071-个人中心第一轮.md)：+45 例 = 新类 35 + 改类 10），**再由 [CR-074](docs/变更日志/变更台账.md#cr-074) C 档体验升级升至 298**（`CoverImagesTest` 4 例；同批的 `Post.rehydrate` 保留 14 参 `@Deprecated` 过渡重载，故 7 个既有夹具零改动）**〔2026-09-24 注（[CR-080](docs/变更日志/变更台账.md#cr-080)）：上句"升至 298"已滞后两轮——[CR-077](docs/变更日志/变更台账.md) / [CR-078](docs/变更日志/变更台账.md) 实施时（`b4ecb5e`）把基线推到 343，但那个数只出现在提交说明里、AGENTS 与台账 §1 都没回填（台账 §1 至今缺这三行，见 [CR-080](docs/变更日志/变更台账.md#cr-080) 的登记）；本轮 CR-080 再加 3 例（`ForumQueryApplicationServiceTest` 的 `likedByMe` 三条：登录批量落位 / 匿名一次仓储都不调 / 空页不查），实测 **346 全绿**，本档与「常用命令」两处同批改到 346〕；〔2026-09-27 注（CR-089）：CR-085 引用回复后 346 → 354，+8 例逐类归因见其[方案](docs/开发/实施方案/CR-085-引用回复.md)，两处同批改到 354〕；〔2026-09-27 注二（CR-090）：+4 例集成测试 + jacoco（行覆盖 66.4% 过 60% check；module 61.9% < 80% 缺口登记 E-002），两处同批改到 358〕；改基线数时须同时改「常用命令」与本条两处），含 `ArchitectureGuardTest` 架构守护测试与 `EndpointAuthorizationManagerTest` 路径级鉴权矩阵）；`MarkdownRendererTest` 的 6 个 XSS 回归用例是论坛安全生命线，渲染 / 白名单改动**先补用例再改实现**；
-- **生产配置红线由 `ProductionSafetyGuard` 机器强制（[CR-063](docs/变更日志/变更台账.md#cr-063)）**：`ProductionSafetyGuardTest` 16 例里有 2 例是**防漂移守护**——(a) guard 内 `DEV_VALUES` 清单必须与 `application.yml` 的占位符默认值**逐字相等**，(b) `application-prod.yml` 的凭据声明必须仍**不含** `:default`、三个开发开关必须仍写死为 `""` / `false` / `mail`。**改 yml 默认值而不同步 guard 清单，测试即红**（这条比对读原文，不需要启上下文）；
-- **受保护端点必须真的校验鉴权（N-4 已闭环，[CR-028](docs/变更日志/变更台账.md)；路径级拦截自 [CR-031](docs/变更日志/变更台账.md) 起落地）**：**每个 HTTP 映射方法必须显式标 `@PublicEndpoint` 或 `@SecurityRequirement`，且标后者者必须真的调用 `common/web/CurrentUser`（`requireId` / `requireRole`）**——`ArchitectureGuardTest` G7 会拦（漏写即测试失败）；**新增需登录的端点仍须补一个「匿名 → 401」单测**（真机 401 也要验）。⚠️ 运行时是**两层**：`security/EndpointAuthorizationManager` 在过滤器链按注解拒绝匿名（401 / 4001，框架直接产出），`CurrentUser` 在业务侧承担角色与资源级授权（403 / 4002）——**框架只区分"登录 / 未登录"，别指望它做角色判定**；
-- **管理端点必须判角色（G9，[CR-068](docs/变更日志/变更台账.md) 起机器强制；处置问题清单 E-011）**：凡有效路径落在 **`/api/v1/admin/**`** 的 `module/*/web` 映射方法，**必须真的调用 `CurrentUser.requireRole`**——G7 对此看不见（`requireId` 也是它的合法调用），而框架层只判"登录 / 未登录"，摘掉角色判定等于**任何已登录账号都能改名册、下架任意内容**。⚠️ **G9 只守"有没有判角色"，不守"角色取值得当不当"**（`requireRole(auth, "ROLE_USER")` 仍会通过机器层），**故约定：每新增一个管理端点必须自带一个「角色不足 → 403」用例**，两条互补、缺一不可；想让声明与判定彻底同源（`@RequireRole` 注解 + 过滤器链裁决）属架构级改动，须另开 CR 并先写实施方案；
-- **联调冒烟**：新链路合入前必须真实起栈（本机 MySQL / Redis + 后端 + 前端）并**浏览器实测**，不能只依赖单测；
-- **结构变更后真实启动一次**确认 Flyway 迁移成功（`mvn verify` 不校验迁移可执行性，也不校验 `@MapperScan` 通配的实际扫描结果）；
-- **接口契约变更必须重生成 OpenAPI 快照** `docs/设计/接口契约/openapi.json`：凡改 Controller 路径 / 方法 / 入参出参 / 校验注解、**新增端点（公开 / 受保护声明）**、`ApiResponse` / `ApiError` 外壳、`OpenApiConfig`、**`common/web/CurrentUser` 或 `PublicEndpoint`**、`ResultCode` 的错误码 / 提示语 / `getHttpStatus()` 映射、**或改了 `security/EndpointAuthorizationManager` / `SecurityConfig` 的授权口径**（[CR-031](docs/变更日志/变更台账.md) 已把 `permitAll()` 换成按端点注解授权并再生成过快照——快照的 `security` 声明不会自动跟随运行时规则，此后每次改动都须重抓核对），都须起后端后按 [api/README.md](docs/设计/接口契约/README.md) §2 命令重抓并格式化，看 `git diff`——**非空即契约已变**，同步技术方案 §5 与该 README。**快照无机器校验，漂移只能靠这条约定拦**；`1002` / `1003` / `1004` 三类响应永远进不了快照，以该 README §6.3 文字约定为准。
+- **`mvn verify` 必须全绿**（基线数见「常用命令」`mvn verify` 注释，**改基线数只改那一处**）；含 `ArchitectureGuardTest` 与 `EndpointAuthorizationManagerTest` 鉴权矩阵；`MarkdownRendererTest` 的 6 个 XSS 回归用例是论坛安全生命线；
+- **新增需登录的端点必须补一个「匿名 → 401」单测**（真机 401 也要验）；**新增管理端点必须自带一个「角色不足 → 403」用例**——G9 只守"有没有判角色"、不守"角色取值得当不当"，两条互补缺一不可；
+- **生产配置红线由 `ProductionSafetyGuardTest` 防漂移守护**：guard 内 `DEV_VALUES` 清单必须与 `application.yml` 占位符默认值**逐字相等**；`application-prod.yml` 凭据声明必须**不含 `:default`**、三个开发开关写死合规值——**改 yml 默认值而不同步 guard，测试即红**；
+- **结构变更后真实启动一次**，确认 Flyway 迁移成功（`mvn verify` 不校验迁移可执行性，也不校验 `@MapperScan` 通配的实际扫描结果）；
+- **接口契约变更必须重生成 OpenAPI 快照** `docs/设计/接口契约/openapi.json`——凡改 Controller 路径 / 方法 / 入参出参 / 校验注解、新增端点（公开 / 受保护声明）、`ApiResponse` / `ApiError` 外壳、`OpenApiConfig`、`CurrentUser` / `PublicEndpoint`、`ResultCode` 的错误码 / 提示语 / `getHttpStatus()` 映射、或 `EndpointAuthorizationManager` / `SecurityConfig` 授权口径：起后端按[契约 README §2](docs/设计/接口契约/README.md) 命令重抓并格式化，看 `git diff`——**非空即契约已变**，同步技术方案 §5 与该 README。**快照无机器校验，漂移只能靠这条约定拦**。两条表达极限：`1002` / `1003` / `1004` 三类响应进不了快照（以契约 README §6.3 文字约定为准）；**可重复的 `@Pattern` 不会输出到契约**，纯代码侧校验规则须靠单测证明。
 
 ## 汇报约定（每次 AI 会话执行）★
 
-单人项目 + 多会话并行，用户对"AI 在干什么"必须有完整可见性：
-
-- **开工先报计划**：任何实质工作开始前，先用 ≤3 行说明"这轮要做什么、改哪些文件"；**若本轮属于「实施方案约定」的门槛范围（见下节），先写方案、停下等确认，不要先动代码**；
-- **小步汇报**：长任务拆成小步，每完成一步用一两句话报告进展；**不要一口气跑完多个批次才汇报**（CR-025 六批次连跑是被记录在案的反面教训）；
+- **开工先报计划**：实质工作开始前，先用 ≤3 行说明"这轮做什么、改哪些文件"；**若属「实施方案约定」门槛范围，先写方案、停下等确认，不要先动代码**；
+- **小步汇报**：长任务拆成小步，每完成一步一两句话报告进展；**不要一口气跑完多个批次才汇报**；
 - **收尾摘要 ≤10 行**：改了什么 / 为什么 / 验证结果，并指向驾驶舱与相关文档；台账登记只报"已登记 CR-xxx"，不复述台账内容；
 - **一次会话只做一个逻辑任务**，除非用户明确要求连做；
-- **并行会话敏感性**：改公共文档（change-log / AGENTS.md / 驾驶舱 / docs/README）前先看当前内容是否已被其他会话更新，**用追加与加注，不做整段覆写**。
+- **并行会话敏感性**：改公共文档（台账 / 本文件 / 驾驶舱 / docs/README）前先看当前内容是否已被其他会话更新，**用追加与加注，不做整段覆写**（本文件整篇重写须用户明确指令）。
 
-## 实施方案约定（较大改动 / Bug 修复先写方案）★（[CR-034](docs/变更日志/变更台账.md) 起）
+## 实施方案约定（较大改动 / Bug 修复先写方案）★
 
 **规则一句话**：够大就先写「可实施方案」→ **停下等用户确认** → 才动代码。
 
@@ -178,48 +157,42 @@ npm run build
 - **数据库结构**：新增 `V*.sql` 迁移、改表 / 索引 / 约束；
 - **新依赖**：`pom.xml` / `package.json`（含大版本升级）；
 - **安全与鉴权**：`security/`、`SecurityConfig`、`CurrentUser`、`PublicEndpoint`、审计链路；
-- **Bug 修复**：根因跨层或跨模块（如表现在前端、根因在后端契约），**或修复会改变既有对外行为**（状态码 / 错误码 / 响应形状）。
+- **Bug 修复**：根因跨层或跨模块，**或修复会改变既有对外行为**（状态码 / 错误码 / 响应形状）。
 
-### 可直接改（不写方案，但仍须按 [CR-029](docs/变更日志/变更台账.md) 轻量登记 CR）
+### 可直接改（不写方案，仍须轻量登记 CR）
 
 单文件局部修改、纯样式 / 文案、文档修正、测试补充、根因单一且对外行为不变的缺陷修复。
 
-### 形态与位置
+### 形态与边界
 
-- 目录 **`docs/开发/实施方案/`**，命名 **`CR-xxx-主题.md`**（与 CR 编号一一对应）；
-- 格式照 **[说明与模板](docs/开发/实施方案/说明与模板.md)**，**一页以内**，六节：目标 / 范围（做与不做）/ 改动点（文件级）/ 步骤 / 验证 / 回滚；
-- 方案是"实施前评审"的载体，**CR 编号仍登记在 [change-log](docs/变更日志/变更台账.md) §1**（[CR-029](docs/变更日志/变更台账.md) 一行式）；
+- 目录 **`docs/开发/实施方案/`**，命名 **`CR-xxx-主题.md`**；格式照[说明与模板](docs/开发/实施方案/说明与模板.md)，**一页以内**，六节：目标 / 范围（做与不做）/ 改动点（文件级）/ 步骤 / 验证 / 回滚；
+- **CR 编号登记在[台账](docs/变更日志/变更台账.md) §1**（一行式）；方案目录与模板在 `docs/README.md` §3「模板」表登记，**各 CR 实例按命名规则存放、不逐项登记**；
 - **实施完成后不回改原方案**：实际与计划的偏差追加到该方案文末「实施结果」节，保留"原计划 vs 实际"对照；
-- 同一 CR 若中途改口径，**先改方案再改代码**。
-
-### 边界
-
-- 用户当面明确说「直接改」时从命；
-- 纯文档 / 流程类改动（如本文件、模板、README）**不写实施方案**，走 change-log 登记即可；
-- 方案文件本身按「文档与流程约定」登记：**目录与模板在 `docs/README.md` §3「模板」表登记**（与既有 `docs/模板/*` 同例——**§2 只登记有版本演进的核心文档**）；**各 CR 实例按命名规则存放、不逐项登记**（避免索引随每次改动线性膨胀）。
-
+- **同一 CR 中途改口径，先改方案再改代码**；
+- **边界**：用户当面明确说「直接改」时从命；纯文档 / 流程类改动（如本文件、模板、README）**不写实施方案**，走 change-log 登记即可。
 
 ## 工作收尾约定（每次任务完成后执行）★
 
-1. **更新进度驾驶舱 [`docs/进度驾驶舱.html`](docs/进度驾驶舱.html)**——触发条件：本次工作改变了进度事实（新 CR / 欠账状态变化（A3-*、W-*、B-*、N-*）/ Sprint 里程碑 / 新问题 / 新业务需求）。更新内容：页头「最后更新」与数据快照日期；① 总览统计与阶段 / Sprint 状态；② 时间线新增 CR 行（**从 change-log §1 抄录**，含日期 / 标题 / 类型 / 状态 / 评审方式 / 提交凭证）；③ 问题台账状态；④ 待办与新需求。**边界**：驾驶舱只做聚合，**不得登记 change-log / next-steps / tailoring-waivers 等事实源文档中没有的新事实**；只改数据，不改结构与样式；更新前先核对 change-log 最新条目，防止驾驶舱静默过时；
-2. **基线级变更确认已登记（[CR-029](docs/变更日志/变更台账.md) 起用轻量格式）**：范围 / 排期 / 技术选型 / 架构 / 工程结构的改动，实施前在 `docs/变更日志/变更台账.md` §1 登记——**一行一条**（改了什么 / 为什么 / 凭证），**不再写九行明细表与三维度影响评估**；CR 编号写入 commit message 即完成凭证对齐，**不做台账回填仪式**；
+1. **更新进度驾驶舱**——触发条件：本次工作改变了进度事实（新 CR / 欠账状态变化（A3-*、W-*、B-*、N-*）/ Sprint 里程碑 / 新问题 / 新业务需求）。更新：页头「数据快照」与 change-log 版本 chip、总览统计、时间线新增 CR 行（**从台账 §1 抄录**）、问题台账、待办。**驾驶舱只做聚合，不得登记事实源文档中没有的新事实；只改数据，不改结构与样式**；更新前先核对台账最新条目，防止静默过时；
+2. **基线级变更确认已登记**：范围 / 排期 / 技术选型 / 架构 / 工程结构的改动，实施前在[台账](docs/变更日志/变更台账.md) §1 **一行一条**登记（改了什么 / 为什么 / 凭证）；CR 编号写入 commit message 即完成凭证对齐，**不做台账回填仪式**；
 3. **展示变更摘要**：列出本次改动的文件与要点，**不自动 git commit / push**，等用户确认。
 
 ## 文档与流程约定
 
-- 阶段门未通过不得进入下一阶段；评审结论与状态由项目经理同步到 `docs/README.md` 阶段门状态表；
-- **版本号只在 `docs/README.md` §2 登记**；其他文档（含本文件）交叉引用只写链接、不写版本号；
-- **状态两处收口（[CR-029](docs/变更日志/变更台账.md) 起）**：项目当前状态只维护 **change-log §1 + 进度驾驶舱** 两处；next-steps / gate-* / waivers 等文档中的既有状态保留为历史，**不再新增状态同步义务**——新状态变化时只改两处；
-- **流程偏离登记在 `docs/流程偏离记录.md`**（不得只在对话里说明）；评审门纪要归档在 `docs/评审/<阶段名>门纪要.md`（现行三份：`立项门纪要.md` / `需求门纪要.md` / `设计门纪要.md`）；
-- **文档命名用中文（[CR-030](docs/变更日志/变更台账.md) 起，推翻原"英文小写中划线"规则）**：文档与文件夹一律用中文名（如 `docs/评审/设计门纪要.md`）；**唯一例外 `README.md`**（GitHub 目录入口约定）；目标结构：`docs/{立项,需求,设计,开发,评审,模板,变更日志}/`；
-- **简洁原则**：流程文档只保留"当前结论 + 指针"，**日志式过程记录（实施补记、状态回填、凭证追踪、版本变更记录）一律写入 `docs/变更日志/`**，不在流程文档里累积；
-- **批量迁移已执行（[CR-030](docs/变更日志/变更台账.md)，2026-09-12）**：中文重命名与日志迁移已一次性完成（35 个 git mv + 1582 处链接修复，校验 0 失效）——原"待 CR-028 会话结束后执行"的安排已履行，新文档一律直接用中文名；
-- 新文档放入 `docs/` 对应位置并在 `docs/README.md` §2 + §3 **两处登记**（漏登记即产生文档不一致），内容用中文；
-- 文档头部必须含：**版本、状态、维护人、最后更新**。
+- 阶段门未通过不得进入下一阶段；**版本号只在 `docs/README.md` §2 登记**，其他文档交叉引用只写链接、不写版本号；
+- **状态两处收口**：项目当前状态只维护**台账 §1 + 进度驾驶舱**两处；next-steps / gate-* / waivers 等文档中的既有状态保留为历史，不再新增同步义务；
+- **流程偏离登记在 `docs/流程偏离记录.md`**（不得只在对话里说明）；评审门纪要归档 `docs/评审/<阶段名>门纪要.md`；
+- **文档命名用中文**（唯一例外 `README.md`——GitHub 目录入口约定）；目标结构 `docs/{立项,需求,设计,开发,评审,模板,变更日志}/`；
+- **简洁原则**：流程文档只保留"当前结论 + 指针"，**日志式过程记录（实施补记、状态回填、凭证追踪、版本沿革）一律写入 `docs/变更日志/`**，不在流程文档里累积；
+- 新文档放入 `docs/` 对应位置并在 `docs/README.md` §2 + §3 **两处登记**；文档头部必须含：**版本、状态、维护人、最后更新**。
 
 ## 红线（与用户全局规则一致）
 
-- **不自动 git commit / push**；提交前先展示变更摘要；**commit message 用中文**（保留 `feat` / `docs` / `fix` 等类型前缀，作用域与描述用中文；标题末尾写 CR 号；正文写清**「做了什么、解决了什么」**，让人不点开代码就能看懂）；monorepo 统一根目录操作；
-- 删除文件 / 目录、修改 `.env` / 密钥 / 证书、`git push` / `rebase` / `reset --hard`、公开发布：**必须先征得用户同意**；
-- **生产环境红线**：`campuslink.roster.bypass=false`、`campuslink.captcha.fixed-code` 必须留空（固定验证码等同取消验证码防线）、JWT 与加密密钥全部覆盖默认值、名册导入与内容处置必须写审计日志、机审降级开关（fail-closed）不得改为跳过审核。
-  - ✅ **前三项自 [CR-063](docs/变更日志/变更台账.md#cr-063) 起由代码强制**（不再只是"上线检查清单项"）：`config/ProductionSafetyGuard` 在 `prod` profile 下抢在数据源之前校验，漏配即启动失败。开发开关三项在 `application-prod.yml` 里**写死**为合规值——⚠️ 这只消灭"默认值可回退"，**不消灭覆盖本身**（环境变量 / 命令行参数仍能盖过 yml），真正的兜底是守卫断言而非 yml 写法。**后两项仍未机器化**——① 审计**覆盖面**：自 [CR-066](docs/变更日志/变更台账.md#cr-066) 起"内容处置必须写审计"这条红线第一次有了真实调用方（`POST_REMOVE` / `POST_RESTORE` / `REPLY_REMOVE` / `REPLY_RESTORE` 四类 + 既有 `ROSTER_IMPORT` / `POST_DELETE`，且**幂等调用不记审计**），但"哪些操作必须留痕"仍由开发者逐个 `auditService.record(...)` 显式调用，**没有切面强制、新增写路径漏记不会被测试发现**（注解式审计切面仍是技术方案 §7.1 记下的欠账）；② **机审 fail-closed 开关**（F-SAFE-001）连同举报（F-SAFE-002）仍未实现。⚠️ 另有一条同类缺口新登记在问题清单 **E-011**：**"仅 SUPERADMIN 可调用"这条角色线无机器强制**——把 `requireRole` 换成 `requireId` 后 `ArchitectureGuardTest` 与鉴权矩阵测试全部仍绿，只有控制器里的 403 用例能发现（名册导入端点同此）。〔**2026-09-19 更新（[CR-068](docs/变更日志/变更台账.md)）：E-011 已闭环**——守护测试新增 **G9**（`/api/v1/admin/**` 的映射方法必须调 `requireRole`），上述"改完仍全绿"的现象当场复跑已不成立（G9 与既有 403 用例同红），原句保留为当时的取证。**仍有一条残余没被机器吃掉**：G9 不判**角色取值得当不当**，那一半靠"每个管理端点自带 403 用例"的约定（见「测试约定」）〕。
+- **不自动 git commit / push**；提交前先展示变更摘要；**commit message 用中文**（保留 `feat` / `docs` / `fix` 等类型前缀，作用域与描述用中文；标题末尾写 CR 号；正文写清**「做了什么、解决了什么」**）；monorepo 统一根目录操作；
+- 删除文件 / 目录、修改 `.env` / 密钥 / 证书、`git push` / `rebase` / `reset --hard`、公开发布（npm publish、生产部署等）：**必须先征得用户同意**；
+- **生产环境红线**（前三项由 `ProductionSafetyGuard` 在 `prod` profile 启动即机器强制）：
+  1. `campuslink.roster.bypass=false`；
+  2. `campuslink.captcha.fixed-code` 必须留空（固定验证码等同取消验证码防线）；
+  3. JWT 与加密密钥全部覆盖默认值（各 ≥32 字节，HASH / CRYPT 两把不得相同）；
+  4. 名册导入与内容处置必须写审计日志（**尚无切面强制**——新增写路径须人工补 `auditService.record(...)`，幂等重放不记审计）；
+  5. 机审降级开关（fail-closed）**不得改为跳过审核**。

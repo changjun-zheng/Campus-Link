@@ -2,6 +2,7 @@
 import { nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getSimilarPosts, listBoards, publishPost, type BoardVo, type SimilarPostVo } from '../api/forum'
+import { previewMarkdown } from '../api/markdown'
 import { useNarrowScreen } from '../composables/useNarrowScreen'
 import { useDraft } from '../composables/useDraft'
 import SvgIcon from '../components/SvgIcon.vue'
@@ -37,6 +38,39 @@ const similarPosts = ref<SimilarPostVo[]>([])
 const queryCount = ref(0)
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
 let reqSeq = 0  // 请求序号，用于乱序保护
+
+/* ─── 实时预览（F-012 / CR-087 接线）：600ms 防抖调服务端渲染（ADR-005），移动端 Tab 切换 ─── */
+const previewMode = ref(false)          // 移动端编辑 / 预览切换；桌面端双栏并存
+const previewHtml = ref('')
+const previewLoading = ref(false)
+const previewError = ref('')
+let previewTimer: ReturnType<typeof setTimeout> | null = null
+let previewSeq = 0
+
+watch(() => form.contentMd, (md) => {
+  if (previewTimer) clearTimeout(previewTimer)
+  if (!md.trim()) {
+    previewHtml.value = ''
+    return
+  }
+  previewTimer = setTimeout(async () => {
+    const seq = ++previewSeq
+    previewLoading.value = true
+    try {
+      const res = await previewMarkdown(md)
+      if (seq === previewSeq) {
+        previewHtml.value = res.html
+        previewError.value = ''
+      }
+    } catch {
+      if (seq === previewSeq) {
+        previewError.value = '预览加载失败'
+      }
+    } finally {
+      if (seq === previewSeq) previewLoading.value = false
+    }
+  }, 600)
+})
 
 watch(() => form.title, (newTitle) => {
   if (debounceTimer) clearTimeout(debounceTimer)
@@ -330,20 +364,45 @@ async function submit() {
       >
         <SvgIcon name="photo" :size="15" />
       </button>
+      <span class="mx-0.5 h-4 w-px bg-line" aria-hidden="true" />
+      <button
+        type="button"
+        class="cl-md-tool text-caption font-medium"
+        :title="narrow ? (previewMode ? '返回编辑' : '预览') : '桌面端右侧实时预览'"
+        :aria-pressed="narrow ? previewMode : undefined"
+        @click="narrow ? (previewMode = !previewMode) : undefined"
+      >
+        {{ narrow ? (previewMode ? '编辑' : '预览') : '预览' }}
+      </button>
       <span class="ml-auto text-caption text-ink-meta md:hidden">{{ form.title.length }}/100 · {{ form.contentMd.length }}/50000</span>
     </div>
 
     <div class="mx-auto max-w-reading px-6 max-md:px-4">
-      <!-- 正文：无边框大行距编辑区（占位说明合并机审提示与 ADR-005 预览边界） -->
-      <textarea
-        ref="contentEl"
-        v-model="form.contentMd"
-        maxlength="50000"
-        placeholder="正文支持 Markdown：标题 / 列表 / 代码块（```语言）/ 链接 / 引用。开始输入…"
-        class="block w-full resize-none border-0 bg-transparent py-5 text-body leading-[1.9] text-ink outline-none placeholder:text-ink-meta min-h-[50vh] max-md:min-h-[36vh]"
-      />
+      <!-- 编辑 / 预览：桌面端双栏（md+ 并排），窄屏 Tab 切换（CR-091 / F-012 接线） -->
+      <div class="flex items-start gap-6 max-md:flex-col">
+        <textarea
+          ref="contentEl"
+          v-show="!previewMode || !narrow"
+          v-model="form.contentMd"
+          maxlength="50000"
+          placeholder="正文支持 Markdown：标题 / 列表 / 代码块（```语言）/ 链接 / 引用。开始输入…"
+          class="min-h-[50vh] w-full resize-none border-0 bg-transparent py-5 text-body leading-[1.9] text-ink outline-none placeholder:text-ink-meta max-md:min-h-[36vh] md:w-1/2 md:flex-none"
+        />
+        <!-- 预览面板：服务端渲染并净化的 HTML，直接 v-html（XSS 防线在 MarkdownRenderer） -->
+        <div
+          v-show="previewMode || !narrow"
+          class="min-h-[50vh] w-full py-5 max-md:min-h-[36vh] md:w-1/2 md:border-l-[0.5px] md:border-line md:pl-6"
+        >
+          <p v-if="!form.contentMd.trim()" class="text-note leading-body text-ink-meta">
+            开始输入正文，此处将实时展示渲染效果…
+          </p>
+          <p v-else-if="previewLoading && !previewHtml" class="text-note text-ink-meta">渲染中…</p>
+          <p v-else-if="previewError" class="text-note text-ink-meta">{{ previewError }}</p>
+          <div v-else class="markdown-body" v-highlight v-html="previewHtml" />
+        </div>
+      </div>
       <p class="pb-6 text-caption leading-body text-ink-meta">
-        发布前将进行内容安全机审（F-SAFE-001）· 暂无实时预览：按 ADR-005，Markdown 只在服务端渲染并做安全净化，发布成功后可在帖子详情页查看渲染结果
+        发布前将进行内容安全机审（F-SAFE-001）· 预览按 ADR-005 在服务端渲染并做安全净化，与发布后的正文同源
       </p>
     </div>
   </div>

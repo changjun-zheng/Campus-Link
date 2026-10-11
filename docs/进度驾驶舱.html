@@ -248,8 +248,8 @@
       <h1>项目进度驾驶舱</h1>
       <p class="sub">重庆工程学院计算机专业学生交流论坛 · 企业七阶段流程（BRD → PRD → 设计 → 开发 → …）· 单人 + AI 协作</p>
       <div class="chips">
-        <span class="chip">数据快照 <b>2026-09-27</b></span>
-        <span class="chip">change-log <b>v1.91</b></span>
+        <span class="chip">数据快照 <b>2026-10-11</b></span>
+        <span class="chip">change-log <b>v1.95</b></span>
         <span class="chip">next-steps <b>v1.13</b></span>
         <span class="chip">waivers <b>v1.11</b></span>
         <span class="chip">视图产物 · 已登记（docs/README.md §2 / §3）</span>
@@ -605,7 +605,7 @@
 
 <footer>
   <div class="rule"></div>
-  Campus-Link 进度驾驶舱 · 视图 v2.0（2026-09-13 重构视觉与结构）· 数据快照 2026-09-19<br>
+  Campus-Link 进度驾驶舱 · 视图 v2.0（2026-09-13 重构视觉与结构）· 数据快照 2026-10-11<br>
   数据由 变更台账 / 下一步行动 / 流程偏离记录 / 设计门纪要 / Sprint2计划 五份事实文档提取生成 · <b>每次工作收尾由 AI 会话按 AGENTS.md「工作收尾约定」更新数据</b>，结构与样式不改
 </footer>
 </div>
@@ -688,6 +688,9 @@ const CRS=[
 {id:"CR-084",date:"2026-09-25",title:"<b>举报前端入口 + 管理后台首版</b>（F-SAFE-002 前端 + F-ADMIN-002/003，登记与实施同批）——帖子 / 楼层「举报」按钮 + 理由五选一对话框（429/2012 去重提示）；<code>/admin</code> 从占位页转实页：举报工单列表（待处理 / 已闭环切换）+ 处理对话框（REMOVE 联动下架 / 封禁、DISMISS 驳回 + 结论）+ 内容处置台（按 id 下架 / 恢复、封禁 / 解封）；顶栏对 SUPERADMIN 显「管理后台」入口（权限边界在后端 requireRole，前端显隐仅为体验）。<b>验证</b>：<code>npm run build</code> 通过；<b>前端交互走查待发起人</b>",type:"前端",status:"full",review:"发起人指令继续开发 + 授权自审代批",hash:"d1dc1ed"},
 {id:"CR-085",date:"2026-09-27",title:"<b>引用回复（F-009 / PRD F-FORUM-004·F-SOC-001）前后端同批 · 零迁移</b>——<code>replies.quoted_reply_id</code>（V1 预留零使用）自此有唯一写入口：Command 可空 <code>quotedReplyId</code>、应用服务校验<b>同帖且可见</b>（不可见 / 跨帖一律 404/3001 防枚举，校验先于机审与楼层号分配）；楼层列表 <code>quoted</code> 引用摘要（楼层号 + 昵称 + 120 字摘要，昵称并入同一批不做 N+1，被引楼层不可见不下发）；<code>NotificationType.QUOTE</code>（V1 词表预留值兑现）+ 通知动作短语。前端：楼层「引用」按钮 + composer 引用条 + 引用块。<b>验证</b>：346→354 全绿、build 通过、真机冒烟 17 项 PASS；<b>同轮重抓快照 v1.16（116501 字节）闭环 CR-082/083 契约挂账</b>，并修掉重复 1001（第四次重犯）+ 补 2011/2013 声明；<b>浏览器交互走查待发起人</b>",type:"前端 + 后端",status:"full",review:"发起人指令「继续完善功能」+ 授权自审代批（实施方案见 <a href=\"开发/实施方案/CR-085-引用回复.md\">CR-085 方案</a>）",hash:"—"},
 {id:"CR-093",date:"2026-10-10",title:"<b>手机号注册 / 登录（F-011，PRD F-ACC-001 补全，零迁移）</b>，前后端同批——注册 / 登录 / 验证码三端点改\"邮箱<b>或</b>手机号\"二合一（register <code>contact</code>、login <code>account</code>、captcha target 格式门）；phone-only 账号零迁移落库（V1 <code>phone_enc/phone_hash</code> 预留列 + 唯一键）；验证码管线 target 无关（同键 HMAC）；新错误码 <code>PHONE_EXISTS(2014)</code>；前端登录 / 注册单输入自动分流。<b>验证</b>：mvn verify 358→366 全绿（+8 例：LoginTest 新类 4 + RegisterTest 3 + ConflictTest 1）；真机冒烟 8 项 PASS（手机号注册→登录→邮箱回归→重复注册 409/2014→垃圾 target→错码 2005）；契约 v1.18 重抓。<b>生产残余</b>：CODE_SENDER_MODE=mail 下手机号发码不可用（短信服务商属 A3-8 族外部欠账）",type:"前端 + 后端",status:"full",review:"发起人指令\"要做\" + 授权自审代批",hash:"—"},
+{id:"CR-094",date:"2026-10-10",title:"<b>PublishView 预览面板接线</b>（F-012 前端残余闭环，纯前端零契约）——CR-087 后端端点已就位但前端未接：新增 <code>api/markdown.ts</code> + 600ms 防抖调预览端点；桌面端 md+ 编辑/预览双栏并排，窄屏 Tab 切换；预览 HTML 服务端已净化。<b>验证</b>：build 通过 + curl 端点 200 + 前端页面预览面板实时渲染",type:"前端",status:"full",review:"发起人指令\"继续完成剩余的功能缺口\" + 授权自审代批",hash:"—"},
+{id:"CR-095",date:"2026-10-10",title:"<b>隐私政策与用户协议文本</b>（P2 上线前置交付物，纯文档）——新建 <code>docs/需求/隐私政策与用户协议.md</code>：隐私政策覆盖 PRD §4 全部收集字段（学号/邮箱/手机号/UGC/阅读数）逐条标注加密存储方式与保护措施（AES-GCM + HMAC、ProductionSafetyGuard、ADR-005 净化、注销匿名化）；用户协议覆盖社区规范/知识产权/免责声明。发起人签发后对外公布",type:"文档",status:"full",review:"发起人指令\"继续完成剩余的功能缺口\" + 授权自审代批",hash:"—"},
+{id:"CR-096",date:"2026-10-11",title:"<b>AGENTS.md 整篇精简重写</b>（纯文档）——删除\"原句保留＋层层加注\"式状态沿革堆叠：速览段（CR-072~088 补注链、契约 v1.11~v1.16 沿革、单测基线 87→366 沿革）整段移除，项目状态只维护台账 §1 + 驾驶舱（对齐 CR-029 收口规则）；全部可执行规则逐条保留（分层 / 错误契约 / 鉴权声明 / 测试约定 / 安全 / 前端令牌与层叠 / 汇报 / 方案门槛 / 收尾 / 红线）；过时表述按实测修正（基线 366、SvgIcon=Tabler 已统一、机审网关已交付）；基线数收敛为「常用命令」单点维护",type:"文档",status:"full",review:"发起人指令\"太乱太杂了进行优化一下\" + 授权自审代批",hash:"—"},
 {id:"CR-091",date:"2026-09-27",title:"<b>前端界面优化批（参考 paicoding，纯样式零契约）</b>——代码块语言标注（data-lang + attr()）、首页排序改文字 Tab（主色+指示条）、热榜前三徽章化、列表节奏与封面 112×70、全局返回顶部、提问按钮 pencil 图标；同批另修 <b>sticky 两栏滚动即消失</b>（EP .el-main 默认 overflow:auto 劫持 sticky 定位参照，scoped 放开为 visible 修复，顶栏毛玻璃随之恢复）；同批 <b>8 视图模板包单根</b>（Transition out-in 下 fragment 有随机卡死风险，详情页举报对话框也由根外挪入根内）。⚠️ <b>同批修复真缺陷：详情页自 CR-084 起整页空白</b>——<code>reactive</code> 漏 import（build 不跑 vue-tsc 故编译期静默），一行补 import 修复；单根加固（8 视图）作为防御性修复保留；<b>滚动设计对齐 CSDN</b>——左栏全高白条、右栏新增「最新发布」挂件 + 关于卡 sticky 接力（滚后视口三栏恒有内容）；列表项对齐 CSDN 红框样式（摘要单行、计数"图标+文字+数字" + formatCount 缩写）。<b>验证</b>：build 通过、全路由（首页/版块/登录/搜索/详情）浏览器实测正常",type:"前端（纯样式）",status:"full",review:"发起人指令 + 授权自审代批",hash:"—"},
 {id:"CR-086",date:"2026-09-27",title:"<b>首页三栏改版 + 顶栏提问按钮</b>（参考 CodeNav / 掘金，纯样式 · 逻辑零改动，登记与实施同批）——HomeView 重构为三栏：左栏版块导航、中栏信息流（排序组 + PostListItem 流）、右栏全站热榜 Top5（sort=hot 数据源）+ 站点介绍卡；顶栏搜索框加宽 + 「提问」主按钮；PostListItem 重排为 CSDN/掘金式（作者行上提、计数下沉）。全部数据源为既有接口。<b>验证</b>：npm run build 通过",type:"前端（纯样式）",status:"full",review:"发起人提供参考截图 + 授权自审代批",hash:"—"},
 {id:"CR-087",date:"2026-09-27",title:"<b>Markdown 预览端点（F-012 后端）</b>，闭环 ADR-005 预览约定（登记与实施同批）——服务端渲染预览端点落地（MarkdownRenderer 单点出口），真机 curl 冒烟通过（公开可达 + 登录发帖正常）；<code>mvn verify</code> 354 全绿。<b>挂账</b>：PublishView 预览面板接线随下一前端批（契约行已随快照 <b>v1.17</b> 入档）；提交 <code>2421742</code>",type:"后端",status:"full",review:"发起人指令继续开发 + 授权自审代批",hash:"2421742"},
