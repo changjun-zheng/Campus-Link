@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SpotBugs 排除清单（CR-103）。
+  规则：不做整类跳过——每条 Match 都写明「为什么属误报 / 为什么按设计接受」。
+  本清单由 2026-10-14 基线轮逐条判定得出（SpotBugs 4.8.6.6 / effort=Max / threshold=Medium）：
+  全仓 61 条 findings 全部落在下列四组，未发现真缺陷；除下表外所有检测器保持开启。
+  ⚠️ 已知取舍（如实登记于 CR-103 方案 §7）：对下列类不再报「防御性拷贝」类问题；
+     若将来在这些类里引入真正需要防御性拷贝的可变持有者，会一并被本清单静默——新增此类代码时须人工留意。
+-->
+<FindBugsFilter>
+
+  <!-- ① DI 构造器注入（EI_EXPOSE_REP2）：注入对象是 Spring 容器共享的单例 bean / 基础设施适配器，
+       做防御性拷贝会破坏容器共享语义 ⇒ 对 DI 的已知误报，不可按字面"修"。 -->
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.config.SecurityConfig"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.security.ApiErrorSecurityHandler"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.account.application.AccountApplicationService"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.account.application.CaptchaService"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.account.infrastructure.redis.RedisCaptchaStore"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.account.infrastructure.redis.RedisRateLimitAdapter"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.account.infrastructure.redis.RedisTicketStore"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.application.ForumQueryApplicationService"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.application.HotRankApplicationService"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.application.PostViewCounter"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.infrastructure.redis.RedisScheduledLock"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.infrastructure.scheduling.HotScoreRefreshScheduler"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.web.AdminReportController"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.web.PostController"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.web.ReportController"/></Match>
+
+  <!-- ② Spring Boot 配置属性绑定（EI_EXPOSE_REP / REP2）：`@ConfigurationProperties` 的内嵌对象由 Boot
+       实例化并经 setter 注入、getter 供业务读取；拷贝会切断绑定链 ⇒ 已知误报。 -->
+  <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.config.AppProperties"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.config.AppProperties"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.config.AppProperties$Ai"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.config.AppProperties$Ai"/></Match>
+
+  <!-- ③ 不可变值载体（EI_EXPOSE_REP / REP2）：web VO、application cmd、分页载体与领域聚合 Post——
+       构造后不再变更，集合字段只读使用；唯一写入入口 `Post.publish` 已 `List.copyOf`。 -->
+  <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.module.forum.web.vo.PageVo"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.web.vo.PageVo"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.module.notification.web.vo.PageVo"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.notification.web.vo.PageVo"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.module.forum.web.vo.PostDetailVo"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.web.vo.PostDetailVo"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.module.forum.web.vo.PostSummaryVo"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.web.vo.PostSummaryVo"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.module.forum.application.cmd.ForumResults$PostDetail"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.application.cmd.ForumResults$PostDetail"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.module.forum.application.cmd.ForumResults$PostSummary"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.application.cmd.ForumResults$PostSummary"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.module.forum.application.cmd.PublishPostCommand"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.application.cmd.PublishPostCommand"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.module.forum.domain.gateway.PageResult"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.domain.gateway.PageResult"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.module.notification.domain.gateway.PageResult"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.notification.domain.gateway.PageResult"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.module.forum.domain.model.Post"/></Match>
+
+  <!-- ④ 按设计接受（两条，非"误报"而是"刻意的设计选择"）：
+       ④a CT_CONSTRUCTOR_THROW —— 三个类的构造器会抛异常（密钥校验 / 参数校验），规则针对的是
+           "可被子类化的类 + finalizer 攻击"；三者均为 Spring 组件或领域模型、全仓无子类，
+           标 final 反而会与 Spring CGLIB 代理机制耦合 ⇒ 按设计接受。 -->
+  <Match><Bug pattern="CT_CONSTRUCTOR_THROW"/><Class name="com.campuslink.common.crypto.CryptoService"/></Match>
+  <Match><Bug pattern="CT_CONSTRUCTOR_THROW"/><Class name="com.campuslink.security.JwtService"/></Match>
+  <Match><Bug pattern="CT_CONSTRUCTOR_THROW"/><Class name="com.campuslink.module.account.domain.model.Account"/></Match>
+
+  <!-- ④b RV_RETURN_VALUE_IGNORED_INFERRED —— 该处刻意丢弃 `Post.acceptReply` 的返回值：
+           领域聚合不可变、迁移返回新对象，而落库走定向 UPDATE（`updateAcceptedReply`），
+           不使用返回对象 ⇒ 按设计接受。 -->
+  <Match>
+    <Bug pattern="RV_RETURN_VALUE_IGNORED_INFERRED"/>
+    <Class name="com.campuslink.module.forum.application.PostApplicationService"/>
+    <Method name="acceptReply"/>
+  </Match>
+
+</FindBugsFilter>

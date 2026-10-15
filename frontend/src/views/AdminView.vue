@@ -12,6 +12,7 @@ import {
   closeReport,
   listReports,
   moderatePost,
+  moderateReply,
   setUserStatus,
   type AdminReportVo,
 } from '../api/admin'
@@ -301,6 +302,38 @@ function goLogin() {
         全部操作写审计日志。
       </p>
     </el-card>
+
+    <!-- 工单处置确认弹窗：CR-103 接入 ESLint 时检出「按钮点了没反应」——
+         openClose 早已置 closeDialogVisible、confirmClose 也早已写好，但模板自 CR-084 起从未渲染该弹窗、
+         确认动作无从触达（ESLint 报 confirmClose 定义未使用 + 无 el-dialog 佐证）。此处补齐意图中的弹窗。 -->
+    <el-dialog
+      v-model="closeDialogVisible"
+      :title="closeAction === 'REMOVE' ? '处置并闭环' : '驳回举报'"
+      width="440px"
+    >
+      <p class="text-body text-ink-regular">
+        {{ closeAction === 'REMOVE' ? '确认下架目标 #' : '确认驳回举报 #' }}{{ closeTarget?.id }}
+      </p>
+      <el-input
+        v-model="closeNote"
+        type="textarea"
+        :rows="3"
+        maxlength="200"
+        show-word-limit
+        placeholder="处理结论（可留空，最长 200 字）"
+        class="mt-3"
+      />
+      <template #footer>
+        <el-button @click="closeDialogVisible = false">取消</el-button>
+        <el-button
+          :type="closeAction === 'REMOVE' ? 'danger' : 'primary'"
+          :loading="processingId === closeTarget?.id"
+          @click="confirmClose"
+        >
+          确认
+        </el-button>
+      </template>
+    </el-dialog>
   </template>
   </div>
 </template>

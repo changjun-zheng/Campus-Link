@@ -217,6 +217,30 @@
           </execution>
         </executions>
       </plugin>
+      <!-- 静态扫描（问题清单 E-003 / W-05 三项硬指标之一，CR-103）：SpotBugs 绑 verify，
+           使既有 `mvn verify`（及 CI 的 `mvn -B verify`）自动获得扫描，无需改 CI 文件。
+           排除清单 backend/spotbugs-exclude.xml 须「每条 Match 注明理由」，不做整类跳过。 -->
+      <plugin>
+        <groupId>com.github.spotbugs</groupId>
+        <artifactId>spotbugs-maven-plugin</artifactId>
+        <version>4.8.6.6</version>
+        <configuration>
+          <effort>Max</effort>
+          <threshold>Medium</threshold>
+          <!-- 基线轮以 false 采 findings 并逐条判定（结论见 spotbugs-exclude.xml）；判定完成后翻 true -->
+          <failOnError>true</failOnError>
+          <excludeFilterFile>spotbugs-exclude.xml</excludeFilterFile>
+        </configuration>
+        <executions>
+          <execution>
+            <id>spotbugs-check</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
 </project>

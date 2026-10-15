@@ -61,7 +61,7 @@ description: 重庆工程学院计算机专业学生交流论坛（Spring Boot 4
 # 仅首次：库必须先存在，Flyway 才能连上
 mysql -h127.0.0.1 -uroot -p -e "CREATE DATABASE IF NOT EXISTS campuslink DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;"
 
-mvn verify            # 编译 + 单测 + 架构守护 + jacoco 行覆盖 60% check；合码前必须全绿
+mvn verify            # 编译 + 单测 + 架构守护 + jacoco 行覆盖 60% check + SpotBugs 静态扫描；合码前必须全绿
                       # 当前基线 366（其中 4 例 SPRING_IT 集成测试默认 SKIPPED）——改基线数只改本注释这一处
 mvn spring-boot:run   # 启动：8088（SERVER_PORT 可覆盖）；健康检查 /actuator/health，OpenAPI /api/docs
 
@@ -77,6 +77,7 @@ SPRING_PROFILES_ACTIVE=prod JWT_SECRET=… APP_HASH_KEY=… APP_CRYPT_KEY=… DB
 npm install
 npm run dev           # 5173，/api 代理到 8088（VITE_API_TARGET 可覆盖）
 npm run build
+npm run lint          # ESLint 静态扫描（flat config，见 eslint.config.js）；合码前必须 exit 0
 ```
 
 **联调冒烟**：新链路合入前必须真实起栈（MySQL / Redis / 后端 / 前端）并**浏览器实测**，不能只依赖单测。主链路：注册（学籍核验 → 验证码）→ 登录 → 发帖（Markdown）→ 回帖 → 采纳 / 点赞 / 收藏 / 搜索 / 通知；**匿名 `POST /api/v1/posts` 必须 401**。
