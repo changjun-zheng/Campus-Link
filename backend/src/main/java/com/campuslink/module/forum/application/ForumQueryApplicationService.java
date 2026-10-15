@@ -6,11 +6,13 @@ import com.campuslink.common.result.ResultCode;
 import com.campuslink.config.AppProperties;
 import com.campuslink.module.account.application.AccountApplicationService;
 import com.campuslink.module.account.application.FollowApplicationService;
+import com.campuslink.module.forum.application.cmd.ForumResults.AuthorStats;
 import com.campuslink.module.forum.application.cmd.ForumResults.MyPostSummary;
 import com.campuslink.module.forum.application.cmd.ForumResults.MyReplyItem;
 import com.campuslink.module.forum.application.cmd.ForumResults.PostBrief;
 import com.campuslink.module.forum.application.cmd.ForumResults.PostDetail;
 import com.campuslink.module.forum.application.cmd.ForumResults.PostSummary;
+import com.campuslink.module.forum.application.cmd.ForumResults.PublicReplyItem;
 import com.campuslink.module.forum.application.cmd.ForumResults.QuotedBrief;
 import com.campuslink.module.forum.application.cmd.ForumResults.ReplyBrief;
 import com.campuslink.module.forum.application.cmd.ForumResults.ReplyItem;
@@ -28,6 +30,7 @@ import com.campuslink.module.forum.domain.model.LikeTargetType;
 import com.campuslink.module.forum.domain.model.MyReplyRow;
 import com.campuslink.module.forum.domain.model.Post;
 import com.campuslink.module.forum.domain.model.PostSortOrder;
+import com.campuslink.module.forum.domain.model.PublicReplyRow;
 import com.campuslink.module.forum.domain.model.Reply;
 import com.campuslink.module.forum.domain.model.SimilarPostRow;
 import lombok.RequiredArgsConstructor;
@@ -297,6 +300,51 @@ public class ForumQueryApplicationService {
      */
     public long countVisiblePostsByAuthor(long authorId) {
         return postRepository.countVisibleByAuthor(authorId);
+    }
+
+    /**
+     * 作者三个对外计数（他人主页资料卡，CR-104）：**一次**取齐，不让 account 侧为三个数字来回调三次——
+     * 三次调用等于允许「帖子 12 / 获赞 30 / 被采纳 3」来自三个不同时刻，同一张卡上的数会对不上。
+     *
+     * <p>三个口径全部限定「可见内容」，逐条与 {@code AuthorStats} 的 javadoc 对应；
+     * {@code likeCount} 是 D-1 发起人定下的「帖子获赞 + 楼层获赞之和」，两次 SUM 相加，
+     * 其中楼层侧要 JOIN 父帖（下架帖的楼层赞不计入）。
+     *
+     * <p>与 {@link #countVisiblePostsByAuthor} 一样**不做作者存在性校验**：唯一调用方
+     * （account 的 {@code UserProfileApplicationService}）已先过同一口径的门。
+     * 保留 {@link #countVisiblePostsByAuthor} 不删：它是本方法里「帖子 N」的单一取数点，
+     * 也是既有单测断言该口径的那把把手。
+     */
+    public AuthorStats authorStats(long authorId) {
+        return new AuthorStats(
+                postRepository.countVisibleByAuthor(authorId),
+                postRepository.sumVisibleLikeCountByAuthor(authorId)
+                        + replyRepository.sumVisibleLikeCountByAuthor(authorId),
+                replyRepository.countAcceptedVisibleByAuthor(authorId));
+    }
+
+    /**
+     * 他人主页的公开楼层时间线（{@code GET /api/v1/users/{id}/replies}，CR-104）：
+     * 楼层与父帖**双可见**（{@code status='PUBLISHED' AND is_deleted=0}）才出现，时间倒序分页。
+     *
+     * <p>⚠️ 与 {@link #listMyReplies} 的口径**相反**，别弄混：那条是作者本人视角（自己哪一层被下架要看得见、
+     * 故带 {@code status}），本条是路人视角（被处置的楼层不得再次公开，故出参里没有 {@code status}）。
+     * 两条分别走仓储的 {@code findPageByAuthor} 与 {@code findPublicPageByAuthor}，
+     * 接错一个就是把平台已处置内容重新公开——这也是本方法不复用 {@code MyReplyItem} 的原因。
+     *
+     * <p>作者存在性在本方法里过一道门（同 {@link #listVisiblePostsByAuthor}）：不存在 / 已注销 → 2007 / 404，
+     * 对外不区分。
+     */
+    public PageResult<PublicReplyItem> listPublicRepliesByAuthor(long authorId, int page, int size) {
+        accountApplicationService.publicAccountOf(authorId);
+        int currentPage = normalizePage(page);
+        int pageSize = normalizeSize(size);
+        PageResult<PublicReplyRow> found = replyRepository.findPublicPageByAuthor(authorId, currentPage, pageSize);
+        List<PublicReplyItem> items = found.items().stream()
+                .map(row -> new PublicReplyItem(row.id(), row.postId(), row.postTitle(), row.floorNo(),
+                        markdownRenderer.toPlainSummary(row.contentMd(), SUMMARY_MAX_CHARS), row.createdAt()))
+                .toList();
+        return new PageResult<>(items, found.total(), currentPage, pageSize);
     }
 
     /**

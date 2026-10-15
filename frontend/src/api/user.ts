@@ -19,8 +19,29 @@ export interface UserProfileVo {
   /** 加入时间，ISO-8601 UTC */
   createdAt: string
   postCount: number
+  /** 获赞数（CR-104 / D-1）：其**可见帖子与可见楼层**收到的赞之和 */
+  likeCount: number
+  /** 被采纳数（CR-104 / D-2）：其回答被采纳为最佳答案的次数 */
+  acceptedCount: number
   followerCount: number
   followingCount: number
+}
+
+/**
+ * 他人主页的公开楼层条目（CR-104），对应后端 `forum.web.vo.PublicReplyVo`。
+ *
+ * 与 `MyReplyVo`（`/replies/mine`，本人视角）**唯一形状差别是没有 `status`**：路人视角下不可见楼层
+ * 已在服务端 SQL 整条滤掉，下发这一列等于把处置事实交给每个匿名访客。同样没有原文 `contentMd`，
+ * 只有服务端截断（120 字上限）后的 `summary`。
+ */
+export interface PublicReplyVo {
+  id: number
+  /** 父帖定位：缺 postId 与标题就只知道「答过一层」而答不出「答在哪」 */
+  postId: number
+  postTitle: string
+  floorNo: number
+  summary: string
+  createdAt: string
 }
 
 /** 用户公开资料（公开端点，匿名可读）；用户不存在或已注销 → 404 / 2007 */
@@ -34,3 +55,11 @@ export const getUserProfile = (id: number | string) => get<UserProfileVo>(`/user
  */
 export const getUserPosts = (id: number | string, page = 1, size = 20) =>
   get<PageVo<PostSummaryVo>>(`/users/${id}/posts?page=${page}&size=${size}`)
+
+/**
+ * 某用户的公开回帖时间线（公开端点，匿名可读，CR-104）：时间倒序分页。
+ *
+ * 口径与 `getUserPosts` 一致（路人视角，被处置的内容不出现），与「我的回帖」相反（那条要露出被下架的楼层）。
+ */
+export const getUserReplies = (id: number | string, page = 1, size = 20) =>
+  get<PageVo<PublicReplyVo>>(`/users/${id}/replies?page=${page}&size=${size}`)

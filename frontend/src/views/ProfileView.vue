@@ -23,7 +23,7 @@
  */
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getUserPosts, getUserProfile, type UserProfileVo } from '../api/user'
+import { getUserPosts, getUserProfile, getUserReplies, type PublicReplyVo, type UserProfileVo } from '../api/user'
 import { followUser, getFollowState, unfollowUser } from '../api/follow'
 import { ApiError } from '../api/client'
 import type { PostSummaryVo } from '../api/forum'
@@ -31,6 +31,7 @@ import PostListItem from '../components/PostListItem.vue'
 import UserAvatar from '../components/UserAvatar.vue'
 import SvgIcon from '../components/SvgIcon.vue'
 import { useAuthStore } from '../stores/auth'
+import { formatRelativeTime } from '../utils/time'
 
 const route = useRoute()
 const router = useRouter()
@@ -56,6 +57,20 @@ const page = ref(1)
 const size = 20
 const postsLoading = ref(false)
 const postsError = ref('')
+
+const replies = ref<PublicReplyVo[]>([])
+const repliesTotal = ref(0)
+const repliesLoading = ref(false)
+const repliesError = ref('')
+/**
+ * 双时间线的当前档（CR-104）：PRD F-ACC-002 的验收句写的是「发帖<b>回帖</b>时间线」，
+ * 原先只有发帖那一半。默认停在帖子——"这人发过什么"比"这人答过什么"更是主页的第一信号。
+ */
+const activeTab = ref<'posts' | 'replies'>('posts')
+const replyPage = ref(1)
+const replySize = 10
+/** 楼层那一档按需加载：默认不拉，切过去才拉——多数访客不看楼层，没必要每次进页多打一趟 */
+const repliesFetched = ref(false)
 
 const following = ref(false)
 const followBusy = ref(false)
@@ -121,6 +136,29 @@ async function loadPosts(seq: number) {
   }
 }
 
+/**
+ * 公开楼层时间线（CR-104）：与帖子档共用同一把 reqSeq 守卫——切用户时两档都要作废。
+ * 出参没有 status 位（路人视角下不可见楼层根本不出现），故这里也没有「已下架」标签分支。
+ */
+async function loadReplies(seq: number) {
+  repliesLoading.value = true
+  repliesError.value = ''
+  try {
+    const res = await getUserReplies(userId.value, replyPage.value, replySize)
+    if (seq !== reqSeq) return
+    replies.value = res.list
+    repliesTotal.value = res.total
+    repliesFetched.value = true
+  } catch (e) {
+    if (seq !== reqSeq) return
+    replies.value = []
+    repliesTotal.value = 0
+    repliesError.value = e instanceof Error ? e.message : '回帖加载失败'
+  } finally {
+    if (seq === reqSeq) repliesLoading.value = false
+  }
+}
+
 /** 关注状态：只在「已登录 + 不是本人」时查；失败静默（按钮回落未关注态） */
 async function loadFollowState(seq: number) {
   following.value = false
@@ -139,6 +177,12 @@ async function loadAll() {
   posts.value = []
   total.value = 0
   page.value = 1
+  // 换用户 = 两档一起作废：不复位的话，在 /u/1 拉过的楼层会带着上一个人的数据停在 /u/2 的缓存里
+  replies.value = []
+  repliesTotal.value = 0
+  replyPage.value = 1
+  repliesFetched.value = false
+  activeTab.value = 'posts'
   if (userId.value === 0) {
     profile.value = null
     missing.value = true
@@ -157,6 +201,17 @@ function onPageChange(next: number) {
   void loadPosts(++reqSeq)
 }
 
+function onReplyPageChange(next: number) {
+  replyPage.value = next
+  void loadReplies(++reqSeq)
+}
+
+/** 切档才发第一趟请求；已拉过则复用（翻页走 onReplyPageChange 自己领序号） */
+function switchTab(next: 'posts' | 'replies') {
+  activeTab.value = next
+  if (next === 'replies' && !repliesFetched.value && !repliesLoading.value) void loadReplies(++reqSeq)
+}
+
 /** 重试也要领新序号：否则重试轮自己就成了“陈旧轮”，响应回来被自己丢弃 */
 function retryProfile() {
   void loadProfile(++reqSeq)
@@ -164,6 +219,15 @@ function retryProfile() {
 
 function retryPosts() {
   void loadPosts(++reqSeq)
+}
+
+function retryReplies() {
+  void loadReplies(++reqSeq)
+}
+
+/** 楼层条目的父帖链接（回帖档用）：与「我的回帖」页同一路由口径 */
+function linkToPost(postId: number) {
+  return '/post/' + postId
 }
 
 async function toggleFollow() {
@@ -228,10 +292,18 @@ watch(userId, () => void loadAll(), { immediate: true })
         <div class="min-w-0 flex-1">
           <div class="flex flex-wrap items-center gap-2">
             <h2 class="min-w-0 truncate text-title-lg font-medium text-ink">{{ profile.nickname }}</h2>
-            <!-- 本人：给编辑入口而不是关注按钮（后端 2009 禁止关注自己） -->
-            <RouterLink v-if="isSelf" to="/settings">
-              <el-button size="small">编辑资料</el-button>
-            </RouterLink>
+            <!-- 本人：给编辑与收藏入口而不是关注按钮（后端 2009 禁止关注自己）。
+                 「我的收藏」随 CR-104 / D-3 补在这里——PRD 那句「本人主页额外可见我的收藏」走
+                 "链到既有 /favorites 页"而不是在本页再嵌一份列表：收藏项的可见性口径与本页相反
+                 （被下架的条目本人仍要看得见），嵌进来等于把两套口径塞进同一张列表 -->
+            <template v-if="isSelf">
+              <RouterLink to="/settings">
+                <el-button size="small">编辑资料</el-button>
+              </RouterLink>
+              <RouterLink to="/favorites">
+                <el-button size="small">我的收藏</el-button>
+              </RouterLink>
+            </template>
             <el-button
               v-else
               size="small"
@@ -248,15 +320,23 @@ watch(userId, () => void loadAll(), { immediate: true })
 
           <div class="mt-3 flex flex-wrap items-center gap-4 text-note text-ink-meta">
             <span>
-              <span class="text-title-sm font-medium text-ink">{{ profile.postCount }}</span>
+              <span class="text-title-sm font-medium text-ink tabular-nums">{{ profile.postCount }}</span>
               帖子
             </span>
             <span>
-              <span class="text-title-sm font-medium text-ink">{{ profile.followerCount }}</span>
+              <span class="text-title-sm font-medium text-ink tabular-nums">{{ profile.likeCount }}</span>
+              获赞
+            </span>
+            <span>
+              <span class="text-title-sm font-medium text-ink tabular-nums">{{ profile.acceptedCount }}</span>
+              被采纳
+            </span>
+            <span>
+              <span class="text-title-sm font-medium text-ink tabular-nums">{{ profile.followerCount }}</span>
               粉丝
             </span>
             <span>
-              <span class="text-title-sm font-medium text-ink">{{ profile.followingCount }}</span>
+              <span class="text-title-sm font-medium text-ink tabular-nums">{{ profile.followingCount }}</span>
               关注
             </span>
           </div>
@@ -264,15 +344,46 @@ watch(userId, () => void loadAll(), { immediate: true })
       </div>
     </el-card>
 
-    <!-- 帖子时间线 -->
+    <!-- 双时间线（CR-104）：帖子 / 回帖。Tab 沿用首页 CR-091 的文字型自有 Tab
+         （主色 + 底部指示条，真 button 保键盘可达与 aria-pressed），不复用 EP 组件 -->
     <el-card shadow="never" :body-style="{ padding: 0 }">
-      <div
-        class="flex items-center justify-between border-b-[0.5px] border-divider px-5 py-3"
-      >
-        <h3 class="text-title-sm font-medium text-ink">帖子</h3>
-        <span class="text-caption text-ink-meta">按发布时间倒序 · 共 {{ total }} 条</span>
+      <div class="flex items-center justify-between border-b-[0.5px] border-divider px-5 py-3">
+        <nav class="flex items-center gap-1" aria-label="TA 的内容">
+          <button
+            type="button"
+            class="relative cursor-pointer border-0 bg-transparent px-3 py-1.5 text-body transition-colors duration-fast ease-standard"
+            :class="activeTab === 'posts' ? 'font-medium text-primary' : 'text-ink-regular hover:text-link'"
+            :aria-pressed="activeTab === 'posts'"
+            @click="switchTab('posts')"
+          >
+            帖子
+            <span
+              aria-hidden="true"
+              class="inset-x-3 -bottom-px absolute h-0.5 rounded-full transition-opacity duration-fast ease-standard"
+              :class="activeTab === 'posts' ? 'bg-primary opacity-100' : 'opacity-0'"
+            />
+          </button>
+          <button
+            type="button"
+            class="relative cursor-pointer border-0 bg-transparent px-3 py-1.5 text-body transition-colors duration-fast ease-standard"
+            :class="activeTab === 'replies' ? 'font-medium text-primary' : 'text-ink-regular hover:text-link'"
+            :aria-pressed="activeTab === 'replies'"
+            @click="switchTab('replies')"
+          >
+            回帖
+            <span
+              aria-hidden="true"
+              class="inset-x-3 -bottom-px absolute h-0.5 rounded-full transition-opacity duration-fast ease-standard"
+              :class="activeTab === 'replies' ? 'bg-primary opacity-100' : 'opacity-0'"
+            />
+          </button>
+        </nav>
+        <span class="text-caption text-ink-meta tabular-nums">
+          按时间倒序 · 共 {{ activeTab === 'posts' ? total : repliesTotal }} 条
+        </span>
       </div>
 
+      <template v-if="activeTab === 'posts'">
       <el-skeleton v-if="postsLoading" animated class="px-5 pt-4">
         <template #template>
           <div
@@ -318,6 +429,65 @@ watch(userId, () => void loadAll(), { immediate: true })
             @current-change="onPageChange"
           />
         </div>
+      </template>
+      </template>
+
+      <!-- 回帖档（CR-104）：条目形状取自「我的回帖」页，唯一差别是这里没有「已下架」标签
+           （后端出参就没有 status 位，路人视角下被处置的楼层在 SQL 侧已整条滤掉） -->
+      <template v-else>
+        <el-skeleton v-if="repliesLoading" animated class="px-5 pt-4">
+          <template #template>
+            <div v-for="i in 3" :key="i" class="border-b-[0.5px] border-divider py-3 last:border-b-0">
+              <el-skeleton-item variant="text" style="width: 38%" />
+              <el-skeleton-item variant="text" class="mt-2" style="width: 100%" />
+              <el-skeleton-item variant="text" class="mt-1" style="width: 64%" />
+            </div>
+          </template>
+        </el-skeleton>
+
+        <div v-else-if="repliesError" class="p-5">
+          <el-alert type="error" :closable="false" show-icon :title="repliesError">
+            <el-button size="small" @click="retryReplies">重新加载</el-button>
+          </el-alert>
+        </div>
+
+        <div v-else-if="!replies.length" class="py-10 text-center">
+          <p class="text-body text-ink-regular">
+            {{ isSelf ? '你还没有回过帖' : 'TA 还没有回过帖' }}
+          </p>
+          <RouterLink to="/">
+            <el-button type="primary" class="mt-4">{{ isSelf ? '去回答问题' : '去逛逛版块' }}</el-button>
+          </RouterLink>
+        </div>
+
+        <template v-else>
+          <ul>
+            <li v-for="r in replies" :key="r.id" class="border-b-[0.5px] border-divider px-5 py-3 last:border-b-0">
+              <div class="flex items-center gap-2">
+                <span class="flex-none text-caption text-ink-meta tabular-nums">第 {{ r.floorNo }} 楼</span>
+                <RouterLink
+                  :to="linkToPost(r.postId)"
+                  class="min-w-0 flex-1 truncate text-body text-ink hover:text-link"
+                >
+                  {{ r.postTitle }}
+                </RouterLink>
+              </div>
+              <p v-if="r.summary" class="mt-1 line-clamp-2 text-note leading-body text-ink-regular">
+                {{ r.summary }}
+              </p>
+              <p class="mt-1.5 text-caption text-ink-meta">{{ formatRelativeTime(r.createdAt) }}</p>
+            </li>
+          </ul>
+          <div v-if="repliesTotal > replySize" class="flex justify-center px-5 py-4">
+            <el-pagination
+              layout="prev, pager, next, total"
+              :total="repliesTotal"
+              :page-size="replySize"
+              :current-page="replyPage"
+              @current-change="onReplyPageChange"
+            />
+          </div>
+        </template>
       </template>
     </el-card>
 

@@ -1,6 +1,7 @@
 package com.campuslink.module.forum.domain.gateway;
 
 import com.campuslink.module.forum.domain.model.MyReplyRow;
+import com.campuslink.module.forum.domain.model.PublicReplyRow;
 import com.campuslink.module.forum.domain.model.Reply;
 import com.campuslink.module.forum.domain.model.ReplyStatus;
 
@@ -26,6 +27,36 @@ public interface ReplyRepository {
      * <p>调用方约束同 {@code PostRepository#findPageByAuthor}：id 只能取自令牌，不接受外部传入。
      */
     PageResult<MyReplyRow> findPageByAuthor(Long authorId, int page, int size);
+
+    /**
+     * 他人主页的公开楼层分页（路人视角，CR-104）：与 {@link #findPageByAuthor} 的**唯一**差别是多一道
+     * 楼层自身的可见性过滤——{@code r.status='PUBLISHED'}，父帖侧条件（未删 + PUBLISHED）逐字相同。
+     *
+     * <p>两条分开写而不是给本人视角那条加布尔开关：开关参数会让"哪一条被下架的楼层该露给谁"
+     * 变成调用方的记忆题，而本仓对已处置内容的收口判据一直是**读侧结构上不可能漏**（见 {@code findVisibleById}）。
+     *
+     * <p>返回 {@link PublicReplyRow}（无 {@code status}）而非 {@code MyReplyRow}：见该载体的 javadoc——
+     * 公开出参带 {@code status} 等于向匿名访客下发处置事实。
+     */
+    PageResult<PublicReplyRow> findPublicPageByAuthor(Long authorId, int page, int size);
+
+    /**
+     * 作者**可见楼层**的获赞总数（获赞数 D-1 的第二半，CR-104）：{@code SUM(r.like_count)}，
+     * WHERE 与 {@link #findPublicPageByAuthor} 同源（楼层与父帖双 {@code PUBLISHED} 且未删）。
+     *
+     * <p>只算可见楼层：一条被平台下架的回答继续替作者挣着赞，等于让已处置内容仍在产出对外信号。
+     */
+    long sumVisibleLikeCountByAuthor(Long authorId);
+
+    /**
+     * 作者**被采纳为最佳答案**的楼层数（被采纳数，D-2 取回答侧，CR-104）：
+     * {@code COUNT(*)} WHERE {@code r.is_accepted=1} 且楼层与父帖均可见（同上同源条件）。
+     *
+     * <p>{@code is_accepted} 由采纳用例与 {@link #updateAcceptedFlags} 单点维护（换采纳时旧位清零），
+     * 故此计数与帖子详情上的「已采纳」标识同源；父帖可见性一并参与，是因为"题都被下了架、答案还挂着被采纳数"
+     * 属同一类外泄。
+     */
+    long countAcceptedVisibleByAuthor(Long authorId);
 
     /**
      * 按 id 查**可见**的回复（{@code status='PUBLISHED' AND is_deleted=0}，与 {@link #findPageByPostId}

@@ -62,10 +62,10 @@ class UserControllerPublicProfileTest {
     }
 
     @Test
-    @DisplayName("正常返回：展示四列 + 三个计数逐位落到 VO（long 计数饱和收窄成 int）")
+    @DisplayName("正常返回：展示四列 + 五个计数逐位落到 VO（long 计数饱和收窄成 int）")
     void mapsProfileAndCountsOntoVo() {
         when(userProfileApplicationService.publicProfileOf(eq(USER_ID), anyString())).thenReturn(new PublicProfile(
-                USER_ID, "张三同学", "软件工程", "在写代码", CREATED_AT, 12L, 34L, 5L));
+                USER_ID, "张三同学", "软件工程", "在写代码", CREATED_AT, 12L, 30L, 3L, 34L, 5L));
 
         UserProfileVo vo = controller.profile(USER_ID, new MockHttpServletRequest()).data();
 
@@ -75,6 +75,8 @@ class UserControllerPublicProfileTest {
         assertThat(vo.bio()).isEqualTo("在写代码");
         assertThat(vo.createdAt()).isEqualTo(CREATED_AT);
         assertThat(vo.postCount()).isEqualTo(12);
+        assertThat(vo.likeCount()).isEqualTo(30);
+        assertThat(vo.acceptedCount()).isEqualTo(3);
         assertThat(vo.followerCount()).isEqualTo(34);
         assertThat(vo.followingCount()).isEqualTo(5);
     }
@@ -105,7 +107,7 @@ class UserControllerPublicProfileTest {
     @DisplayName("IP 接线：无 X-Forwarded-For 取 remoteAddr，有则取首段——传给 application 的是 IP 不是 userId")
     void passesClientIpExtractedFromRequest() {
         when(userProfileApplicationService.publicProfileOf(eq(USER_ID), anyString())).thenReturn(new PublicProfile(
-                USER_ID, "张三同学", "软件工程", "在写代码", CREATED_AT, 0L, 0L, 0L));
+                USER_ID, "张三同学", "软件工程", "在写代码", CREATED_AT, 0L, 0L, 0L, 0L, 0L));
 
         MockHttpServletRequest direct = new MockHttpServletRequest();
         direct.setRemoteAddr("10.0.0.8");
@@ -125,7 +127,7 @@ class UserControllerPublicProfileTest {
                 .map(RecordComponent::getName).toList();
 
         assertThat(fields).containsExactly("id", "nickname", "major", "bio", "createdAt",
-                "postCount", "followerCount", "followingCount");
+                "postCount", "likeCount", "acceptedCount", "followerCount", "followingCount");
         assertThat(fields).doesNotContain("email", "emailHash", "emailEnc", "phone", "studentId", "studentIdHash",
                 "role", "status", "verified", "anonymized", "deleteAt", "accountType", "following");
     }

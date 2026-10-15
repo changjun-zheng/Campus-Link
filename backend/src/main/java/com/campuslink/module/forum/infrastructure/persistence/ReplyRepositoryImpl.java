@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.campuslink.module.forum.domain.gateway.PageResult;
 import com.campuslink.module.forum.domain.gateway.ReplyRepository;
 import com.campuslink.module.forum.domain.model.MyReplyRow;
+import com.campuslink.module.forum.domain.model.PublicReplyRow;
 import com.campuslink.module.forum.domain.model.Reply;
 import com.campuslink.module.forum.domain.model.ReplyStatus;
 import com.campuslink.module.forum.infrastructure.persistence.mapper.ReplyMapper;
@@ -49,6 +50,26 @@ public class ReplyRepositoryImpl implements ReplyRepository {
                 .map(d -> new MyReplyRow(d.getId(), d.getPostId(), d.getPostTitle(), d.getFloorNo(),
                         d.getContentMd(), ReplyStatus.valueOf(d.getStatus()), d.getCreatedAt()))
                 .toList(), result.getTotal(), page, size);
+    }
+
+    @Override
+    public PageResult<PublicReplyRow> findPublicPageByAuthor(Long authorId, int page, int size) {
+        // 与本人视角那条一样：楼层与父帖的可见性在同一条 SQL 判定，total 与条件同源（ReplyMapper#findPublicPageByAuthor）
+        IPage<PublicReplyDO> result = replyMapper.findPublicPageByAuthor(new Page<>(page, size), authorId);
+        return new PageResult<>(result.getRecords().stream()
+                .map(d -> new PublicReplyRow(d.getId(), d.getPostId(), d.getPostTitle(), d.getFloorNo(),
+                        d.getContentMd(), d.getCreatedAt()))
+                .toList(), result.getTotal(), page, size);
+    }
+
+    @Override
+    public long sumVisibleLikeCountByAuthor(Long authorId) {
+        return replyMapper.sumVisibleLikeCountByAuthor(authorId);
+    }
+
+    @Override
+    public long countAcceptedVisibleByAuthor(Long authorId) {
+        return replyMapper.countAcceptedVisibleByAuthor(authorId);
     }
 
     @Override

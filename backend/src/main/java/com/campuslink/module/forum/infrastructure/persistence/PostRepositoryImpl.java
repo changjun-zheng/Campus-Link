@@ -77,6 +77,12 @@ public class PostRepositoryImpl implements PostRepository {
         return postMapper.selectCount(visibleQuery().eq(PostDO::getAuthorId, authorId));
     }
 
+    @Override
+    public long sumVisibleLikeCountByAuthor(Long authorId) {
+        // SQL 字面量与 visibleQuery() 三条件逐字相同，同源性由用例侧「下架帖的赞不计入」守住（见 PostMapper javadoc）
+        return postMapper.sumVisibleLikeCountByAuthor(authorId);
+    }
+
     /**
      * 可见帖子条件（{@code status='PUBLISHED' AND is_deleted=0}）的**单一构造点**：
      * {@link #findPageByAuthors}（列表）与 {@link #countVisibleByAuthor}（计数）共用，

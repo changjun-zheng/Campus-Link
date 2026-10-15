@@ -54,4 +54,24 @@ public interface PostMapper extends BaseMapper<PostDO> {
                              @Param("boardId") Long boardId,
                              @Param("excludeAuthorId") Long excludeAuthorId,
                              @Param("limit") int limit);
+
+    /**
+     * 作者可见帖子的获赞总数（他人主页资料卡「获赞 N」，CR-104）。
+     *
+     * <p>WHERE 与 {@code PostRepositoryImpl#countVisibleByAuthor} / {@code #findPageByAuthors} 的
+     * {@code visibleQuery()} 三个条件逐字相同——这里是 SQL 字面量、那边是 Lambda 构造器，
+     * **两处各写一遍是本条已知代价**（抽成共享 SQL 常量会把条件同时钉进 domain 与 mapper，更糊）。
+     * 同源性由 {@code ForumQueryApplicationServiceAuthorStatsTest} 的「下架帖的赞不计入」用例守着。
+     *
+     * <p>读冗余计数列 {@code like_count}（由 {@code adjustLikeCount} 单点增减）而非 JOIN {@code likes} 现算：
+     * 现算要按作者扫全部点赞行，而主页是一次高频读、量级不对称。
+     */
+    @Select("""
+            SELECT COALESCE(SUM(like_count), 0)
+            FROM posts
+            WHERE author_id = #{authorId}
+              AND status = 'PUBLISHED'
+              AND is_deleted = 0
+            """)
+    long sumVisibleLikeCountByAuthor(@Param("authorId") Long authorId);
 }

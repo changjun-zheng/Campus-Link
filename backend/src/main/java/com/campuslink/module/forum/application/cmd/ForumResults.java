@@ -65,6 +65,25 @@ public final class ForumResults {
                              String status, Instant createdAt) {
     }
 
+    /**
+     * 他人主页的公开楼层条目（CR-104）：与 {@link MyReplyItem} 的差别就是**没有 {@code status}**——
+     * 路人视角下不可见楼层根本不会出现在结果里，下发这一列等于把处置事实交给每个匿名访客。
+     * {@code summary} 由应用层经 {@code MarkdownRenderer} 从原文截出，原文不出用例边界。
+     */
+    public record PublicReplyItem(Long id, Long postId, String postTitle, int floorNo, String summary,
+                                 Instant createdAt) {
+    }
+
+    /**
+     * 作者三个对外计数（CR-104）：**一次**跨上下文调用取齐，而不是让 account 侧为三个数字来回调三次
+     * （每个数字一次调用会把"同一张资料卡上的三个数不该来自三个时刻"变成隐患）。
+     *
+     * <p>三个口径全部限定"可见内容"：{@code postCount} 与主页下方那份帖子列表同源；
+     * {@code likeCount} 是 D-1 的「帖子 + 楼层获赞之和」；{@code acceptedCount} 是 D-2 的回答侧被采纳数。
+     */
+    public record AuthorStats(long postCount, long likeCount, long acceptedCount) {
+    }
+
     /** 回帖结果：floorNo 为本次分配的楼层号（设计 §3.6，口径见 sprint-2-design §4.1） */
     public record PublishedReply(Long id, int floorNo) {
     }

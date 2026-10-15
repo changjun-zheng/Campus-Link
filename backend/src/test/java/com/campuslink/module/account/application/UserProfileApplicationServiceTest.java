@@ -10,6 +10,7 @@ import com.campuslink.module.account.domain.model.AccountRole;
 import com.campuslink.module.account.domain.model.AccountStatus;
 import com.campuslink.module.account.domain.model.EmailAddress;
 import com.campuslink.module.forum.application.ForumQueryApplicationService;
+import com.campuslink.module.forum.application.cmd.ForumResults.AuthorStats;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,7 +32,8 @@ import static org.mockito.Mockito.when;
 /**
  * 他人主页资料卡的读时聚合（{@code publicProfileOf}）与 IP 限流门。
  *
- * <p>聚合这里能测的只有**接线**：三个计数各自取自哪个端口。取值的正确性由各自的测试守
+ * <p>聚合这里能测的只有**接线**：五个计数各自取自哪个端口（其中帖子 / 获赞 / 被采纳三个来自 forum 侧
+ * <b>同一次</b> {@code authorStats} 调用，CR-104——三个数分三次取就允许它们来自三个时刻，同一张卡上会自相矛盾）。取值的正确性由各自的测试守
  * （{@code PostRepositoryImplCountVisibleByAuthorTest} 守帖子计数的 SQL 条件，
  * {@code FollowRepositoryImpl} 的两个 count 与关注状态端点共用同一对方法）——
  * 本类的价值在于"接错一根线"会立刻变红，尤其是 {@code followerCount} 与 {@code followingCount}
@@ -61,7 +63,7 @@ class UserProfileApplicationServiceTest {
     void aggregatesProfileAndThreeCounts() {
         when(rateLimitGateway.hitAndCount(anyString(), any())).thenReturn(1L);
         when(accountApplicationService.publicAccountOf(USER_ID)).thenReturn(account());
-        when(forumQueryService.countVisiblePostsByAuthor(USER_ID)).thenReturn(12L);
+        when(forumQueryService.authorStats(USER_ID)).thenReturn(new AuthorStats(12L, 30L, 3L));
         when(followRepository.countByFollowee(USER_ID)).thenReturn(34L);
         when(followRepository.countByFollower(USER_ID)).thenReturn(5L);
 
@@ -73,6 +75,8 @@ class UserProfileApplicationServiceTest {
         assertThat(profile.bio()).isEqualTo("在写代码");
         assertThat(profile.createdAt()).isEqualTo(CREATED_AT);
         assertThat(profile.postCount()).isEqualTo(12L);
+        assertThat(profile.likeCount()).isEqualTo(30L);
+        assertThat(profile.acceptedCount()).isEqualTo(3L);
         assertThat(profile.followerCount()).isEqualTo(34L);
         assertThat(profile.followingCount()).isEqualTo(5L);
     }
@@ -82,19 +86,21 @@ class UserProfileApplicationServiceTest {
     void zeroCountsAreReportedAsZero() {
         when(rateLimitGateway.hitAndCount(anyString(), any())).thenReturn(1L);
         when(accountApplicationService.publicAccountOf(USER_ID)).thenReturn(account());
-        when(forumQueryService.countVisiblePostsByAuthor(USER_ID)).thenReturn(0L);
+        when(forumQueryService.authorStats(USER_ID)).thenReturn(new AuthorStats(0L, 0L, 0L));
         when(followRepository.countByFollowee(USER_ID)).thenReturn(0L);
         when(followRepository.countByFollower(USER_ID)).thenReturn(0L);
 
         PublicProfile profile = service.publicProfileOf(USER_ID, IP);
 
         assertThat(profile.postCount()).isZero();
+        assertThat(profile.likeCount()).isZero();
+        assertThat(profile.acceptedCount()).isZero();
         assertThat(profile.followerCount()).isZero();
         assertThat(profile.followingCount()).isZero();
     }
 
     @Test
-    @DisplayName("账号不可公开（不存在 / 已注销）→ 2007，且三个计数一个都不查（不给探针当放大器）")
+    @DisplayName("账号不可公开（不存在 / 已注销）→ 2007，且五个计数一个都不查（不给探针当放大器）")
     void invisibleAccountShortCircuitsBeforeCounting() {
         when(rateLimitGateway.hitAndCount(anyString(), any())).thenReturn(1L);
         when(accountApplicationService.publicAccountOf(USER_ID))
@@ -104,7 +110,7 @@ class UserProfileApplicationServiceTest {
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.USER_NOT_FOUND));
 
-        verify(forumQueryService, never()).countVisiblePostsByAuthor(USER_ID);
+        verify(forumQueryService, never()).authorStats(USER_ID);
         verify(followRepository, never()).countByFollowee(USER_ID);
         verify(followRepository, never()).countByFollower(USER_ID);
     }
@@ -114,7 +120,7 @@ class UserProfileApplicationServiceTest {
     void rateLimitKeyIsPerIpWithOneMinuteWindow() {
         when(rateLimitGateway.hitAndCount(anyString(), any())).thenReturn(1L);
         when(accountApplicationService.publicAccountOf(USER_ID)).thenReturn(account());
-        when(forumQueryService.countVisiblePostsByAuthor(USER_ID)).thenReturn(0L);
+        when(forumQueryService.authorStats(USER_ID)).thenReturn(new AuthorStats(0L, 0L, 0L));
         when(followRepository.countByFollowee(USER_ID)).thenReturn(0L);
         when(followRepository.countByFollower(USER_ID)).thenReturn(0L);
 
@@ -128,7 +134,7 @@ class UserProfileApplicationServiceTest {
     void thirtiethHitPassesAndThirtyFirstRejects() {
         when(rateLimitGateway.hitAndCount(anyString(), any())).thenReturn(30L);
         when(accountApplicationService.publicAccountOf(USER_ID)).thenReturn(account());
-        when(forumQueryService.countVisiblePostsByAuthor(USER_ID)).thenReturn(0L);
+        when(forumQueryService.authorStats(USER_ID)).thenReturn(new AuthorStats(0L, 0L, 0L));
         when(followRepository.countByFollowee(USER_ID)).thenReturn(0L);
         when(followRepository.countByFollower(USER_ID)).thenReturn(0L);
 
@@ -150,7 +156,7 @@ class UserProfileApplicationServiceTest {
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.PROFILE_VIEW_RATE_LIMITED));
 
         verify(accountApplicationService, never()).publicAccountOf(USER_ID);
-        verify(forumQueryService, never()).countVisiblePostsByAuthor(USER_ID);
+        verify(forumQueryService, never()).authorStats(USER_ID);
         verify(followRepository, never()).countByFollowee(USER_ID);
         verify(followRepository, never()).countByFollower(USER_ID);
     }

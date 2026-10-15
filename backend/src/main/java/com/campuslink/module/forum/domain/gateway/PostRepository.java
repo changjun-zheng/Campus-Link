@@ -48,6 +48,19 @@ public interface PostRepository {
     long countVisibleByAuthor(Long authorId);
 
     /**
+     * 作者**可见帖子**的获赞总数（他人主页资料卡的「获赞 N」，CR-104 / D-1）：
+     * {@code SUM(like_count)}，WHERE 与 {@link #countVisibleByAuthor} 逐字同源
+     * （{@code author_id = ? AND status='PUBLISHED' AND is_deleted=0}）。
+     *
+     * <p>读的是 {@code posts.like_count} 这一冗余计数列（V1 就位、由 {@link #adjustLikeCount} 单点增减），
+     * 不在这里 JOIN {@code likes} 现算——现算要扫全表点赞行，而计数列的准确性已由点赞用例与真机冒烟守住。
+     *
+     * <p>无可见帖子时返回 0（SQL 侧 {@code COALESCE}），不返回 {@code null}：调用方是展示层计数，
+     * 让它去处理"聚合空集"等于把 SQL 细节漏到用例里。
+     */
+    long sumVisibleLikeCountByAuthor(Long authorId);
+
+    /**
      * 站内搜索（F-FORUM-008）：标题全文（ngram）+ tags 冗余列 LIKE 兜底，只搜 PUBLISHED 且未删除，
      * 按相关度得分 DESC、created_at DESC 排序。{@code boardId} 为 null 表示全站；{@code days} 为 null 表示不限时间窗。
      */

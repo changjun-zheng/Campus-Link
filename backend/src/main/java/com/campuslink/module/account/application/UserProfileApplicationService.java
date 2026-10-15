@@ -6,6 +6,7 @@ import com.campuslink.module.account.domain.gateway.FollowRepository;
 import com.campuslink.module.account.domain.gateway.RateLimitGateway;
 import com.campuslink.module.account.domain.model.Account;
 import com.campuslink.module.forum.application.ForumQueryApplicationService;
+import com.campuslink.module.forum.application.cmd.ForumResults.AuthorStats;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -61,9 +62,10 @@ public class UserProfileApplicationService {
             throw new ApiException(ResultCode.PROFILE_VIEW_RATE_LIMITED);
         }
         Account account = accountApplicationService.publicAccountOf(userId);
+        AuthorStats stats = forumQueryService.authorStats(userId);
         return new PublicProfile(account.getId(), account.getNickname(), account.getMajor(), account.getBio(),
                 account.getCreatedAt(),
-                forumQueryService.countVisiblePostsByAuthor(userId),
+                stats.postCount(), stats.likeCount(), stats.acceptedCount(),
                 followRepository.countByFollowee(userId),
                 followRepository.countByFollower(userId));
     }
@@ -71,10 +73,14 @@ public class UserProfileApplicationService {
     /**
      * 公开资料出参（application 层载体，web 层再映射成 {@code UserProfileVo}）。
      *
-     * <p>计数用 {@code long}：三个来源（{@code COUNT(*)} 与 {@code follows} 的两个计数）返回的都是 long，
+     * <p>计数用 {@code long}：四个来源（forum 的三个聚合与 {@code follows} 的两个计数）返回的都是 long，
      * 在应用层就窄化等于把"饱和还是抛异常"这个展示层决定提前塞进用例出参；收窄发生在 VO 那一步。
+     *
+     * <p>{@code likeCount} / {@code acceptedCount}（CR-104）来自 forum 侧**同一次** {@code authorStats} 调用，
+     * 与 {@code postCount} 因此来自同一时刻——资料卡上三个数互相矛盾这条路被堵在取数处。
      */
     public record PublicProfile(Long id, String nickname, String major, String bio, Instant createdAt,
-                                long postCount, long followerCount, long followingCount) {
+                                long postCount, long likeCount, long acceptedCount,
+                                long followerCount, long followingCount) {
     }
 }
