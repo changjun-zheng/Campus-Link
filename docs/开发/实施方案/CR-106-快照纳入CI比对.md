@@ -3,7 +3,7 @@
 | 文档信息 | 内容 |
 |---------|------|
 | 版本 | v1.0 |
-| 状态 | **待发起人确认**（本轮零代码、零 CI 改动；CI 配置属红线，须点头才动） |
+| 状态 | **已实施**（发起人 2026-10-16 勾 P-1「T1+T2」/ P-2「批准改 CI」；实施结果见 §8） |
 | 维护人 | AI 会话（Qoder @ 2026-10-16） |
 | 最后更新 | 2026-10-16 |
 | 关联 CR | [CR-106](../../变更日志/变更台账.md#cr-106) · 承接 [CR-090](../../变更日志/变更台账.md#cr-090) §5「CI 备料」与 [CR-103](../../变更日志/变更台账.md#cr-103) |
@@ -57,3 +57,15 @@ T1 / T2 是**纯新增测试类**、CI 是**独立几个 commit**：回滚即删
 - **P-1 范围**：□ **T1 + T2（推荐）**——T1 永远跑、T2 连字段级漂移一起堵，并把集成测试首次搬进 CI □ 只 T1——零 CI 风险，但字段级仍靠人重抓
 - **P-2 CI 改动**：□ 批准按 CR-090 §5 备料给 `backend-ci.yml` 加 `mysql:8 + redis:7` 服务与 `SPRING_IT=true`（代价：单次 CI 由 ~1 分钟升到 3~4 分钟，且自此多一层"服务容器起不来就红"的外部依赖）□ 不批准，T2 只在本机 `SPRING_IT=true` 跑
 - **P-3 首跑发现漂移怎么办**：□ 若 T1 首跑变红，先据实重抓快照并在台账单记一条"发现 X 处漂移"（**推荐**）□ 停下来先报告、等我对每个差异逐条判定
+
+## 8. 实施结果（实施后追加，不回改上文）
+
+**实施完成（2026-10-16）。发起人勾选：P-1 = T1 + T2、P-2 = 批准按 CR-090 §5 备料改 `backend-ci.yml`。**
+
+- **改动**：新增 `backend/src/test/java/com/campuslink/contract/OpenApiSnapshotOperationsTest.java`（T1，2 例：双向差集 + 公开/受保护标记 + 规模非零，纯反射不连库）与 `OpenApiSnapshotEqualityTest.java`（T2，1 例：真上下文抓 `/api/docs` 与归档做 Jackson 语义比对，剔除 `servers`）；`.github/workflows/backend-ci.yml` 加 `services: mysql:8 + redis:7`（双 health check）、`env: SPRING_IT=true / DB_HOST=127.0.0.1 / REDIS_HOST=127.0.0.1`。**零生产代码、零迁移、零新依赖、`openapi.json` 零改动。**
+- **验证**：默认 `mvn -B -o verify` → **Tests run 384 / Failures 0 / Skipped 5** + `BugInstance size is 0`；`SPRING_IT=true mvn -B -o verify` → **384 / Skipped 0**；CI run `38831907922` → **384 / 0 failures / Skipped 0，Total time 1m01s**（job 1m49s）。
+- **两支反证各自成立，且证明了"两层分工"不是话术**：① 给 `UserPostController` 加一个 `@GetMapping("/probe")`（带 `@PublicEndpoint`，故 G7 不参与）不重抓 → **T1 红**，报「操作数与快照不一致：代码 43 / 快照 42」；② 给 `UserProfileVo` 加一个组件 `probeCount` 不重抓 → **T1 仍绿**（2/0 failures）而 **T2 红**，失败信息精确到 `$.components.schemas.UserProfileVo.properties.probeCount（归档里缺这个字段）`。两个探针文件撤销后 sha256 与实验前逐字节相同（`5f363d8d…` / `b4280337…`），工作区无残留。
+- **T1 / T2 首跑均对现状为绿**——这是"快照 == 已提交代码"的独立第二方证据，与 v1.108 那轮手工 `cmp` 的结论交叉印证（不是我先设好断言再去凑数据）。
+- **落码偏差一条（对 §3 的更正）**：方案里 T2 原命名 `OpenApiSnapshotEqualityIT`，**实测根本不会执行**——surefire 默认包含模式是 `**/Test*.java`、`**/*Test.java`、`**/*Tests.java`、`**/*TestCase.java`，`*IT` 后缀一个都不收；而我当时用 `-Dtest=OpenApiSnapshotEqualityIT` 显式点名验证，它是绿的，**这个探针方式正好把坑盖住了**。改名 `OpenApiSnapshotEqualityTest` 后：默认 `mvn verify` 记为可见 `Skipped: 1`（此前连 SKIPPED 都不计）、`SPRING_IT=true` 与 CI 里真实执行。**教训**：验证新测试是否"进了流水线"，判据必须是**默认那条命令的汇总行数**，不是 `-Dtest=` 点名结果。
+- **代价与预估的差**：方案 §5 写"单次 CI 由 ~1 分钟升到 3~4 分钟"，实测 **1m01s → 只多约 40 秒**（服务与 Maven 依赖下载并行、测试本身没变慢）。当初按保守值报，如实记录偏差。
+- **残余（不随本轮关闭）**：① 本机默认 `mvn verify` 仍 SKIPPED 掉 T2 那一例，字段级校验的下限在 CI、不在个人手速；② §6.3 登记的 springdoc 表达极限（`1002/1003/1004`、可重复 `@Pattern`）**不在比对范围内**，仍靠文字约定；③ 快照**内容**对不对仍需人判断（机器只保证"归档 == 当前代码"）；④ E-003 剩余项（`frontend-ci.yml` 加 lint）、E-004（Code Review 归档）、A3-6（逐页走查）、A3-8（选型）、B1/B2（名册）一律未动。

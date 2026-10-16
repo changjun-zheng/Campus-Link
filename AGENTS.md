@@ -62,7 +62,7 @@ description: 重庆工程学院计算机专业学生交流论坛（Spring Boot 4
 mysql -h127.0.0.1 -uroot -p -e "CREATE DATABASE IF NOT EXISTS campuslink DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;"
 
 mvn verify            # 编译 + 单测 + 架构守护 + jacoco 行覆盖 60% check + SpotBugs 静态扫描；合码前必须全绿
-                      # 当前基线 381（其中 4 例 SPRING_IT 集成测试默认 SKIPPED）——改基线数只改本注释这一处
+                      # 当前基线 384（默认 mvn verify 有 5 例 SKIPPED：CR-090 的 4 例 + CR-106 的契约快照真身比对 1 例；CI 与本机 SPRING_IT=true 时 0 SKIPPED 全跑）——改基线数只改本注释这一处
 mvn spring-boot:run   # 启动：8088（SERVER_PORT 可覆盖）；健康检查 /actuator/health，OpenAPI /api/docs
 
 # 生产 profile：5 个凭据变量一个都不能省（各 ≥32 字节，HASH / CRYPT 两把不得相同），
@@ -133,11 +133,11 @@ npm run lint          # ESLint 静态扫描（flat config，见 eslint.config.js
 
 ## 测试约定
 
-- **`mvn verify` 必须全绿**（基线数见「常用命令」`mvn verify` 注释，**改基线数只改那一处**）；含 `ArchitectureGuardTest` 与 `EndpointAuthorizationManagerTest` 鉴权矩阵；`MarkdownRendererTest` 的 6 个 XSS 回归用例是论坛安全生命线；
+- **`mvn verify` 必须全绿**（基线数见「常用命令」`mvn verify` 注释，**改基线数只改那一处**）；含**契约快照机器比对两层**（CR-106）：`contract/OpenApiSnapshotOperationsTest` 不连库、默认就跑，拦"改 Controller 忘重抓快照"；`contract/OpenApiSnapshotEqualityTest` 需真上下文（`SPRING_IT=true`，CI 已带 MySQL/Redis 服务），拦出参字段级漂移——**两类探针实测各自变红**，所以"快照等于代码"不再只靠约定；含 `ArchitectureGuardTest` 与 `EndpointAuthorizationManagerTest` 鉴权矩阵；`MarkdownRendererTest` 的 6 个 XSS 回归用例是论坛安全生命线；
 - **新增需登录的端点必须补一个「匿名 → 401」单测**（真机 401 也要验）；**新增管理端点必须自带一个「角色不足 → 403」用例**——G9 只守"有没有判角色"、不守"角色取值得当不当"，两条互补缺一不可；
 - **生产配置红线由 `ProductionSafetyGuardTest` 防漂移守护**：guard 内 `DEV_VALUES` 清单必须与 `application.yml` 占位符默认值**逐字相等**；`application-prod.yml` 凭据声明必须**不含 `:default`**、三个开发开关写死合规值——**改 yml 默认值而不同步 guard，测试即红**；
 - **结构变更后真实启动一次**，确认 Flyway 迁移成功（`mvn verify` 不校验迁移可执行性，也不校验 `@MapperScan` 通配的实际扫描结果）；
-- **接口契约变更必须重生成 OpenAPI 快照** `docs/设计/接口契约/openapi.json`——凡改 Controller 路径 / 方法 / 入参出参 / 校验注解、新增端点（公开 / 受保护声明）、`ApiResponse` / `ApiError` 外壳、`OpenApiConfig`、`CurrentUser` / `PublicEndpoint`、`ResultCode` 的错误码 / 提示语 / `getHttpStatus()` 映射、或 `EndpointAuthorizationManager` / `SecurityConfig` 授权口径：起后端按[契约 README §2](docs/设计/接口契约/README.md) 命令重抓并格式化，看 `git diff`——**非空即契约已变**，同步技术方案 §5 与该 README。**快照无机器校验，漂移只能靠这条约定拦**。两条表达极限：`1002` / `1003` / `1004` 三类响应进不了快照（以契约 README §6.3 文字约定为准）；**可重复的 `@Pattern` 不会输出到契约**，纯代码侧校验规则须靠单测证明。
+- **接口契约变更必须重生成 OpenAPI 快照** `docs/设计/接口契约/openapi.json`——凡改 Controller 路径 / 方法 / 入参出参 / 校验注解、新增端点（公开 / 受保护声明）、`ApiResponse` / `ApiError` 外壳、`OpenApiConfig`、`CurrentUser` / `PublicEndpoint`、`ResultCode` 的错误码 / 提示语 / `getHttpStatus()` 映射、或 `EndpointAuthorizationManager` / `SecurityConfig` 授权口径：起后端按[契约 README §2](docs/设计/接口契约/README.md) 命令重抓并格式化，看 `git diff`——**非空即契约已变**，同步技术方案 §5 与该 README。**快照自此有机器校验（CR-106 两层比对）**，但要说清它守的是什么：**「归档快照 == 当前代码」有测试拦，「快照本身对不对」仍需人判断**（重抓命令见契约 README §2）。两条表达极限：`1002` / `1003` / `1004` 三类响应进不了快照（以契约 README §6.3 文字约定为准）；**可重复的 `@Pattern` 不会输出到契约**，纯代码侧校验规则须靠单测证明。
 
 ## 汇报约定（每次 AI 会话执行）★
 
