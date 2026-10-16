@@ -15,9 +15,44 @@ defaults:
   run:
     working-directory: backend
 
+env:
+  # 集成测试开门（CR-090 立的 SPRING_IT 判据）：自此 CI 真跑 SpringBootContextTest 的 4 例
+  # 与 CR-106 的 OpenApiSnapshotEqualityTest（契约快照真身比对）。
+  SPRING_IT: 'true'
+  # 一律用 127.0.0.1 而非 localhost：runner 上 localhost 可能解析成 IPv6 ::1，
+  # 而 service container 的端口映射只保证 IPv4 侧（本仓在 Chroma / Node 侧撞过同一类坑）。
+  DB_HOST: 127.0.0.1
+  REDIS_HOST: 127.0.0.1
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    # 与本机开发口径一致的原生依赖栈（MySQL 8 + Redis 7），凭据取 application.yml 的默认值，
+    # 不引入新密钥：这条 CI 用的全部是仓库里已公开的开发态口令，仅存在于本次 job 的临时容器内。
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ROOT_PASSWORD: ci-root
+          MYSQL_DATABASE: campuslink
+          MYSQL_USER: campuslink
+          MYSQL_PASSWORD: campuslink
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pci-root"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=20
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli -h 127.0.0.1 ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
