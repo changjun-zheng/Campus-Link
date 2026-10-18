@@ -1,0 +1,44 @@
+{
+  "generatedAt": "2026-10-17T16:13:34.657Z",
+  "ids": {
+    "boardCode": "qna",
+    "postId": 41,
+    "userId": 32
+  },
+  "pages": [
+    {
+      "key": "17-unknown-route",
+      "name": "未知路由（断链探针）",
+      "want": "/this-route-does-not-exist",
+      "auth": false,
+      "gotPath": "/this-route-does-not-exist",
+      "title": "Campus-Link",
+      "viewport": "1440x900@1",
+      "textLen": 0,
+      "items": 0,
+      "badLinks": 0,
+      "errBanner": false,
+      "errors": [],
+      "netFail": [],
+      "screenshot": "17-unknown-route.png",
+      "head": ""
+    },
+    {
+      "key": "18-search-result",
+      "name": "搜索结果态",
+      "want": "/search?q=Redis",
+      "auth": false,
+      "gotPath": "/search?q=Redis",
+      "title": "搜索 · Campus-Link",
+      "viewport": "1440x900@1",
+      "textLen": 36,
+      "items": 2,
+      "badLinks": 0,
+      "errBanner": false,
+      "errors": [],
+      "netFail": [],
+      "screenshot": "18-search-result.png",
+      "head": "首页\n/\n搜索\n全部版块\n全部时间\n搜索\n\n输入关键词搜索帖子标题与标签"
+    }
+  ]
+}

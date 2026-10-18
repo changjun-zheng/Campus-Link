@@ -1,0 +1,27 @@
+{
+  "generatedAt": "2026-10-17T16:14:15.251Z",
+  "ids": {
+    "boardCode": "qna",
+    "postId": 41,
+    "userId": 32
+  },
+  "pages": [
+    {
+      "key": "18-search-result",
+      "name": "搜索结果态",
+      "want": "/search?keyword=Redis",
+      "auth": false,
+      "gotPath": "/search?keyword=Redis",
+      "title": "搜索 · Campus-Link",
+      "viewport": "1440x900@1",
+      "textLen": 122,
+      "items": 3,
+      "badLinks": 0,
+      "errBanner": false,
+      "errors": [],
+      "netFail": [],
+      "screenshot": "18-search-result.png",
+      "head": "首页\n/\n搜索\n全部版块\n全部时间\n搜索\n共 1 条结果\n管\n管理员\n·\n2026-09-13 22:40\nRedis 缓存穿透怎么防？CR-049 冒烟帖\n\n布隆过滤器 + 空值缓存，SETNX 限流。\n\n技术问答\n阅读 0\n赞 1\n回复 1"
+    }
+  ]
+}

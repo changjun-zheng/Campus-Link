@@ -1,0 +1,46 @@
+{
+  "generatedAt": "2026-10-17T16:12:51.301Z",
+  "ids": {
+    "boardCode": "qna",
+    "postId": 41,
+    "userId": 32
+  },
+  "pages": [
+    {
+      "key": "11-notifications",
+      "name": "通知中心",
+      "want": "/notifications",
+      "auth": true,
+      "gotPath": "/notifications",
+      "title": "通知 · Campus-Link",
+      "viewport": "1440x900@1",
+      "textLen": 353,
+      "items": 7,
+      "badLinks": 0,
+      "errBanner": false,
+      "errors": [],
+      "netFail": [],
+      "screenshot": "11-notifications.png",
+      "head": "通知中心\n\n回复、引用、采纳、点赞与收藏的站内提醒，仅本人可见\n\n全部\n未读\n全部已读\n\n模拟学生01 点赞了你的帖子\n\nCR-051 UTC 口径验证 20:27:18\n\n2026-09-25 12:00\n\n模拟学生01 回复了你的帖子 #1 楼\n\nRedis 缓存穿透怎么防？CR-049 冒烟帖\n\n2026-09-15 22:57\n\n模拟学生01 点赞了你的帖子\n\nRedis 缓存穿透怎么防？",
+      "sessionInjected": true
+    },
+    {
+      "key": "12-favorites",
+      "name": "我的收藏",
+      "want": "/favorites",
+      "auth": true,
+      "gotPath": "/favorites",
+      "title": "我的收藏 · Campus-Link",
+      "viewport": "1440x900@1",
+      "textLen": 163,
+      "items": 4,
+      "badLinks": 0,
+      "errBanner": false,
+      "errors": [],
+      "netFail": [],
+      "screenshot": "12-favorites.png",
+      "head": "我的收藏\n\n按收藏时间倒序，仅本人可见\n\n管\n管理员\n·\n2026-09-15 20:27\n已采纳\nCR-051 UTC 口径验证 20:27:18\n\n验证写入时间为 UTC 墙钟。\n\n技术问答\n阅读 0\n赞 1\n回复 2\n管\n管理员\n·\n2026-09-13 16:17\n你好\n\n你好\n\n技术问答\n阅读 0\n赞 1\n回复 1",
+      "sessionInjected": true
+    }
+  ]
+}
