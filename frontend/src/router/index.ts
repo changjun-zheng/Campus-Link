@@ -19,6 +19,9 @@ const router = createRouter({
     { path: '/me/posts', name: 'my-posts', component: () => import('../views/MyPostsView.vue'), meta: { title: '我的帖子', requiresAuth: true } },
     { path: '/me/replies', name: 'my-replies', component: () => import('../views/MyRepliesView.vue'), meta: { title: '我的回帖', requiresAuth: true } },
     { path: '/admin', name: 'admin', component: () => import('../views/AdminView.vue'), meta: { title: '管理后台', requiresAuth: true } },
+    // 未知路由兜底（BUG-011，CR-109）：必须放在最后。此前无 catch-all，拼错或失效的地址
+    // 会"匹配失败但静默放行"到 App 壳层 —— 顶栏页脚照常渲染、主区完全空白、标题回落默认值。
+    { path: '/:pathMatch(.*)*', name: 'not-found', component: () => import('../views/NotFoundView.vue'), meta: { title: '页面不存在' } },
   ],
 })
 

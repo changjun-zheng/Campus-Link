@@ -1334,7 +1334,7 @@
             <span class="chip">数据快照 <b>2026-10-17</b></span>
 
 
-            <span class="chip">change-log <b>v1.112</b></span>
+            <span class="chip">change-log <b>v1.113</b></span>
 
 
             <span class="chip">next-steps <b>v1.14</b></span>
@@ -1926,7 +1926,15 @@
         </div>
 
 
-        <p>96 次登记（其中已实施 <b>95</b> 次）：完整 <b>85</b> · 部分 <b>8</b> · 未做 <b>2</b>（〔<b>v1.112 注（2026-10-17，CR-108 走查轮）</b>：⚠️
+        <p>97 次登记（其中已实施 <b>96</b> 次）：完整 <b>86</b> · 部分 <b>8</b> · 未做 <b>2</b>（〔<b>v1.113 注（2026-10-19，CR-109
+            未知路由兜底轮）</b>：<b>BUG-011 由 🔴 开放转 ✅ 已修复</b>——bug 修复前 <code>router/index.ts</code> 无 catch-all，未知路径静默放行到 App
+          壳层 ⇒ 顶栏页脚在、主区空白白页；修法＝路由表<b>末尾</b> catch-all <code>/:pathMatch(.*)*</code> + 新建
+          <code>NotFoundView.vue</code>（<code>el-result</code> 警告态 + 标题「页面不存在」+ 主色按钮「回到首页」）。实测（仅前端 dev server
+          5173）：<code>/this-route-does-not-exist</code> 渲染出「页面不存在 / 回到首页」、<code>document.title</code> = 「页面不存在 ·
+          Campus-Link」、<b>不再白屏</b>，点「回到首页」落到 <code>/</code>；回归 <code>/board/qna</code> 未被 catch-all 抢走。登记 96 →
+          <b>97</b>、已实施 95 → <b>96</b>、完整 85 → <b>86</b>，<b>在途仍一条（CR-055）</b>；时间线数组补入 <b>CR-109</b> ⇒ 96 条 ＝ 97 行 − 在途
+          CR-055。⚠️ 本轮实测<b>后端未启动</b>（首页 / 版块页「重新加载」错误态属预期，不影响兜底结论）；零后端 / 零契约 / 零迁移〕〔<b>v1.112 注（2026-10-17，CR-108
+            走查轮）</b>：⚠️
           本段<b>跳过了 v1.111 的 CR-107</b>（那一轮只更新了 chip、未回填本段）——本注一并补齐：登记 94 → <b>96</b>（+CR-107 / +CR-108）、已实施 93 →
           <b>95</b>、完整 83 → <b>85</b>，<b>在途仍一条（CR-055）</b>。本轮事实：<b>W-03 补偿③ 的桌面 ≥768 一侧执行并归档</b>——自建 CDP 通道（隔离无头 Edge
           155 + <code>Emulation.setDeviceMetricsOverride</code>）强制 <b>1440×900</b>，对 PRD §5.1 现行 <b>13 条路由</b>逐页走查（零错误条
@@ -2429,8 +2437,8 @@
             <div>
 
 
-              <div class="r-title">BUG-011 未知路由无兜底 ⇒ 主区空白白页 · 🔴 <b>开放</b>（2026-10-17 W-03 补偿③ 走查当场发现，<a
-                  href="变更日志/变更台账.md#cr-108">CR-108</a> 只登记不处置）</div>
+              <div class="r-title">BUG-011 未知路由无兜底 ⇒ 主区空白白页 · ✅ <b>已修复</b>（2026-10-19，<a
+                  href="变更日志/变更台账.md#cr-109">CR-109</a>）</div>
 
 
               <div class="r-desc"><code>frontend/src/router/index.ts</code> 只有 <b>13 条具名路由</b>、<b>无 catch-all / 404
@@ -2440,7 +2448,12 @@
                 <code>screenshots/walkthrough-desktop-2026-10-17/17-unknown-route.png</code>）。影响：站外旧链接 /
                 手打地址进来即见「空壳白页」，且与<a href="设计/UI规范/界面规范.md">界面规范</a> §5.2「错误态不复用通用错误态、须给下一步动作」相抵触（3001 帖子不存在态挂在
                 <code>/post/:id</code> 上，覆盖不到路由级失败）。<b>建议</b>：新增 <code>/:pathMatch(.*)*</code> 指向 404
-                视图或重定向首页；<b>属改代码，须另开 CR</b>（比照 A3-10「先登记后实施」）。
+                视图或重定向首页；<b>属改代码，须另开 CR</b>（比照 A3-10「先登记后实施」）。<b>〔修复（2026-10-19，<a
+                    href="变更日志/变更台账.md#cr-109">CR-109</a>，纯前端〕</b>路由表<b>末尾</b>新增 catch-all <code>/:pathMatch(.*)*</code>
+                + 新建 <code>NotFoundView.vue</code>（<code>el-result</code> 警告态 + 标题「页面不存在」+ 副标题「地址可能输错了，或这个链接已经失效」+
+                主色按钮「回到首页」）；复测（<b>后端未启动</b>的仅前端 dev server 栈）<code>/this-route-does-not-exist</code> 渲染出「页面不存在 +
+                回到首页」、<code>document.title</code> = 「页面不存在 · Campus-Link」、<b>不再白屏</b>，点「回到首页」落到 <code>/</code>，回归
+                <code>/board/qna</code> 未被 catch-all 抢走。
               </div>
 
 
@@ -3585,6 +3598,7 @@
       { id: "CR-102", date: "2026-10-11", title: "<b>首页界面质感打磨批</b>（纯前端）——全局细滚动条（8px 圆角令牌取色）；<b>列表自绘返回顶部圆钮</b>，顺带修 CR-100 两个真缺陷：全局 backtop 在固定框架下永不出现 + <b>触底加载死锁</b>（首屏仅溢出几十 px 滚不动 ⇒ 滚动门永不开，改为无溢出自动续载）；空状态图标化、热榜前三徽章分级（第 1 实心）、li hover 反馈、计数 tabular-nums、搜索框聚焦展宽、「已经到底了」细线装饰。验证：回顶全链路真实点击 + 截图裁决、自动续载 6→18、build 通过", type: "前端（纯样式 / 行为）", status: "full", review: "发起人指令\"高级前端 + UI 设计师继续优化\" + 授权自审代批", hash: "—" },
 
 
+      { id: "CR-109", date: "2026-10-19", title: "<b>未知路由兜底（BUG-011 修复，纯前端）</b>——缺陷来源＝问题清单 <b>BUG-011</b>（由 <b>CR-108</b> 桌面逐页走查当场发现：无 catch-all ⇒ 未知路径静默放行到 App 壳层、顶栏页脚在而主区空白白页）。修法＝① 路由表<b>末尾</b>新增 catch-all <code>/:pathMatch(.*)*</code>；② 新建 <code>NotFoundView.vue</code>（<code>el-result</code> 警告态 + 标题「页面不存在」+ 副标题「地址可能输错了，或这个链接已经失效」+ 主色按钮「回到首页」，载体与 <code>PostDetailView</code> 的业务码 3001 态同源、遵循界面规范 §5.2）。<b>门槛判定</b>：属「可直接改」——根因单一（路由表缺兜底）、不改任何 API 状态码 / 错误码 / 响应形状，故未写实施方案、按轻量登记直接实施。<b>验证</b>：<code>npm run lint</code> exit 0、<code>npm run build</code> ✓ built in 1m 3s；真实栈浏览器实测（仅前端 dev server 5173、404 页不依赖后端）<code>/this-route-does-not-exist</code> 渲染出「页面不存在 / 回到首页」、<code>document.title</code> = 「页面不存在 · Campus-Link」、<b>不再白屏</b>，点「回到首页」正确落到 <code>/</code>；<b>回归</b> <code>/board/qna</code> 仍渲染版块页、未被 catch-all 抢走。⚠️ 实测<b>后端未启动</b>（首页 / 版块页「重新加载」错误态属预期，不影响本结论）；零后端 / 零契约 / 零迁移", type: "前端（路由兜底）", status: "full", review: "🟢 发起人指令「继续进行下一个任务」（**未点名具体项**）；本轮项（修 BUG-011）由 AI 选定并如实登记", hash: "—" },
       { id: "CR-108", date: "2026-10-17", title: "<b>W-03 补偿③ 的桌面逐页走查执行并归档</b>（走查取证 + 纯文档，零代码）——自建 <b>CDP 通道</b>（隔离无头 Edge 155 + 独立 <code>--user-data-dir</code> + Node 内置 <code>WebSocket</code>，<code>Emulation.setDeviceMetricsOverride</code> 强制 <b>1440×900 @ DPR 1</b>）绕开「自动化浏览器视口被钉在 676×395、Zoom 与最大化均无效」的死结，对 PRD §5.1 现行 <b>13 条路由</b>逐页走查（匿名 9 页 + 登录 7 页）：<b>全部可达并渲染、零错误条 / 零控制台错误 / 零空锚点</b>，<code>/admin</code> 匿名正确跳 <code>/login?redirect=/admin</code>，<code>/post/999999</code> 走 3001 专用不存在态；另加 2 条探针（未知路由、搜索结果态）。<b>17 张截图 + 4 份原始 JSON</b> 归档于 <b>界面规范</b> <b>§8.5</b> 与 <code>screenshots/walkthrough-desktop-2026-10-17/</code>；<b>新登记 BUG-011</b>（未知路由无 catch-all ⇒ 顶栏页脚仍在、主区空白白页，只登记不处置）。同批：流程偏离记录 v1.12（W-03 状态行）、问题清单 v1.23（V-002 加注 + BUG-011）、界面规范 v1.12。⚠️ <b>三条边界</b>：走查系<b>程序化</b>采集（<b>不充抵补偿② 的人工采集口径</b>）、窄屏 / 移动端一侧仍按 CR-053 <b>暂缓</b>、<b>W-03 仍开放、A3-6 未闭环（属发起人判断）</b>。本轮前置＝排查前端 dev server 硬崩（退出码 <code>0xC0000409</code>），结论为 <b>OS 环境侧原生误判、非产品缺陷</b>（WER 无 node 记录、esbuild 二进制自检正常）", type: "文档（治理）+ 验证（走查取证）", status: "full", review: "🟢 发起人选定本轮方向（原话「就此结案，回 W-03 走查」）", hash: "—" },
       { id: "CR-107", date: "2026-10-17", title: "<b>文档完整性修复轮（纯文档）</b>——① <b>台账悬空锚点全类清零</b>：复核发现 E-010 记的「悬空 4 处」<b>早已过时</b>（自 CR-029「轻量登记」起新增 CR 不建 §2 小节、也无人补 <code>&lt;a id&gt;</code>）⇒ 实测 <b>25 处</b>；在 §2 建两段「轻量登记区」补 29 个锚点与轻量指针，<b>机器复核：锚点 100 ≥ 引用 99、悬空 0</b>；② <code>AGENTS.md</code>「测试约定」+1 条（自由文本进 HTML 前须有服务端净化断言，E-013 候选③）；③ 修一处跨文件锚点尾缀（CR-059 方案 → 问题清单 <code>#bug-001…已修复</code>）。⚠️ <b>不做</b>：不代填 CR-077 / 078 / 079 / 092 四条 §1 缺行、不补写任何 CR 的事后叙事、不重复处置已由 CR-089 完成的 E-009", type: "文档（治理）", status: "full", review: "🟢 发起人选定「先做不依赖起栈的治理项」（MySQL80 因权限起不来、重复栈验证类工作如实推迟）", hash: "—" },
       { id: "CR-106", date: "2026-10-16", title: "<b>契约快照纳入机器比对（闭环问题清单 E-001）+ 集成测试首次进 CI</b>——两层：<code>OpenApiSnapshotOperationsTest</code>（<b>不连库、默认随 mvn verify 就跑</b>，反射扫全部映射注解与归档 <code>openapi.json</code> 的 paths 做双向差集 + 公开/受保护标记 + 规模非零）拦最易复发的「改 Controller 忘重抓」（CR-077/078 欠过两轮）；<code>OpenApiSnapshotEqualityTest</code>（真上下文抓 <code>/api/docs</code> 与归档做 Jackson <b>语义</b>比对、剔除 servers 抓取噪声）拦 T1 看不见的字段级漂移。CI 按 CR-090 §5 备料补 <code>services: mysql:8 + redis:7</code> 与 <code>SPRING_IT=true</code>。<b>验证</b>：默认 mvn -B -o verify → 384 / Skipped 5 + BugInstance 0；SPRING_IT=true → 384 / 0 skipped；CI run 38831907922 → 384 / Skipped 0、总耗时 1m01s（<b>实测代价仅 +约 40 秒，方案预估 3~4 分钟偏保守</b>）。两支反证各自成立且证明分工是真的：加 <code>@GetMapping</code> 新增一条 <code>/probe</code> 路径 不重抓 → T1 报「代码 43 / 快照 42」；给 <code>UserProfileVo</code> 加一组件不重抓 → T2 精确报 <code>$.components.schemas.UserProfileVo.properties.probeCount</code> 而 T1 仍绿；探针文件撤销后 sha256 逐字节复原。<b>抓到一个自造坑（落码偏差）</b>：T2 原名 <code>...EqualityIT</code>，surefire 默认包含模式不收 <code>*IT</code>——我用 <code>-Dtest=</code> 点名验证时它是绿的、默认 mvn verify 里<b>一行都没跑（连 SKIPPED 都不计）</b>；改名 <code>*Test</code> 后才变成可见 Skipped 1 并在 CI 真执行。<b>教训</b>：判「新测试有没有进流水线」要读默认命令的汇总行数，不是点名结果。T1 / T2 首跑均对现状为绿，等于给上一轮手工 cmp 的结论补了独立第二方。", type: "工程（测试 + CI）", status: "full", review: "🟡 发起人指示「按建议先做 E-001」并勾 P-1 T1+T2 / P-2 批准改 CI", hash: "aa500f9" },
