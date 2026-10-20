@@ -202,13 +202,21 @@
             </goals>
             <configuration>
               <rules>
+                <!-- 提测准入门覆盖率门禁（CR-090 开 0.60；CR-111 补测后抬到 0.80）。
+                     ⚠️ 为什么是「全局 80%」而不是「module 包 80%」：JaCoCo check 的 rule 级 <includes>
+                     对**嵌套包前缀实测空匹配**——用 `com/campuslink/module/*` / `com/campuslink/module/**` /
+                     `com.campuslink.module.*` / 两级式四种写法，把阈值抬到 0.90 都静默 PASS；
+                     而 `<include>*</include>` 同样条件下会如实报 `0.81 < 0.90` ⇒ 匹配器生效、只是
+                     这些模式命中 0 个类。**空样本的门禁等于没门禁**，故放弃 module-only 规则，
+                     改用全局 80%（CR-111 实测总覆盖 81.5%、module 83.6%）。
+                     想真正单盯 module，需要 CSV/XML 后处理步骤，属另一条工程线，未在本轮引入。 -->
                 <rule>
                   <element>BUNDLE</element>
                   <limits>
                     <limit>
                       <counter>LINE</counter>
                       <value>COVEREDRATIO</value>
-                      <minimum>0.60</minimum>
+                      <minimum>0.80</minimum>
                     </limit>
                   </limits>
                 </rule>
