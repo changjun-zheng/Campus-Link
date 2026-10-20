@@ -1,0 +1,178 @@
+[
+  {
+    "label": "1-home-mobile",
+    "viewport": "mobile",
+    "expected": "/",
+    "path": "/",
+    "title": "首页 · Campus-Link",
+    "len": 2085,
+    "text": "最新 热门 关注 模 模拟学生01 · 2026-09-19 23:46 CR-074 演示帖：阅读数/封面/关注 封面演示 System.out.println(42); 技术问",
+    "consoleErrors": 0,
+    "bytes": 55745
+  },
+  {
+    "label": "2-board-mobile",
+    "viewport": "mobile",
+    "expected": "/board/qna",
+    "path": "/board/qna",
+    "title": "版块 · Campus-Link",
+    "len": 1559,
+    "text": "首页 / 技术问答 技术问答 提问、报错排查、环境配置、技术选型 发帖 模 模拟学生01 · 2026-09-19 23:46 CR-074 演示帖：阅读数/封面/关注 封面演示 ",
+    "consoleErrors": 0,
+    "bytes": 51342
+  },
+  {
+    "label": "4-post-detail-mobile",
+    "viewport": "mobile",
+    "expected": "/post/41",
+    "path": "/post/41",
+    "title": "帖子详情 · Campus-Link",
+    "len": 242,
+    "text": "技术问答 CR-074 演示帖：阅读数/封面/关注 模 模拟学生01 · 发布于 2026-09-19 23:46 · 2 回复 · 7 封面演示 System.out.print",
+    "consoleErrors": 0,
+    "bytes": 151901
+  },
+  {
+    "label": "5-publish-mobile",
+    "viewport": "mobile",
+    "expected": "/publish",
+    "path": "/publish",
+    "title": "发布 · Campus-Link",
+    "len": 121,
+    "text": "技术问答 发 布 添加标签（0~5 个，回车自建） # H2 B I </> ❝ 预览 0/100 · 0/50000 发布前将进行内容安全机审（F-SAFE-001）· 预览按 ",
+    "consoleErrors": 0,
+    "bytes": 37434
+  },
+  {
+    "label": "7-search-mobile",
+    "viewport": "mobile",
+    "expected": "/search?keyword=Redis",
+    "path": "/search",
+    "title": "搜索 · Campus-Link",
+    "len": 122,
+    "text": "首页 / 搜索 全部版块 全部时间 搜索 共 1 条结果 管 管理员 · 2026-09-13 22:40 Redis 缓存穿透怎么防？CR-049 冒烟帖 布隆过滤器 + 空值缓",
+    "consoleErrors": 0,
+    "bytes": 33586
+  },
+  {
+    "label": "8-profile-mobile",
+    "viewport": "mobile",
+    "expected": "/u/32",
+    "path": "/u/32",
+    "title": "个人主页 · Campus-Link",
+    "len": 612,
+    "text": "模 模拟学生01 编辑资料 我的收藏 计算机科学与技术 · 加入于 2026 年 09 月 想走 Java 后端 6 帖子 0 获赞 0 被采纳 1 粉丝 0 关注 帖子 回帖 按",
+    "consoleErrors": 0,
+    "bytes": 50986
+  },
+  {
+    "label": "11-notifications-mobile",
+    "viewport": "mobile",
+    "expected": "/notifications",
+    "path": "/notifications",
+    "title": "通知 · Campus-Link",
+    "len": 569,
+    "text": "通知中心 回复、引用、采纳、点赞与收藏的站内提醒，仅本人可见 全部 未读 全部已读 模拟学生02 回复了你的帖子 #1 楼 内容已删除 2026-09-27 22:48 标为已读 ",
+    "consoleErrors": 0,
+    "bytes": 43227
+  },
+  {
+    "label": "12-favorites-mobile",
+    "viewport": "mobile",
+    "expected": "/favorites",
+    "path": "/favorites",
+    "title": "我的收藏 · Campus-Link",
+    "len": 111,
+    "text": "我的收藏 按收藏时间倒序，仅本人可见 管 管理员 · 2026-09-15 20:27 已采纳 CR-051 UTC 口径验证 20:27:18 验证写入时间为 UTC 墙钟。 技",
+    "consoleErrors": 0,
+    "bytes": 30605
+  },
+  {
+    "label": "13-settings-mobile",
+    "viewport": "mobile",
+    "expected": "/settings",
+    "path": "/settings",
+    "title": "设置 · Campus-Link",
+    "len": 398,
+    "text": "模 设置 本页内容仅本人可见 我的资料 昵称必填，2~32 字 6 / 32 专业选填，≤64 字 8 / 64 个性签名选填，≤200 字纯文本 10 / 200 学籍已认证 角",
+    "consoleErrors": 0,
+    "bytes": 42922
+  },
+  {
+    "label": "14-me-posts-mobile",
+    "viewport": "mobile",
+    "expected": "/me/posts",
+    "path": "/me/posts",
+    "title": "我的帖子 · Campus-Link",
+    "len": 562,
+    "text": "我的帖子 按发布时间倒序，仅本人可见；被平台下架的帖子会标出但打不开 已下架 CR-074 演示帖：阅读数/封面/关注 封面演示 System.out.println(42); 技",
+    "consoleErrors": 0,
+    "bytes": 49179
+  },
+  {
+    "label": "15-me-replies-mobile",
+    "viewport": "mobile",
+    "expected": "/me/replies",
+    "path": "/me/replies",
+    "title": "我的回帖 · Campus-Link",
+    "len": 291,
+    "text": "我的回帖 按回帖时间倒序，仅本人可见；所在帖子已消失的回帖不出现 第 2 楼 CR-074 演示帖：阅读数/封面/关注 赞成 2026-10-11 23:06 第 1 楼 CR-0",
+    "consoleErrors": 0,
+    "bytes": 41300
+  },
+  {
+    "label": "17-unknown-route-mobile",
+    "viewport": "mobile",
+    "expected": "/this-route-does-not-exist",
+    "path": "/this-route-does-not-exist",
+    "title": "页面不存在 · Campus-Link",
+    "len": 30,
+    "text": "页面不存在 地址可能输错了，或这个链接已经失效 回到首页",
+    "consoleErrors": 0,
+    "bytes": 22952
+  },
+  {
+    "label": "3-login-mobile",
+    "viewport": "mobile",
+    "expected": "/login",
+    "path": "/login",
+    "title": "登录 / 注册 · Campus-Link",
+    "len": 127,
+    "text": "Campus-Link 问有所答 学有同伴 · 求职有路 重庆工程学院计算机专业学生的垂直交流论坛，学籍核验注册，仅本校同学可见。 问有所答 学有同伴 求职有路 欢迎回来 登录 注",
+    "consoleErrors": 0,
+    "bytes": 64033
+  },
+  {
+    "label": "9-admin-anon-mobile",
+    "viewport": "mobile",
+    "expected": "/admin",
+    "path": "/login",
+    "title": "登录 / 注册 · Campus-Link",
+    "len": 127,
+    "text": "Campus-Link 问有所答 学有同伴 · 求职有路 重庆工程学院计算机专业学生的垂直交流论坛，学籍核验注册，仅本校同学可见。 问有所答 学有同伴 求职有路 欢迎回来 登录 注",
+    "consoleErrors": 0,
+    "bytes": 64033
+  },
+  {
+    "label": "17-unknown-route",
+    "viewport": "desktop",
+    "expected": "/this-route-does-not-exist",
+    "path": "/this-route-does-not-exist",
+    "title": "页面不存在 · Campus-Link",
+    "len": 30,
+    "text": "页面不存在 地址可能输错了，或这个链接已经失效 回到首页",
+    "consoleErrors": 0,
+    "bytes": 29174
+  },
+  {
+    "label": "1-home",
+    "viewport": "desktop",
+    "expected": "/",
+    "path": "/",
+    "title": "首页 · Campus-Link",
+    "len": 953,
+    "text": "技术问答 学习资源 面经求职 竞赛交流 课程交流 闲聊灌水 我的收藏 我的帖子 最新 热门 模 模拟学生01 · 2026-09-19 23:46 CR-074 演示帖：阅读数/封",
+    "consoleErrors": 0,
+    "bytes": 167413
+  }
+]
