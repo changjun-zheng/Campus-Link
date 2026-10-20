@@ -64,7 +64,9 @@
   --cl-radius-lg: 12px;
 
   /* ---- 布局 ---- */
-  --cl-container: 1080px;
+  /* 1240（CR-114 / BUG-012）：1080 时页头内层给导航只剩 362px、而 6 个版块需要 500px
+     ⇒「竞赛交流」截半、「闲聊灌水」完全不可见（滚动条又被隐藏）。1280 下导航拿到 520px（1240 实测只到 480、还差 20，故取 1280）。 */
+  --cl-container: 1280px;
   --cl-reading: 760px;
   --cl-header-h: 60px;
 
@@ -670,6 +672,8 @@
   .markdown-body pre {
     margin: 1em 0;
     padding: var(--cl-space-3) var(--cl-space-4);
+    /* 左侧强调线（CR-114）：代码块与正文之间加一道极轻的分界，仍只用令牌色 */
+    border-left: 3px solid var(--cl-code-accent);
     border-radius: var(--cl-radius-sm);
     background: var(--cl-bg-code);
     line-height: 1.6;

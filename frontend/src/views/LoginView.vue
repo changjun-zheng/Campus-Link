@@ -76,11 +76,11 @@ async function doRegister() {
 
 <template>
   <div
-    class="mx-auto flex w-full max-w-[960px] flex-col gap-5 py-8 md:flex-row md:items-stretch md:gap-9 md:py-16"
+    class="mx-auto flex w-full max-w-[960px] flex-col gap-5 py-8 md:flex-row md:items-stretch md:gap-9 md:py-20"
   >
     <!-- 品牌区（CR-052：桌面左栏，窄屏折叠为顶部品牌条；复用 hero 渐变令牌） -->
     <section
-      class="cl-hero-bg flex flex-col justify-center rounded-lg border-[0.5px] border-line p-6 md:w-[360px] md:flex-none md:p-9"
+      class="cl-hero-bg flex flex-col justify-center rounded-lg border-[0.5px] border-line p-6 md:w-[360px] md:flex-none md:p-10"
     >
       <div class="flex items-center gap-2.5">
         <img src="/logo.svg" alt="Campus-Link" class="h-9 w-auto" width="36" height="36" />

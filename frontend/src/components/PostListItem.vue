@@ -60,7 +60,7 @@ async function onLike() {
 
 <template>
   <li
-    class="border-b-[0.5px] border-divider px-5 py-3.5 transition-colors duration-fast ease-standard last:border-b-0 hover:bg-bg-hover"
+    class="border-b-[0.5px] border-divider px-5 py-4 transition-colors duration-fast ease-standard last:border-b-0 hover:bg-bg-hover"
   >
     <div class="flex gap-3">
       <div class="min-w-0 flex-1">
@@ -78,7 +78,7 @@ async function onLike() {
           </el-tag>
           <RouterLink
             :to="`/post/${post.id}`"
-            class="min-w-0 flex-1 truncate text-title-sm font-medium text-ink hover:text-link"
+            class="min-w-0 flex-1 truncate text-title font-medium text-ink hover:text-link"
           >
             {{ post.title }}
           </RouterLink>
@@ -87,14 +87,14 @@ async function onLike() {
         <!-- 摘要单行截断（CR-091，参考 CSDN 列表项红框样式） -->
         <p
           v-if="showSummary && post.summary"
-          class="mt-1 truncate text-note leading-body text-ink-regular"
+          class="mt-1.5 truncate text-note leading-body text-ink-regular"
         >
           {{ post.summary }}
         </p>
 
         <!-- 元信息行（CR-091，参考 CSDN）：计数改"图标 + 文字 + 数字"并拉宽间距，去点分隔；
              tabular-nums（CR-102）让数字等宽，点赞数变化时不抖动 -->
-        <div class="mt-1.5 flex flex-wrap items-center gap-x-3.5 gap-y-1 text-caption text-ink-meta tabular-nums">
+        <div class="mt-2 flex flex-wrap items-center gap-x-3.5 gap-y-1 text-caption text-ink-meta tabular-nums">
           <template v-if="showBoard">
             <RouterLink :to="`/board/${post.boardCode}`" class="text-link hover:underline">
               {{ post.boardName || boardNameOf(post.boardCode) }}

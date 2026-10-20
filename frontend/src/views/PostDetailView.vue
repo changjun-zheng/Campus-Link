@@ -412,7 +412,7 @@ watch(
     <template v-else-if="post">
       <div class="cl-post-shell">
         <div class="cl-post-main">
-      <el-card shadow="never" class="mb-4">
+      <el-card shadow="never" class="mb-5">
         <!-- 标题与正文同处 760px 阅读列（ui-guideline §6），否则标题贴卡片边、正文内缩，左缘不齐 -->
         <div class="mx-auto max-w-reading">
           <div class="flex items-center gap-2">
@@ -422,7 +422,7 @@ watch(
             <el-tag v-if="post.accepted" type="success" effect="light" size="small">已采纳</el-tag>
             <el-tag v-for="t in post.tags" :key="t" size="small" effect="plain">{{ t }}</el-tag>
           </div>
-          <h1 class="my-2 text-h1 font-medium text-ink">{{ post.title }}</h1>
+          <h1 class="my-2.5 text-h1 font-medium leading-snug text-ink">{{ post.title }}</h1>
           <div class="flex flex-wrap items-center gap-1.5 text-caption text-ink-meta">
             <!-- 作者名可点（F-ACC-002）：头像与昵称同在一个 RouterLink 里，保留 href 供中键新开 / 键盘聚焦 -->
             <RouterLink
