@@ -62,7 +62,7 @@ description: 重庆工程学院计算机专业学生交流论坛（Spring Boot 4
 mysql -h127.0.0.1 -uroot -p -e "CREATE DATABASE IF NOT EXISTS campuslink DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;"
 
 mvn verify            # 编译 + 单测 + 架构守护 + jacoco 行覆盖 60% check + SpotBugs 静态扫描；合码前必须全绿
-                      # 当前基线 384（默认 mvn verify 有 5 例 SKIPPED：CR-090 的 4 例 + CR-106 的契约快照真身比对 1 例；CI 与本机 SPRING_IT=true 时 0 SKIPPED 全跑）——改基线数只改本注释这一处
+                      # 当前基线 488（默认 mvn verify 有 5 例 SKIPPED：CR-090 的 4 例 + CR-106 的契约快照真身比对 1 例；CI 与本机 SPRING_IT=true 时 0 SKIPPED 全跑）——改基线数只改本注释这一处
 mvn spring-boot:run   # 启动：8088（SERVER_PORT 可覆盖）；健康检查 /actuator/health，OpenAPI /api/docs
 
 # 生产 profile：5 个凭据变量一个都不能省（各 ≥32 字节，HASH / CRYPT 两把不得相同），
@@ -133,7 +133,7 @@ npm run lint          # ESLint 静态扫描（flat config，见 eslint.config.js
 
 ## 测试约定
 
-- **`mvn verify` 必须全绿**（基线数见「常用命令」`mvn verify` 注释，**改基线数只改那一处**）；含**契约快照机器比对两层**（CR-106）：`contract/OpenApiSnapshotOperationsTest` 不连库、默认就跑，拦"改 Controller 忘重抓快照"；`contract/OpenApiSnapshotEqualityTest` 需真上下文（`SPRING_IT=true`，CI 已带 MySQL/Redis 服务），拦出参字段级漂移——**两类探针实测各自变红**，所以"快照等于代码"不再只靠约定；含 `ArchitectureGuardTest` 与 `EndpointAuthorizationManagerTest` 鉴权矩阵；`MarkdownRendererTest` 的 6 个 XSS 回归用例是论坛安全生命线；
+- **`mvn verify` 必须全绿**（基线数见「常用命令」`mvn verify` 注释，**改基线数只改那一处**）；含 **jacoco 覆盖率门禁**（CR-111：全局行覆盖 ≥0.80；⚠️ rule 级 `includes` 对嵌套包会**空匹配并静默通过**，别再加「module 包」这类规则，护栏说明在 pom 注释里）；含**契约快照机器比对两层**（CR-106）：`contract/OpenApiSnapshotOperationsTest` 不连库、默认就跑，拦"改 Controller 忘重抓快照"；`contract/OpenApiSnapshotEqualityTest` 需真上下文（`SPRING_IT=true`，CI 已带 MySQL/Redis 服务），拦出参字段级漂移——**两类探针实测各自变红**，所以"快照等于代码"不再只靠约定；含 `ArchitectureGuardTest` 与 `EndpointAuthorizationManagerTest` 鉴权矩阵；`MarkdownRendererTest` 的 6 个 XSS 回归用例是论坛安全生命线；
 - **新增需登录的端点必须补一个「匿名 → 401」单测**（真机 401 也要验）；**新增管理端点必须自带一个「角色不足 → 403」用例**——G9 只守"有没有判角色"、不守"角色取值得当不当"，两条互补缺一不可；
 - **生产配置红线由 `ProductionSafetyGuardTest` 防漂移守护**：guard 内 `DEV_VALUES` 清单必须与 `application.yml` 占位符默认值**逐字相等**；`application-prod.yml` 凭据声明必须**不含 `:default`**、三个开发开关写死合规值——**改 yml 默认值而不同步 guard，测试即红**；
 - **结构变更后真实启动一次**，确认 Flyway 迁移成功（`mvn verify` 不校验迁移可执行性，也不校验 `@MapperScan` 通配的实际扫描结果）；
