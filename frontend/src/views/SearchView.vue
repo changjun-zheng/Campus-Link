@@ -106,8 +106,10 @@ onMounted(async () => {
     <span class="text-ink-regular">搜索</span>
   </nav>
 
-  <el-card shadow="never" class="mb-4">
-    <div class="flex flex-col gap-3 md:flex-row md:items-center">
+  <el-card shadow="never" class="mb-5">
+    <h2 class="text-title-lg font-medium text-ink">站内搜索</h2>
+    <p class="mt-1.5 text-note text-ink-meta">按标题与标签检索，至少 2 个字；结果按相关度排序</p>
+    <div class="mt-4 flex flex-col gap-3 md:flex-row md:items-center">
       <el-input
         ref="inputRef"
         v-model="keyword"

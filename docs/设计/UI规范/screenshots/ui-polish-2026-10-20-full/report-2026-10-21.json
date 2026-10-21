@@ -1,0 +1,128 @@
+[
+  {
+    "label": "3-login",
+    "expected": "/login",
+    "path": "/login",
+    "len": 127,
+    "hOverflow": false,
+    "consoleErrors": 0,
+    "bytes": 85147
+  },
+  {
+    "label": "1-home",
+    "expected": "/",
+    "path": "/",
+    "len": 956,
+    "hOverflow": false,
+    "consoleErrors": 0,
+    "bytes": 175099
+  },
+  {
+    "label": "2-board",
+    "expected": "/board/qna",
+    "path": "/board/qna",
+    "len": 1559,
+    "hOverflow": false,
+    "consoleErrors": 0,
+    "bytes": 117201
+  },
+  {
+    "label": "4-post-detail",
+    "expected": "/post/41",
+    "path": "/post/41",
+    "len": 242,
+    "hOverflow": false,
+    "consoleErrors": 0,
+    "bytes": 442910
+  },
+  {
+    "label": "5-publish",
+    "expected": "/publish",
+    "path": "/publish",
+    "len": 148,
+    "hOverflow": false,
+    "consoleErrors": 0,
+    "bytes": 59737
+  },
+  {
+    "label": "7-search",
+    "expected": "/search?keyword=Redis",
+    "path": "/search",
+    "len": 155,
+    "hOverflow": false,
+    "consoleErrors": 0,
+    "bytes": 52129
+  },
+  {
+    "label": "8-profile",
+    "expected": "/u/32",
+    "path": "/u/32",
+    "len": 612,
+    "hOverflow": false,
+    "consoleErrors": 0,
+    "bytes": 117564
+  },
+  {
+    "label": "11-notifications",
+    "expected": "/notifications",
+    "path": "/notifications",
+    "len": 569,
+    "hOverflow": false,
+    "consoleErrors": 0,
+    "bytes": 72607
+  },
+  {
+    "label": "12-favorites",
+    "expected": "/favorites",
+    "path": "/favorites",
+    "len": 111,
+    "hOverflow": false,
+    "consoleErrors": 0,
+    "bytes": 45897
+  },
+  {
+    "label": "13-settings",
+    "expected": "/settings",
+    "path": "/settings",
+    "len": 398,
+    "hOverflow": false,
+    "consoleErrors": 0,
+    "bytes": 66315
+  },
+  {
+    "label": "14-me-posts",
+    "expected": "/me/posts",
+    "path": "/me/posts",
+    "len": 562,
+    "hOverflow": false,
+    "consoleErrors": 0,
+    "bytes": 78205
+  },
+  {
+    "label": "15-me-replies",
+    "expected": "/me/replies",
+    "path": "/me/replies",
+    "len": 291,
+    "hOverflow": false,
+    "consoleErrors": 0,
+    "bytes": 61449
+  },
+  {
+    "label": "17-unknown-route",
+    "expected": "/this-route-does-not-exist",
+    "path": "/this-route-does-not-exist",
+    "len": 30,
+    "hOverflow": false,
+    "consoleErrors": 0,
+    "bytes": 37587
+  },
+  {
+    "label": "16-admin",
+    "expected": "/admin",
+    "path": "/admin",
+    "len": 104,
+    "hOverflow": false,
+    "consoleErrors": 0,
+    "bytes": 42835
+  }
+]

@@ -72,15 +72,15 @@ watch(
     <span class="text-ink-regular">{{ board?.name || code }}</span>
   </nav>
 
-  <el-card shadow="never" class="mb-4">
+  <el-card shadow="never" class="mb-5">
     <div class="flex items-center justify-between gap-3">
       <div class="flex min-w-0 items-center gap-3.5">
         <span :class="['cl-board-icon', `cl-board-icon--${code}`]">
           <SvgIcon :name="boardIcon" :size="22" />
         </span>
         <div class="min-w-0">
-          <h2 class="mb-0.5 text-title-lg font-medium text-ink">{{ board?.name || code }}</h2>
-          <p class="text-note text-ink-meta">{{ board?.description || '' }}</p>
+          <h2 class="text-title-lg font-medium text-ink">{{ board?.name || code }}</h2>
+          <p class="mt-1.5 text-note text-ink-meta">{{ board?.description || '' }}</p>
         </div>
       </div>
       <RouterLink :to="`/publish?board=${code}`" class="flex-none">

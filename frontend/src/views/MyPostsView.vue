@@ -47,7 +47,7 @@ loadPosts()
 <template>
   <!-- TRANSITION-SINGLE-ROOT：App.vue 以 <Transition mode="out-in"> 包路由组件，多根组件（fragment）在该模式下会随机卡死路由切换（CR-091 修复详情页同类问题） -->
   <div>
-  <el-card shadow="never" class="mb-4">
+  <el-card shadow="never" class="mb-5">
     <h2 class="text-title-lg font-medium text-ink">我的帖子</h2>
     <p class="mt-1.5 text-note text-ink-meta">按发布时间倒序，仅本人可见；被平台下架的帖子会标出但打不开</p>
   </el-card>

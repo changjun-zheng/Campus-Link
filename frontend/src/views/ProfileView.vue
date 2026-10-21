@@ -267,7 +267,7 @@ watch(userId, () => void loadAll(), { immediate: true })
 
   <template v-else>
     <!-- 资料卡 -->
-    <el-card shadow="never" class="mb-4">
+    <el-card shadow="never" class="mb-5">
       <el-skeleton v-if="profileLoading" animated>
         <template #template>
           <div class="flex gap-4">

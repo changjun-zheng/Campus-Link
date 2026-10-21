@@ -158,7 +158,7 @@ async function onDeactivate() {
 
 <template>
   <div class="mx-auto w-full max-w-reading">
-    <el-card shadow="never" class="mb-4">
+    <el-card shadow="never" class="mb-5">
       <div class="flex items-center gap-3">
         <UserAvatar :src="user?.avatarUrl" :name="user?.nickname" :size="44" />
         <div class="min-w-0">
@@ -169,7 +169,7 @@ async function onDeactivate() {
     </el-card>
 
     <!-- 区块 1：我的资料 -->
-    <el-card shadow="never" class="mb-4">
+    <el-card shadow="never" class="mb-5">
       <template #header>
         <span class="font-medium">我的资料</span>
       </template>
@@ -249,7 +249,7 @@ async function onDeactivate() {
     </el-card>
 
     <!-- 区块 2：我的内容 -->
-    <el-card shadow="never" class="mb-4" :body-style="{ padding: 0 }">
+    <el-card shadow="never" class="mb-5" :body-style="{ padding: 0 }">
       <template #header>
         <span class="font-medium">我的内容</span>
       </template>

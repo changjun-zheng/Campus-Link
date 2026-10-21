@@ -175,7 +175,7 @@ function goLogin() {
   </el-result>
 
   <template v-else>
-    <el-tabs v-model="tab" class="mb-4">
+    <el-tabs v-model="tab" class="mb-5">
       <el-tab-pane label="举报工单" name="reports" />
       <el-tab-pane label="内容处置台" name="moderation" />
     </el-tabs>

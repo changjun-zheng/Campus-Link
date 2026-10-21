@@ -105,7 +105,7 @@ loadNotifications()
 <template>
   <!-- TRANSITION-SINGLE-ROOT：App.vue 以 <Transition mode="out-in"> 包路由组件，多根组件（fragment）在该模式下会随机卡死路由切换（CR-091 修复详情页同类问题） -->
   <div>
-  <el-card shadow="never" class="mb-4">
+  <el-card shadow="never" class="mb-5">
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div>
         <h2 class="text-title-lg font-medium text-ink">通知中心</h2>
