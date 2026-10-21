@@ -148,8 +148,11 @@ public class ReplyRepositoryImpl implements ReplyRepository {
 
     @Override
     public int adjustLikeCount(Long replyId, int delta) {
+        // 同 PostRepositoryImpl（BUG-008 / CR-117）：按符号取固定片段、减方向以 GREATEST 兜底
         replyMapper.update(null, new LambdaUpdateWrapper<ReplyDO>()
-                .setSql("like_count = like_count + " + delta)
+                .setSql(delta >= 0
+                        ? "like_count = like_count + 1"
+                        : "like_count = GREATEST(like_count - 1, 0)")
                 .eq(ReplyDO::getId, replyId));
         return replyMapper.selectById(replyId).getLikeCount();
     }

@@ -176,8 +176,12 @@ public class PostRepositoryImpl implements PostRepository {
 
     @Override
     public int adjustLikeCount(Long postId, int delta) {
+        // 计数增减只按符号取固定片段（BUG-008 / CR-117）：delta 不进 SQL，安全约束不再藏在调用约定里；
+        // 减方向以 GREATEST 兜底，计数不会降到 0 以下。
         postMapper.update(null, new LambdaUpdateWrapper<PostDO>()
-                .setSql("like_count = like_count + " + delta)
+                .setSql(delta >= 0
+                        ? "like_count = like_count + 1"
+                        : "like_count = GREATEST(like_count - 1, 0)")
                 .eq(PostDO::getId, postId));
         return postMapper.selectById(postId).getLikeCount();
     }
@@ -185,7 +189,9 @@ public class PostRepositoryImpl implements PostRepository {
     @Override
     public int adjustFavoriteCount(Long postId, int delta) {
         postMapper.update(null, new LambdaUpdateWrapper<PostDO>()
-                .setSql("favorite_count = favorite_count + " + delta)
+                .setSql(delta >= 0
+                        ? "favorite_count = favorite_count + 1"
+                        : "favorite_count = GREATEST(favorite_count - 1, 0)")
                 .eq(PostDO::getId, postId));
         return postMapper.selectById(postId).getFavoriteCount();
     }

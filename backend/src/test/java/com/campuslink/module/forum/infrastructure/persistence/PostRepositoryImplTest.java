@@ -208,7 +208,7 @@ class PostRepositoryImplTest {
     }
 
     @Test
-    @DisplayName("赞数与收藏数：按 delta 拼进 setSql 后读回新值（两列不能写串）")
+    @DisplayName("赞数与收藏数：只按符号取固定片段（delta 不进 SQL），减方向以 GREATEST 兜底")
     void adjustsLikeAndFavoriteCounts() {
         PostDO after = doRow();
         after.setLikeCount(4);
@@ -219,7 +219,8 @@ class PostRepositoryImplTest {
         assertThat(capturedUpdateWrapper().getSqlSet()).contains("like_count = like_count + 1");
 
         assertThat(repository.adjustFavoriteCount(POST_ID, -1)).isEqualTo(2);
-        assertThat(capturedUpdateWrapper().getSqlSet()).contains("favorite_count = favorite_count + -1");
+        assertThat(capturedUpdateWrapper().getSqlSet())
+                .contains("favorite_count = GREATEST(favorite_count - 1, 0)");
     }
 
     @Test

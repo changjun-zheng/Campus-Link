@@ -12,6 +12,7 @@
   <!-- ① DI 构造器注入（EI_EXPOSE_REP2）：注入对象是 Spring 容器共享的单例 bean / 基础设施适配器，
        做防御性拷贝会破坏容器共享语义 ⇒ 对 DI 的已知误报，不可按字面"修"。 -->
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.config.SecurityConfig"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.config.HotConfigGuard"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.security.ApiErrorSecurityHandler"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.account.application.AccountApplicationService"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.account.application.CaptchaService"/></Match>
