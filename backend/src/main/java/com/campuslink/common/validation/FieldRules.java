@@ -35,6 +35,13 @@ public final class FieldRules {
      * 注册侧由 {@code @NotBlank} 顺带覆盖，只有编辑侧（null 合法）需要这一条。
      */
     public static final String NON_BLANK_PATTERN = "[\\s\\S]*\\S[\\s\\S]*";
+    /**
+     * 引流 / 联系方式禁则（O4 / CR-119，处置问题清单 E-013 "URL 与联系方式仍畅通"那半句）：
+     * 昵称与签名不得包含网址、微信 / QQ 等站外联系方式。**只挡显式引流**，不做"疑似"判定——
+     * 误伤成本高于漏判（正常帖子正文不受本规则约束，正文仍走机审通道）。
+     */
+    public static final String CONTACT_BANNED_PATTERN =
+            "^(?!.*(?i:https?://|www\\.|微信|weixin|加微|加v|vx|qq群|扣扣群|telegram|t\\.me/)).*$";
 
     private static final Pattern FORBIDDEN = Pattern.compile("[" + FORBIDDEN_CHARS + "]");
 

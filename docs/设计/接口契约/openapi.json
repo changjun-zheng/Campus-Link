@@ -1876,6 +1876,72 @@
         }
       }
     },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "续签登录态（F-ACC-001 / CR-116）：凭当前有效令牌换取新令牌，实现 7 天滑动续期",
+        "operationId": "refresh",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseAuthResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未登录（4001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "用户不存在（2007）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "账号已被封禁（2006）；账号注销中，请先撤销注销（2013）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "系统繁忙，请稍后再试（9999）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/v1/auth/login": {
       "post": {
         "tags": [
@@ -3300,8 +3366,7 @@
           "bio": {
             "type": "string",
             "maxLength": 200,
-            "minLength": 0,
-            "pattern": "^[^<>\\p{Cntrl}\\u200B\\u200C\\u200D\\u2060\\uFEFF]*$"
+            "minLength": 0
           }
         }
       },
@@ -3534,7 +3599,7 @@
           },
           "contentMd": {
             "type": "string",
-            "maxLength": 50000,
+            "maxLength": 20000,
             "minLength": 0
           },
           "tags": {
@@ -3586,7 +3651,7 @@
         "properties": {
           "contentMd": {
             "type": "string",
-            "maxLength": 50000,
+            "maxLength": 20000,
             "minLength": 0
           },
           "quotedReplyId": {
@@ -3677,7 +3742,7 @@
         "properties": {
           "contentMd": {
             "type": "string",
-            "maxLength": 50000,
+            "maxLength": 20000,
             "minLength": 0
           }
         },
@@ -3776,8 +3841,7 @@
           "nickname": {
             "type": "string",
             "maxLength": 32,
-            "minLength": 2,
-            "pattern": "^[^<>\\p{Cntrl}\\u200B\\u200C\\u200D\\u2060\\uFEFF]*$"
+            "minLength": 2
           }
         },
         "required": [

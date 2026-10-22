@@ -1,5 +1,6 @@
 package com.campuslink.module.forum.application.cmd;
 
+import com.campuslink.common.validation.ContentLimits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
@@ -9,6 +10,7 @@ import java.util.List;
 public record PublishPostCommand(
         @NotBlank(message = "版块不能为空") String boardCode,
         @NotBlank(message = "标题不能为空") @Size(max = 100, message = "标题最长 100 字") String title,
-        @NotBlank(message = "正文不能为空") @Size(max = 50000, message = "正文最长 50000 字符") String contentMd,
+        @NotBlank(message = "正文不能为空")
+        @Size(max = ContentLimits.MAX_CHARS, message = ContentLimits.MAX_CHARS_MESSAGE) String contentMd,
         @Size(max = 5, message = "标签最多 5 个") List<@Size(max = 32, message = "单个标签最长 32 字") String> tags) {
 }

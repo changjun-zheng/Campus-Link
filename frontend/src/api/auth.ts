@@ -3,7 +3,8 @@ import type { UserInfo } from '../types'
 
 export interface AuthResponse {
   token: string
-  expiresAtEpochSeconds: number
+  /** 后端字段为单数 `Second`（AccountController.AuthResponse 的 record 组件名） */
+  expiresAtEpochSecond: number
   user: UserInfo
 }
 
@@ -19,6 +20,12 @@ export const register = (payload: { ticket: string; contact: string; code: strin
 
 /** 登录（F-011 / CR-093）：account 为邮箱或手机号 */
 export const login = (account: string, code: string) => post<AuthResponse>('/auth/login', { account, code })
+
+/**
+ * 续签登录态（CR-116 / F-ACC-001）：凭当前有效令牌换新令牌，实现 7 天滑动续期。
+ * 未登录 / 封禁 / 注销中由后端拒绝（4001 / 2006 / 2013 / 2007），调用方据码决定是否清会话。
+ */
+export const refreshSession = () => post<AuthResponse>('/auth/refresh')
 
 export const fetchMe = () => get<UserInfo>('/users/me')
 

@@ -72,8 +72,10 @@ public class AccountApplicationService {
     }
 
     /**
-     * 注册（F-ACC-001 + F-ACC-004，CR-093 起支持手机号渠道）：验证码 → 消费票据 → 建号 → 占用名册学号（事务） → 发布领域事件。
-     * {@code contact} 为邮箱**或**手机号（二合一，格式门在 web 侧 @Pattern）：验证码存取键与冲突预检都走规范化后的 contact。
+     * 注册（F-ACC-001 + F-ACC-004，CR-093 起支持手机号渠道）：验证码 → 消费票据 → 建号 → 占用名册学号（事务） →
+     * 发布领域事件。
+     * {@code contact} 为邮箱**或**手机号（二合一，格式门在 web 侧 @Pattern）：验证码存取键与冲突预检都走规范化后的
+     * contact。
      */
     @Transactional
     public LoginResult register(RegisterCommand command) {
@@ -159,6 +161,26 @@ public class AccountApplicationService {
     }
 
     /**
+     * 登录态续签（F-ACC-001 / CR-116）：凭当前有效 JWT 换新 token，实现"7 天滑动续期"。
+     *
+     * <p>
+     * <b>为什么重读账号而不是直接按 claims 重签</b>：封禁 / 注销中的账号不能靠"续签"把会话
+     * 无限延长；角色也从库里取，让角色调整在续签时生效。{@code DEACTIVATED} 不续签——续签等于
+     * 绕过"注销冷静期内再次登录即撤销注销"的语义，用户须重新登录走一次撤销链路。
+     */
+    public LoginResult refresh(long userId) {
+        Account account = accountRepository.findById(userId)
+                .orElseThrow(() -> new ApiException(ResultCode.USER_NOT_FOUND));
+        if (account.getStatus() == AccountStatus.DEACTIVATED) {
+            throw new ApiException(ResultCode.ACCOUNT_DEACTIVATED);
+        }
+        if (!account.isActive()) {
+            throw new ApiException(ResultCode.USER_BANNED);
+        }
+        return toResult(account);
+    }
+
+    /**
      * 批量取昵称：其他上下文（forum）展示作者名的唯一入口（ADR-012 跨上下文只调对方 application）。
      * 一次查询取齐整页作者，不做 N+1；查不到的 id 不出现在结果中，由调用方决定回落文案。
      */
@@ -198,7 +220,10 @@ public class AccountApplicationService {
         }
     }
 
-    /** 管理员封禁 / 解封（CR-082 治理）：超级管理员不可被封禁；全程审计。forum 侧工单 REMOVE 用户时经此方法（跨上下文不带 domain 类型） */
+    /**
+     * 管理员封禁 / 解封（CR-082 治理）：超级管理员不可被封禁；全程审计。forum 侧工单 REMOVE 用户时经此方法（跨上下文不带 domain
+     * 类型）
+     */
     public void adminSetStatus(long operatorId, long targetId, AccountStatus target) {
         Account a = accountOf(targetId);
         if (a.getRole() == AccountRole.SUPERADMIN) {
@@ -219,11 +244,13 @@ public class AccountApplicationService {
      * 不存在与已注销（{@code DEACTIVATED}）一律 2007 / 404，两种情形对外不区分——与帖子侧
      * {@code requireVisiblePost} 把「不存在 / 已删 / 未发布」全归 3001 是同一条纪律：不给按 id 探测账号状态的口子。
      *
-     * <p>与 {@link #accountOf} 的差别只多一道注销门，不合并成一个方法是因为两者的调用方语义不同：
+     * <p>
+     * 与 {@link #accountOf} 的差别只多一道注销门，不合并成一个方法是因为两者的调用方语义不同：
      * {@code accountOf} 答「这个 id 有没有对应账号」（关注 / 令牌校验用，注销中的账号仍是关注关系的一方），
      * 本方法答「这个账号能不能被路人看见」。
      *
-     * <p>{@code BANNED} **不在这里拦**：封禁限的是发言与登录，不是把已发布内容从站内抹掉
+     * <p>
+     * {@code BANNED} **不在这里拦**：封禁限的是发言与登录，不是把已发布内容从站内抹掉
      * （全站列表 / 搜索 / 热榜从不按作者状态过滤）；主页若单独消失，列表里那个作者名就点不开了。
      */
     public Account publicAccountOf(long accountId) {

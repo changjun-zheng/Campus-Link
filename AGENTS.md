@@ -62,7 +62,7 @@ description: 重庆工程学院计算机专业学生交流论坛（Spring Boot 4
 mysql -h127.0.0.1 -uroot -p -e "CREATE DATABASE IF NOT EXISTS campuslink DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;"
 
 mvn verify            # 编译 + 单测 + 架构守护 + jacoco 行覆盖 60% check + SpotBugs 静态扫描；合码前必须全绿
-                      # 当前基线 494（默认 mvn verify 有 5 例 SKIPPED：CR-090 的 4 例 + CR-106 的契约快照真身比对 1 例；CI 与本机 SPRING_IT=true 时 0 SKIPPED 全跑）——改基线数只改本注释这一处
+                      # 当前基线 507（默认 mvn verify 有 5 例 SKIPPED：CR-090 的 4 例 + CR-106 的契约快照真身比对 1 例；CI 与本机 SPRING_IT=true 时 0 SKIPPED 全跑）——改基线数只改本注释这一处
 mvn spring-boot:run   # 启动：8088（SERVER_PORT 可覆盖）；健康检查 /actuator/health，OpenAPI /api/docs
 
 # 生产 profile：5 个凭据变量一个都不能省（各 ≥32 字节，HASH / CRYPT 两把不得相同），
@@ -89,6 +89,8 @@ npm run lint          # ESLint 静态扫描（flat config，见 eslint.config.js
 - **45 个开发账号**（全合成身份、仅限本机开发库；清单见[开发测试账号清单](docs/开发/开发测试账号清单.md)）：学号 `888800001`~`888800045`、邮箱 `dev-stu-01@dev.campuslink.local`~、登录 = **邮箱 + 验证码 `123456`**（**本系统没有密码字段**；接口自 CR-093 起"邮箱或手机号"二合一，开发账号只有邮箱）；批量核验用 `VERIFY_IP_HOURLY_LIMIT=<n>` 临时抬高 IP 限流（默认 10 次/小时/IP，对外行为不变）；
 - **管理员**（dev-only 种子）：`admin@campuslink.local` + 验证码 `123456`，角色 `SUPERADMIN`，无学号、不走学籍核验；
 - **入参格式**：学号 `^\d{9}$`；姓名限中文名（2~16 汉字可含 `·`）或外文名（字母起头可含空格 / `-` / `'` / `.`）；`nickname` 2~32 自由文本。
+
+**机审**（F-SAFE-001）：`campuslink.moderation.mode` 缺省 `log`（只记录放行，开发用）；`local`＝本地词表，命中即拦 `5001 / 422`，**词表为空则启动失败**（`MODERATION_WORDS` 逗号分隔），**不允许"配了 local 却没有词"变成静默放行**；真实服务商适配待 A3-8。
 
 **热榜**：`posts.hot_score` 由 `@Scheduled` 定时刷新（公式与权重唯一事实源在 domain 的 `HotScorePolicy`），读取走 `GET /api/v1/posts?sort=hot`（缺省 `latest`，非法值 `400 / 1001`）。**调参只改 `application.yml` 的 `campuslink.hot.*`，不改代码**；⚠️ `lock-ttl-seconds`（默认 300）须 ≤ 刷新周期——锁靠 TTL 兜底不显式释放，TTL 比周期长会把实际周期变成 TTL；验证时用 `HOT_REFRESH_INTERVAL_MS` / `HOT_INITIAL_DELAY_MS` 临时缩短周期（这两项只被 `@Scheduled` 占位符消费，刻意不绑定 `AppProperties`）。
 

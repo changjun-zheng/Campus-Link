@@ -26,11 +26,15 @@ const router = createRouter({
 })
 
 // 登录守卫：requiresAuth 路由未登录时跳转登录页并携带回跳地址
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
+  const auth = useAuthStore()
+  // CR-116 滑动续期：剩余有效期不足 2 天时先续签；失败分级在 store 内（认证错误清会话、网络故障保留）
+  if (auth.isLoggedIn && auth.needsRenewal()) {
+    await auth.ensureFreshSession()
+  }
   if (!to.meta.requiresAuth) {
     return true
   }
-  const auth = useAuthStore()
   // BUG-004：Date.now() 非响应式，过期判定做成命令式，进受保护路由前先清掉过期会话
   if (auth.hasExpired()) {
     auth.logout()

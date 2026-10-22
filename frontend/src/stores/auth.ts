@@ -1,10 +1,20 @@
 import { defineStore } from 'pinia'
-import { fetchMe, login as loginApi, register as registerApi } from '../api/auth'
+import { fetchMe, login as loginApi, refreshSession as refreshSessionApi, register as registerApi } from '../api/auth'
+import { ApiError } from '../api/client'
 import type { UserInfo } from '../types'
 
 const TOKEN_KEY = 'cl_token'
 const USER_KEY = 'cl_user'
 const EXP_KEY = 'cl_exp'
+
+/** 续签阈值（CR-116）：剩余有效期不足 2 天时在导航前续签，避免"第 7 天必掉线" */
+const RENEW_THRESHOLD_SECONDS = 2 * 24 * 3600
+
+/** 单飞句柄：并发调用共享同一个刷新请求，避免导航与页面请求同时打 /auth/refresh */
+let refreshInFlight: Promise<boolean> | null = null
+
+/** 只在认证类错误时清会话：网络故障保留 token（仍未过期，下次导航再试） */
+const SESSION_INVALID_CODES = [4001, 2006, 2013, 2007]
 
 /** 读取本地过期时间戳（秒）；缺失或非法一律返回 0，表示"无过期信息" */
 function readStoredExpiresAt(): number {
@@ -36,11 +46,11 @@ export const useAuthStore = defineStore('auth', {
     /** 登录（F-011 / CR-093）：account 为邮箱或手机号 */
     async login(account: string, code: string) {
       const res = await loginApi(account, code)
-      this.setSession(res.token, res.user, res.expiresAtEpochSeconds)
+      this.setSession(res.token, res.user, res.expiresAtEpochSecond)
     },
     async register(payload: { ticket: string; contact: string; code: string; nickname: string }) {
       const res = await registerApi(payload)
-      this.setSession(res.token, res.user, res.expiresAtEpochSeconds)
+      this.setSession(res.token, res.user, res.expiresAtEpochSecond)
     },
     async fetchMe() {
       this.setUser(await fetchMe())
@@ -68,6 +78,42 @@ export const useAuthStore = defineStore('auth', {
      */
     hasExpired(): boolean {
       return this.expiresAt > 0 && this.expiresAt * 1000 <= Date.now()
+    },
+    /** 是否需要续签（CR-116）：无过期信息时不主动判（交后端 401 兜底） */
+    needsRenewal(): boolean {
+      return this.isLoggedIn && this.expiresAt > 0
+        && this.expiresAt - Date.now() / 1000 < RENEW_THRESHOLD_SECONDS
+    },
+    /**
+     * 续签登录态（CR-116）：单飞执行，成功后更新 token / 用户 / 过期时间。
+     * 返回是否仍持有有效会话——认证类错误会清会话，网络故障只返回 false 且保留会话。
+     */
+    async refresh(): Promise<boolean> {
+      if (refreshInFlight) {
+        return refreshInFlight
+      }
+      refreshInFlight = (async () => {
+        try {
+          const res = await refreshSessionApi()
+          this.setSession(res.token, res.user, res.expiresAtEpochSecond)
+          return true
+        } catch (e) {
+          if (e instanceof ApiError && SESSION_INVALID_CODES.includes(e.code)) {
+            this.logout()
+          }
+          return false
+        } finally {
+          refreshInFlight = null
+        }
+      })()
+      return refreshInFlight
+    },
+    /** 守卫入口：不足阈值才真正发请求，其余情况零成本放行 */
+    async ensureFreshSession(): Promise<boolean> {
+      if (!this.needsRenewal()) {
+        return true
+      }
+      return this.refresh()
     },
     logout() {
       this.token = ''

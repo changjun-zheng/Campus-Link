@@ -274,7 +274,7 @@ async function submit() {
         <el-option v-for="b in boards" :key="b.code" :label="b.name" :value="b.code" />
       </el-select>
       <span class="ml-auto hidden shrink-0 text-caption text-ink-meta md:inline" aria-live="polite">
-        标题 {{ form.title.length }}/100 · 正文 {{ form.contentMd.length }}/50000
+        标题 {{ form.title.length }}/100 · 正文 {{ form.contentMd.length }}/20000
       </span>
       <el-button type="primary" :loading="submitting" @click="submit">发 布</el-button>
     </div>
@@ -374,7 +374,7 @@ async function submit() {
       >
         {{ narrow ? (previewMode ? '编辑' : '预览') : '预览' }}
       </button>
-      <span class="ml-auto text-caption text-ink-meta md:hidden">{{ form.title.length }}/100 · {{ form.contentMd.length }}/50000</span>
+      <span class="ml-auto text-caption text-ink-meta">{{ form.title.length }}/100 · {{ form.contentMd.length }}/20000</span>
     </div>
 
     <div class="mx-auto max-w-reading px-6 max-md:px-4">
@@ -384,7 +384,7 @@ async function submit() {
           ref="contentEl"
           v-show="!previewMode || !narrow"
           v-model="form.contentMd"
-          maxlength="50000"
+          maxlength="20000"
           placeholder="正文支持 Markdown：标题 / 列表 / 代码块（```语言）/ 链接 / 引用。开始输入…"
           class="min-h-[50vh] w-full resize-none border-0 bg-transparent py-5 text-body leading-[1.9] text-ink outline-none placeholder:text-ink-meta max-md:min-h-[36vh] md:w-1/2 md:flex-none"
         />
@@ -402,7 +402,7 @@ async function submit() {
         </div>
       </div>
       <p class="pb-6 text-caption leading-body text-ink-meta">
-        发布前将进行内容安全机审（F-SAFE-001）· 预览按 ADR-005 在服务端渲染并做安全净化，与发布后的正文同源
+        发布内容须符合社区规范，违规内容将被下架处理 · 预览按 ADR-005 在服务端渲染并做安全净化，与发布后的正文同源
       </p>
     </div>
   </div>

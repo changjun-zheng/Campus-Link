@@ -658,7 +658,7 @@ watch(
                   v-model="replyMd"
                   type="textarea"
                   :rows="narrow ? 4 : 6"
-                  maxlength="50000"
+                  maxlength="20000"
                   show-word-limit
                   placeholder="写下你的回复…支持 Markdown（回复发布后按楼层展示）"
                 />

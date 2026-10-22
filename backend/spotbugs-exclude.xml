@@ -64,6 +64,7 @@
   <Match><Bug pattern="CT_CONSTRUCTOR_THROW"/><Class name="com.campuslink.common.crypto.CryptoService"/></Match>
   <Match><Bug pattern="CT_CONSTRUCTOR_THROW"/><Class name="com.campuslink.security.JwtService"/></Match>
   <Match><Bug pattern="CT_CONSTRUCTOR_THROW"/><Class name="com.campuslink.module.account.domain.model.Account"/></Match>
+  <Match><Bug pattern="CT_CONSTRUCTOR_THROW"/><Class name="com.campuslink.module.forum.infrastructure.moderation.LocalWordListModerationGateway"/></Match>
 
   <!-- ④b RV_RETURN_VALUE_IGNORED_INFERRED —— 该处刻意丢弃 `Post.acceptReply` 的返回值：
            领域聚合不可变、迁移返回新对象，而落库走定向 UPDATE（`updateAcceptedReply`），

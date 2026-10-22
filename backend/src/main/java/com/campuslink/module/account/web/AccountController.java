@@ -3,6 +3,8 @@ package com.campuslink.module.account.web;
 import com.campuslink.common.result.ApiResponse;
 import com.campuslink.common.result.ErrorCodes;
 import com.campuslink.common.result.ResultCode;
+import com.campuslink.common.web.ApiDocs;
+import com.campuslink.common.web.CurrentUser;
 import com.campuslink.common.web.IpUtil;
 import com.campuslink.common.web.PublicEndpoint;
 import com.campuslink.module.account.application.AccountApplicationService;
@@ -14,10 +16,12 @@ import com.campuslink.module.account.application.cmd.AccountCommands.RegisterCom
 import com.campuslink.module.account.application.cmd.AccountCommands.VerifyStudentCommand;
 import com.campuslink.module.account.application.cmd.AccountCommands.VerifyStudentResult;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -37,16 +41,16 @@ public class AccountController {
     private final CaptchaService captchaService;
 
     @Operation(summary = "学籍核验（F-ACC-004）：学号 + 姓名，通过返回一次性核验票据")
-    @ErrorCodes({ResultCode.STUDENT_VERIFY_FAILED, ResultCode.VERIFY_RATE_LIMITED})
+    @ErrorCodes({ ResultCode.STUDENT_VERIFY_FAILED, ResultCode.VERIFY_RATE_LIMITED })
     @PublicEndpoint
     @PostMapping("/verify-student")
     public ApiResponse<VerifyStudentResult> verifyStudent(@Valid @RequestBody VerifyStudentCommand command,
-                                                          HttpServletRequest http) {
+            HttpServletRequest http) {
         return ApiResponse.ok(accountApplicationService.verifyStudent(command, IpUtil.clientIp(http)));
     }
 
     @Operation(summary = "发送验证码（F-011 / CR-093：target 为邮箱或手机号；60s 重发间隔，单账号日上限 10 条）")
-    @ErrorCodes({ResultCode.CAPTCHA_TOO_FREQUENT, ResultCode.CAPTCHA_EXCEEDED})
+    @ErrorCodes({ ResultCode.CAPTCHA_TOO_FREQUENT, ResultCode.CAPTCHA_EXCEEDED })
     @PublicEndpoint
     @PostMapping("/captcha")
     public ApiResponse<Void> captcha(@Valid @RequestBody CaptchaCommand command) {
@@ -55,8 +59,8 @@ public class AccountController {
     }
 
     @Operation(summary = "注册：需先通过学籍核验并携带票据；contact 为邮箱或手机号（F-011 / CR-093）")
-    @ErrorCodes({ResultCode.CAPTCHA_INVALID, ResultCode.VERIFY_TICKET_INVALID,
-            ResultCode.STUDENT_VERIFY_FAILED, ResultCode.EMAIL_EXISTS, ResultCode.PHONE_EXISTS})
+    @ErrorCodes({ ResultCode.CAPTCHA_INVALID, ResultCode.VERIFY_TICKET_INVALID,
+            ResultCode.STUDENT_VERIFY_FAILED, ResultCode.EMAIL_EXISTS, ResultCode.PHONE_EXISTS })
     @PublicEndpoint
     @PostMapping("/register")
     public ApiResponse<AuthResponse> register(@Valid @RequestBody RegisterCommand command) {
@@ -64,11 +68,21 @@ public class AccountController {
     }
 
     @Operation(summary = "登录：邮箱 + 验证码")
-    @ErrorCodes({ResultCode.LOGIN_FAILED, ResultCode.USER_BANNED, ResultCode.ACCOUNT_EXPIRED})
+    @ErrorCodes({ ResultCode.LOGIN_FAILED, ResultCode.USER_BANNED, ResultCode.ACCOUNT_EXPIRED })
     @PublicEndpoint
     @PostMapping("/login")
     public ApiResponse<AuthResponse> login(@Valid @RequestBody LoginCommand command) {
         return ApiResponse.ok(AuthResponse.from(accountApplicationService.login(command)));
+    }
+
+    @Operation(summary = "续签登录态（F-ACC-001 / CR-116）：凭当前有效令牌换取新令牌，实现 7 天滑动续期")
+    @SecurityRequirement(name = ApiDocs.BEARER_AUTH)
+    @ErrorCodes({ ResultCode.NOT_LOGGED_IN, ResultCode.USER_NOT_FOUND,
+            ResultCode.USER_BANNED, ResultCode.ACCOUNT_DEACTIVATED })
+    @PostMapping("/refresh")
+    public ApiResponse<AuthResponse> refresh(Authentication authentication) {
+        return ApiResponse.ok(AuthResponse.from(
+                accountApplicationService.refresh(CurrentUser.requireId(authentication))));
     }
 
     /** web 响应模型：对前端契约与重构前一致 */

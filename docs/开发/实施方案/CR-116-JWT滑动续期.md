@@ -66,4 +66,9 @@ revert 单个 commit 即可：**零迁移、零数据回补**；已签发的 tok
 
 ## 7. 实施结果（实施后追加，不回改上文）
 
-<待实施>
+**已实施（2026-10-22，发起人确认「实施 CR-116」）**。
+
+- **实际改动**：与原计划 §3 一致——后端 `AccountApplicationService.refresh(long)` + `AccountController#refresh`（`@SecurityRequirement` + `CurrentUser.requireId` + `@ErrorCodes`）；前端 `api/auth.ts` 的 `refreshSession()`、`stores/auth.ts` 的 `refresh()`（单飞）与 `ensureFreshSession()`、`router/index.ts` 守卫；契约快照再生成 v1.20。
+- **与计划的偏差（如实）**：① 前端多修了一处**原计划外的真缺陷**——`AuthResponse` 字段名误写为复数 `expiresAtEpochSeconds`（后端是单数 `expiresAtEpochSecond`），导致 `cl_exp` 从未落盘；不修它，本方案「剩余 < 2 天续签」没有触发依据。已登记为问题清单 **BUG-013**（✅ 当轮修复）。② 额外在 `spotbugs-exclude.xml` 加了一条 DI 误报排除（新增 guard 类触发的 `EI_EXPOSE_REP2`，与既有同类条目同规则）。③ `AGENTS.md` 基线 494 → **501**（新增 4 个应用层用例 + 3 个控制器用例）。
+- **验证真实结果**：`SPRING_IT=true mvn -o verify` **501 / 0 failures / Skipped 0** + `BugInstance size is 0`；`npm run lint` exit 0、`npm run build` ✓ built in 18.66s；真机：登录 → 3 秒后 refresh（exp 前移 3 秒、token 变化、新 token 调 `/users/me` 200）、匿名 refresh → `401 / 4001`；前端 CDP 实测：`cl_exp` 设为 1 天后导航 `/notifications` ⇒ **恰好 1 次** `/auth/refresh`、exp 回到 7 天、token 已换（VERDICT=PASS）。
+- **遗留 / 边界**：① 页面停留超过 7 天不导航的极端场景仍会掉线（下次导航或刷新即续签）——计划 §2 已明确不做；② 旧缓存里 `cl_exp` 为空的用户下次登录即恢复正常；③ 本方案未做 refresh token 轮换 / 绝对上限 / 黑名单，均按 §2 的不做清单执行。

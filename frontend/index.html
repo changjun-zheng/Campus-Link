@@ -3,6 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- 内容安全策略（E-012 ③ / CR-118）：与服务端 Markdown 白名单叠加的第二道防线。
+         style-src 放行 inline 是 Element Plus / Vite 注入样式的现实需要；connect-src 放行 ws 供 HMR。 -->
+    <meta http-equiv="Content-Security-Policy"
+          content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' ws: wss:; object-src 'none'; base-uri 'self'" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>Campus-Link · 重工计算机学生社区</title>
   </head>

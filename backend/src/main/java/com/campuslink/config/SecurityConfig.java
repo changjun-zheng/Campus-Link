@@ -12,6 +12,8 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.header.Header;
+import org.springframework.security.web.header.writers.StaticHeadersWriter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -40,6 +42,12 @@ public class SecurityConfig {
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(apiErrorSecurityHandler)
                         .accessDeniedHandler(apiErrorSecurityHandler))
+                // 安全响应头（E-012 ③ / CR-118）：API 响应不承载 HTML，CSP 取最严的 default-src 'none'；
+                // SPA 页面自身的 CSP 在 frontend/index.html 的 meta 中（同源静态托管与 Vite 开发均生效）
+                .headers(headers -> headers.addHeaderWriter(new StaticHeadersWriter(List.of(
+                        new Header("Referrer-Policy", "strict-origin-when-cross-origin"),
+                        new Header("Permissions-Policy", "camera=(), microphone=(), geolocation=()"),
+                        new Header("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")))))
                 // 无状态 API 不存"重放请求"：否则 401 响应会因默认 request cache 创建 session
                 .requestCache(AbstractHttpConfigurer::disable)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

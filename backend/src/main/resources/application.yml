@@ -95,6 +95,12 @@ campuslink:
   code-sender:
     # log = 开发模式（验证码只打日志）；mail = 真实发送
     mode: ${CODE_SENDER_MODE:log}
+  moderation:
+    # 机审通道（F-SAFE-001）：log = 只记录放行（开发缺省）；local = 本地词表，命中即拦（fail-closed）；
+    # 真实服务商适配待 A3-8 决策与凭据（届时新增 mode=aliyun / tencent 适配器即可）
+    mode: ${MODERATION_MODE:log}
+    # local 模式必填（逗号分隔）；留空即启动失败——不允许"空词表 = 静默放行"
+    words: ${MODERATION_WORDS:}
   cors:
     allowed-origins: ${CORS_ORIGINS:http://localhost:5173}
   ai:
