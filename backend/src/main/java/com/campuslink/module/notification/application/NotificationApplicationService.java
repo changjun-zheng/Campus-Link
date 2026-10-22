@@ -9,12 +9,14 @@ import com.campuslink.module.forum.application.cmd.ForumResults.ReplyBrief;
 import com.campuslink.module.notification.application.cmd.NotificationResults.MarkAllReadResult;
 import com.campuslink.module.notification.application.cmd.NotificationResults.NotificationItem;
 import com.campuslink.module.notification.application.cmd.NotificationResults.UnreadCountResult;
+import com.campuslink.module.notification.application.event.NotificationCreatedEvent;
 import com.campuslink.module.notification.domain.gateway.NotificationRepository;
 import com.campuslink.module.notification.domain.gateway.PageResult;
 import com.campuslink.module.notification.domain.model.Notification;
 import com.campuslink.module.notification.domain.model.NotificationTargetType;
 import com.campuslink.module.notification.domain.model.NotificationType;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -26,11 +28,13 @@ import java.util.stream.Collectors;
 /**
  * 通知用例（F-SOC-001）：5 个触发入口 + 我的通知 / 未读数 / 全部已读 / 单条已读。
  *
- * <p><b>触发侧</b>由 forum 的 application 服务在动作成功后直接调用本服务（同事务写入，不用 Spring 事件——
- * 事件要么异步丢通知、要么被迫同步仍不如直调清晰）。接收人由调用方给出：forum 侧当时已握有帖子 / 楼层聚合，
- * 再查一次只是重复读。<b>自触发抑制</b>在本层兜底（自己回帖 / 自己点赞自己的内容不打扰自己）。
+ * <p><b>触发侧</b>由 forum 的 application 服务在动作成功后直接调用本服务（同事务写入）——落库仍走直调，
+ * 不把"写通知"交给事件总线。落库后额外发一个 {@link NotificationCreatedEvent}，只供实时流
+ * （F-010）在**事务提交后**推送未读角标；写与推互不阻塞。接收人由调用方给出：forum 侧当时已握有
+ * 帖子 / 楼层聚合，再查一次只是重复读。<b>自触发抑制</b>在本层兜底（自己回帖 / 自己点赞自己的内容不打扰自己）。
  *
- * <p><b>读侧组装</b>：通知表只存事实四元组，昵称跨 account 取、帖子标题与楼层号跨 forum 取，
+ * <p>
+ * <b>读侧组装</b>：通知表只存事实四元组，昵称跨 account 取、帖子标题与楼层号跨 forum 取，
  * 三个 Map 各一页一次批量查（不做 N+1，口径同 {@code ForumQueryApplicationService}）。
  * 跨上下文只允许调用对方 {@code application}（ADR-012 / 守护测试 G4），故本类不出现 domain 类型。
  */
@@ -48,6 +52,7 @@ public class NotificationApplicationService {
     private final NotificationRepository notificationRepository;
     private final AccountApplicationService accountApplicationService;
     private final ForumQueryApplicationService forumQueryService;
+    private final ApplicationEventPublisher eventPublisher;
 
     /** 帖子被回复：接收人是帖子作者，目标是新楼层 */
     public void postReplied(long replierId, long replyId, long postAuthorId) {
@@ -124,13 +129,16 @@ public class NotificationApplicationService {
     /**
      * 单条已读（幂等，F-SOC-001）。
      *
-     * <p><b>不存在与"存在但属于他人"给同一个 404</b>：后者若回 403，就等于向任意已登录账号确认了
+     * <p>
+     * <b>不存在与"存在但属于他人"给同一个 404</b>：后者若回 403，就等于向任意已登录账号确认了
      * "这个 id 上确实有一条通知"——他人通知的存在性本身也是隐私，故不区分。
      *
-     * <p><b>已读短路</b>：再调直接返回（HTTP 仍 200），不重复 UPDATE；前端是乐观更新 +
+     * <p>
+     * <b>已读短路</b>：再调直接返回（HTTP 仍 200），不重复 UPDATE；前端是乐观更新 +
      * fire-and-forget，同一行被点两次是常态，不能因此报错。
      *
-     * <p>不记审计：口径同 {@link #markAllRead}，标记自己的通知已读非安全敏感操作。
+     * <p>
+     * 不记审计：口径同 {@link #markAllRead}，标记自己的通知已读非安全敏感操作。
      */
     public void markRead(long notificationId, long userId) {
         Notification notification = notificationRepository.findById(notificationId)
@@ -145,11 +153,13 @@ public class NotificationApplicationService {
     }
 
     private void notify(NotificationType type, long actorId, NotificationTargetType targetType,
-                        long targetId, long recipientId) {
+            long targetId, long recipientId) {
         if (actorId == recipientId) {
             return;
         }
         notificationRepository.save(Notification.of(type, actorId, targetType, targetId, recipientId));
+        // 只给实时流一个信号；未读数由监听器在事务提交后自取
+        eventPublisher.publishEvent(new NotificationCreatedEvent(recipientId));
     }
 
     /** 跳转目标帖子：目标本身是帖子即 targetId，是楼层则取楼层所属帖（楼层已删则 null） */
@@ -164,17 +174,19 @@ public class NotificationApplicationService {
     /**
      * 组装单条通知。
      *
-     * <p>⚠️ {@code postId} 在**帖子摘要未命中时也必须为 null**——CR-066 之前它只由 {@link #postIdOf} 决定，
+     * <p>
+     * ⚠️ {@code postId} 在**帖子摘要未命中时也必须为 null**——CR-066 之前它只由 {@link #postIdOf} 决定，
      * 于是指向"已删帖 / 已下架帖"的帖子类通知仍下发可点链接，点进去落 404 / 3001；而前端
      * {@code NotificationsView.vue} 一直按"服务端不下发 postId 即不给跳转"实现（那句注释写了很久，
      * 服务端却从未真的履行）。现在两侧对齐，标题回落与不可点击是**同一个判定**的两个出口。
      */
     private static NotificationItem toItem(Notification notification, Map<Long, String> nicknames,
-                                           Map<Long, ReplyBrief> replyBriefs, Map<Long, PostBrief> postBriefs) {
+            Map<Long, ReplyBrief> replyBriefs, Map<Long, PostBrief> postBriefs) {
         Long resolvedPostId = postIdOf(notification, replyBriefs);
         PostBrief post = resolvedPostId == null ? null : postBriefs.get(resolvedPostId);
         ReplyBrief reply = notification.getTargetType() == NotificationTargetType.REPLY
-                ? replyBriefs.get(notification.getTargetId()) : null;
+                ? replyBriefs.get(notification.getTargetId())
+                : null;
         return new NotificationItem(notification.getId(), notification.getType().code(),
                 notification.getActorId(),
                 nicknames.getOrDefault(notification.getActorId(), NICKNAME_FALLBACK),

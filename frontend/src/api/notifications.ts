@@ -47,6 +47,66 @@ export const listNotifications = (opts: { unread?: boolean; page?: number; size?
 /** 未读数（顶栏铃铛角标） */
 export const getUnreadCount = () => get<UnreadCountVo>('/notifications/unread-count')
 
+/** 通知流连接失败（携带 HTTP 状态；401 表示登录态已失效，调用方应停止重连） */
+export class NotificationStreamError extends Error {
+  constructor(readonly status: number) {
+    super(`通知流连接失败（${status}）`)
+    this.name = 'NotificationStreamError'
+  }
+}
+
+/**
+ * 未读数实时流（F-010 / CR-121）：`event: unread` + `data: {"unreadCount": n}`。
+ *
+ * <p>不用 `EventSource`——它无法携带 `Authorization` 头，而令牌不能进 query string；
+ * 这里用 `fetch` 读 `ReadableStream` 并自行解析 SSE 帧。
+ * 连接结束（服务端 30 分钟超时 / 网络断开）时返回，由调用方决定重连节奏。
+ */
+export async function openUnreadStream(
+  onUnread: (count: number) => void,
+  signal: AbortSignal,
+): Promise<void> {
+  const token = localStorage.getItem('cl_token')
+  if (!token) {
+    throw new NotificationStreamError(401)
+  }
+  const res = await fetch('/api/v1/notifications/stream', {
+    headers: { Authorization: `Bearer ${token}`, Accept: 'text/event-stream' },
+    signal,
+  })
+  if (!res.ok || !res.body) {
+    throw new NotificationStreamError(res.status)
+  }
+  const reader = res.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  while (!signal.aborted) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buffer = (buffer + decoder.decode(value, { stream: true })).replace(/\r\n/g, '\n')
+    let boundary = buffer.indexOf('\n\n')
+    while (boundary >= 0) {
+      const frame = buffer.slice(0, boundary)
+      buffer = buffer.slice(boundary + 2)
+      const event = /^event:\s*(.+)$/m.exec(frame)?.[1]?.trim()
+      if (event === 'unread') {
+        const data = /^data:\s*(.+)$/m.exec(frame)?.[1]
+        if (data) {
+          try {
+            const parsed = JSON.parse(data) as { unreadCount?: number }
+            if (typeof parsed.unreadCount === 'number') {
+              onUnread(parsed.unreadCount)
+            }
+          } catch {
+            // 单帧解析失败不终止连接：下一帧仍可恢复（角标还有轮询兜底）
+          }
+        }
+      }
+      boundary = buffer.indexOf('\n\n')
+    }
+  }
+}
+
 /** 全部标记已读：updated 为本次新标记的条数 */
 export const markAllRead = () => put<{ updated: number }>('/notifications/read-all')
 

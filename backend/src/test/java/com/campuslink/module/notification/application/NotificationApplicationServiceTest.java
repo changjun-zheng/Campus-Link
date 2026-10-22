@@ -9,6 +9,7 @@ import com.campuslink.module.forum.application.cmd.ForumResults.ReplyBrief;
 import com.campuslink.module.notification.application.cmd.NotificationResults.MarkAllReadResult;
 import com.campuslink.module.notification.application.cmd.NotificationResults.NotificationItem;
 import com.campuslink.module.notification.application.cmd.NotificationResults.UnreadCountResult;
+import com.campuslink.module.notification.application.event.NotificationCreatedEvent;
 import com.campuslink.module.notification.domain.gateway.NotificationRepository;
 import com.campuslink.module.notification.domain.gateway.PageResult;
 import com.campuslink.module.notification.domain.model.Notification;
@@ -21,6 +22,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.Instant;
 import java.util.List;
@@ -58,6 +60,8 @@ class NotificationApplicationServiceTest {
     private AccountApplicationService accountApplicationService;
     @Mock
     private ForumQueryApplicationService forumQueryService;
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private NotificationApplicationService service;
@@ -79,6 +83,16 @@ class NotificationApplicationServiceTest {
     }
 
     @Test
+    @DisplayName("实时流信号：通知落库后发布接收人事件（未读数由监听器在事务提交后自取）")
+    void triggerPublishesNotificationCreatedEvent() {
+        service.postReplied(7L, 11L, RECIPIENT);
+
+        ArgumentCaptor<NotificationCreatedEvent> captor = ArgumentCaptor.forClass(NotificationCreatedEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        assertThat(captor.getValue().userId()).isEqualTo(RECIPIENT);
+    }
+
+    @Test
     @DisplayName("自触发抑制：触发人即接收人时不产生通知（6 个入口共用同一兜底）")
     void selfTriggerIsSuppressed() {
         service.postReplied(7L, 11L, 7L);
@@ -88,6 +102,7 @@ class NotificationApplicationServiceTest {
         service.replyQuoted(7L, 11L, 7L);
 
         verify(notificationRepository, never()).save(any());
+        verify(eventPublisher, never()).publishEvent(any());
     }
 
     /** CR-085 / F-009：引用通知与 REPLY 同构——目标是引用方的新楼层，接收人是被引用楼层的作者 */
@@ -286,7 +301,7 @@ class NotificationApplicationServiceTest {
     }
 
     private static Notification notification(Long id, NotificationType type, NotificationTargetType targetType,
-                                             Long targetId, boolean read) {
+            Long targetId, boolean read) {
         return Notification.rehydrate(id, RECIPIENT, type, 7L, targetType, targetId, read, CREATED_AT);
     }
 

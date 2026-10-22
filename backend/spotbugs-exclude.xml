@@ -24,6 +24,9 @@
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.application.PostViewCounter"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.infrastructure.redis.RedisScheduledLock"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.infrastructure.scheduling.HotScoreRefreshScheduler"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.notification.infrastructure.stream.NotificationStreamHeartbeatTrigger"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.notification.infrastructure.stream.NotificationStreamListener"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.notification.web.NotificationController"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.web.AdminReportController"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.web.PostController"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.web.ReportController"/></Match>

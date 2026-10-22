@@ -3141,6 +3141,52 @@
         ]
       }
     },
+    "/api/v1/notifications/stream": {
+      "get": {
+        "tags": [
+          "notification"
+        ],
+        "summary": "未读数实时流（需登录，SSE）：event=unread，data={\"unreadCount\":n}；20 秒心跳",
+        "operationId": "stream",
+        "responses": {
+          "200": {
+            "description": "SSE 事件流（text/event-stream）",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未登录（4001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "系统繁忙，请稍后再试（9999）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/v1/favorites/mine": {
       "get": {
         "tags": [
