@@ -60,7 +60,8 @@ public class AccountController {
 
     @Operation(summary = "注册：需先通过学籍核验并携带票据；contact 为邮箱或手机号（F-011 / CR-093）")
     @ErrorCodes({ ResultCode.CAPTCHA_INVALID, ResultCode.VERIFY_TICKET_INVALID,
-            ResultCode.STUDENT_VERIFY_FAILED, ResultCode.EMAIL_EXISTS, ResultCode.PHONE_EXISTS })
+            ResultCode.STUDENT_VERIFY_FAILED, ResultCode.EMAIL_EXISTS, ResultCode.PHONE_EXISTS,
+            ResultCode.MODERATION_BLOCKED, ResultCode.MODERATION_UNAVAILABLE })
     @PublicEndpoint
     @PostMapping("/register")
     public ApiResponse<AuthResponse> register(@Valid @RequestBody RegisterCommand command) {

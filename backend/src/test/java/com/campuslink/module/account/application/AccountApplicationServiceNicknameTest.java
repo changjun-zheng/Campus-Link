@@ -14,6 +14,7 @@ import com.campuslink.module.account.domain.model.AccountRole;
 import com.campuslink.module.account.domain.model.AccountStatus;
 import com.campuslink.module.account.domain.model.EmailAddress;
 import com.campuslink.module.account.domain.service.StudentVerificationService;
+import com.campuslink.module.forum.application.ModerationApplicationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -65,7 +66,8 @@ class AccountApplicationServiceNicknameTest {
     void setUp() {
         service = new AccountApplicationService(
                 verificationService, accountRepository, rosterGateway, ticketStore, captchaService,
-                codec, tokenIssuer, rateLimitGateway, mock(AuditService.class), new AppProperties(), eventPublisher);
+                codec, tokenIssuer, rateLimitGateway, mock(AuditService.class), new AppProperties(), eventPublisher,
+                mock(ModerationApplicationService.class));
     }
 
     @Test
@@ -101,6 +103,7 @@ class AccountApplicationServiceNicknameTest {
     }
 
     private static Account account(Long id, String nickname) {
-        return Account.rehydrate(id, EmailAddress.of("u" + id + "@example.com"), null, null, nickname, null, null, null, null, null, AccountRole.USER, AccountStatus.ACTIVE, true, false, null, null, null);
+        return Account.rehydrate(id, EmailAddress.of("u" + id + "@example.com"), null, null, nickname, null, null, null,
+                null, null, AccountRole.USER, AccountStatus.ACTIVE, true, false, null, null, null);
     }
 }

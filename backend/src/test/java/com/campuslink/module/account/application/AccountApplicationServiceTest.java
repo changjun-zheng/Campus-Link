@@ -22,6 +22,7 @@ import com.campuslink.module.account.domain.model.AccountStatus;
 import com.campuslink.module.account.domain.model.EmailAddress;
 import com.campuslink.module.account.domain.model.StudentId;
 import com.campuslink.module.account.domain.service.StudentVerificationService;
+import com.campuslink.module.forum.application.ModerationApplicationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -43,6 +44,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -53,10 +55,12 @@ import static org.mockito.Mockito.when;
  * 学籍核验（限流 / 统一失败提示 / 票据载荷加密）、注册的前置失败链（验证码 / 票据 / 双方渠道冲突 / 名册占用）、
  * 登录的账号状态机（冷静期撤销 / 期满拒登 / 封禁）、注销冷静期写入、发帖前置门与管理员处置。
  *
- * <p>分工：{@code ...LoginTest} 守渠道分流与反枚举，{@code ...RegisterTest} 守票据解密与唯一键冲突翻译，
+ * <p>
+ * 分工：{@code ...LoginTest} 守渠道分流与反枚举，{@code ...RegisterTest} 守票据解密与唯一键冲突翻译，
  * {@code ...NicknameTest} / {@code ...PublicAccountTest} 守读侧两个门。本类不重复这些断言，只补缺口。
  *
- * <p>本类不证明并发语义：{@code rosterGateway.occupy} 返回 false 时的"整个事务回滚"由
+ * <p>
+ * 本类不证明并发语义：{@code rosterGateway.occupy} 返回 false 时的"整个事务回滚"由
  * {@code @Transactional} 承担，单测只能证明**抛了正确的码**。
  */
 @ExtendWith(MockitoExtension.class)
@@ -96,7 +100,8 @@ class AccountApplicationServiceTest {
     void setUp() {
         props = new AppProperties();
         service = new AccountApplicationService(verificationService, accountRepository, rosterGateway, ticketStore,
-                captchaService, codec, tokenIssuer, rateLimitGateway, auditService, props, eventPublisher);
+                captchaService, codec, tokenIssuer, rateLimitGateway, auditService, props, eventPublisher,
+                mock(ModerationApplicationService.class));
     }
 
     // ── 学籍核验（F-ACC-004）────────────────────────────────────────────

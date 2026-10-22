@@ -16,6 +16,7 @@ import com.campuslink.module.account.domain.model.AccountRole;
 import com.campuslink.module.account.domain.model.AccountStatus;
 import com.campuslink.module.account.domain.model.EmailAddress;
 import com.campuslink.module.account.domain.service.StudentVerificationService;
+import com.campuslink.module.forum.application.ModerationApplicationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -34,13 +35,14 @@ import static org.mockito.Mockito.when;
 /**
  * 他人主页的账号可见性门（{@code publicAccountOf}，F-ACC-002 本体最小版）。
  *
- * <p>三态各守一头，都是产品口径而不是实现细节：
+ * <p>
+ * 三态各守一头，都是产品口径而不是实现细节：
  * ① 不存在与已注销（{@code DEACTIVATED}）**必须同一个码**（2007 / 404）——分得开就等于给外人一个
- *    按 id 枚举"这个学号注册过没有、注销了没有"的探针，与帖子侧把"不存在 / 已删 / 未发布"全归 3001 同一条纪律；
+ * 按 id 枚举"这个学号注册过没有、注销了没有"的探针，与帖子侧把"不存在 / 已删 / 未发布"全归 3001 同一条纪律；
  * ② 被封禁（{@code BANNED}）**必须照常返回**——封禁限的是发言与登录，全站列表 / 搜索从不按作者状态过滤，
- *    主页若单独消失，列表里那个作者名就成了点不开的死链；
+ * 主页若单独消失，列表里那个作者名就成了点不开的死链；
  * ③ 这道门与 {@link AccountApplicationService#accountOf} 分开存在：后者答"这个 id 有没有账号"
- *    （关注 / 令牌校验用，注销中的账号仍是关注关系的一方），把注销门塞进 {@code accountOf} 会顺带改掉关注链路的语义。
+ * （关注 / 令牌校验用，注销中的账号仍是关注关系的一方），把注销门塞进 {@code accountOf} 会顺带改掉关注链路的语义。
  */
 @ExtendWith(MockitoExtension.class)
 class AccountApplicationServicePublicAccountTest {
@@ -72,7 +74,8 @@ class AccountApplicationServicePublicAccountTest {
     void setUp() {
         service = new AccountApplicationService(
                 verificationService, accountRepository, rosterGateway, ticketStore, captchaService,
-                codec, tokenIssuer, rateLimitGateway, mock(AuditService.class), new AppProperties(), eventPublisher);
+                codec, tokenIssuer, rateLimitGateway, mock(AuditService.class), new AppProperties(), eventPublisher,
+                mock(ModerationApplicationService.class));
     }
 
     @Test
@@ -113,6 +116,8 @@ class AccountApplicationServicePublicAccountTest {
     }
 
     private static Account account(AccountStatus status) {
-        return Account.rehydrate(USER_ID, EmailAddress.of("dev-stu-01@dev.campuslink.local"), null, null, "张三同学", null, null, "软件工程", null, "在写代码", AccountRole.USER, status, true, false, null, Instant.parse("2026-09-01T08:00:00Z"), null);
+        return Account.rehydrate(USER_ID, EmailAddress.of("dev-stu-01@dev.campuslink.local"), null, null, "张三同学", null,
+                null, "软件工程", null, "在写代码", AccountRole.USER, status, true, false, null,
+                Instant.parse("2026-09-01T08:00:00Z"), null);
     }
 }

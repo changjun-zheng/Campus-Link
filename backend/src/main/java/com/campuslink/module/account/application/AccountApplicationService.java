@@ -23,6 +23,7 @@ import com.campuslink.module.account.domain.model.AccountStatus;
 import com.campuslink.module.account.domain.model.Contact;
 import com.campuslink.module.account.domain.model.StudentId;
 import com.campuslink.module.account.domain.service.StudentVerificationService;
+import com.campuslink.module.forum.application.ModerationApplicationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -54,6 +55,7 @@ public class AccountApplicationService {
     private final AuditService auditService;
     private final AppProperties props;
     private final ApplicationEventPublisher eventPublisher;
+    private final ModerationApplicationService moderationService;
 
     /** 学籍核验（F-ACC-004）：IP 限流 → 比对 → 签发一次性票据（payload 为加密学号） */
     public VerifyStudentResult verifyStudent(VerifyStudentCommand command, String ip) {
@@ -79,6 +81,8 @@ public class AccountApplicationService {
      */
     @Transactional
     public LoginResult register(RegisterCommand command) {
+        // CR-122：昵称进入机审调用面（与发帖 / 回帖同一网关与 fail-closed 口径），放在任何副作用之前
+        moderationService.ensureAllowed(command.nickname());
         Contact contact = Contact.parse(command.contact());
         if (!captchaService.verify(contact.normalized(), command.code())) {
             throw new ApiException(ResultCode.CAPTCHA_INVALID);

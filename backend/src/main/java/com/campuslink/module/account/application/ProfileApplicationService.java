@@ -9,6 +9,7 @@ import com.campuslink.module.account.domain.gateway.RateLimitGateway;
 import com.campuslink.module.account.domain.model.Account;
 import com.campuslink.module.account.domain.model.AccountStatus;
 import com.campuslink.module.account.domain.model.ProfileField;
+import com.campuslink.module.forum.application.ModerationApplicationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,10 +21,13 @@ import java.util.stream.Collectors;
 /**
  * 资料编辑用例（F-ACC-007a + 007e，应用层）：限流 → 状态门 → 聚合改规则 → 定向 UPDATE → 审计。
  *
- * <p>单开一个服务而不是塞进 {@link AccountApplicationService}：后者是"账号生命周期"（核验 / 注册 / 登录），
+ * <p>
+ * 单开一个服务而不是塞进 {@link AccountApplicationService}：后者是"账号生命周期"（核验 / 注册 / 登录），
  * 依赖 10 个端口；本用例只依赖仓储、限流与审计三件，分开后两条链路各自的构造都不再膨胀。
  *
- * <p>无机审（F-SAFE-001 未实现）期间，昵称与签名写入的唯一两道可查证缓解就是本类的限流与审计。
+ * <p>
+ * 昵称与签名自 CR-122 起进入机审调用面（与发帖 / 回帖同一网关，本地词表模式下命中 `5001 / 422`）；
+ * 限流与审计仍是本用例的另外两道缓解。
  */
 @Service
 @RequiredArgsConstructor
@@ -36,15 +40,18 @@ public class ProfileApplicationService {
     private final AccountRepository accountRepository;
     private final RateLimitGateway rateLimitGateway;
     private final AuditService auditService;
+    private final ModerationApplicationService moderationService;
 
     /**
      * 修改本人资料（昵称 / 专业 / 签名）。返回改动后的聚合，web 层据此回显全量 {@code UserVo}（前端不必二次拉取）。
      *
-     * <p>限流判据是 {@code hits > HOURLY_LIMIT} 而非 {@code >=}：{@code hitAndCount} **先增后判**，
+     * <p>
+     * 限流判据是 {@code hits > HOURLY_LIMIT} 而非 {@code >=}：{@code hitAndCount} **先增后判**，
      * 用 {@code >=} 会在第 10 次就拒掉、把配额写成 9 次。放在最前面是 PRD 的硬断言——
      * 第 11 次请求不得触达 UPDATE（读库与审计同样都不该发生）。
      *
-     * <p>状态门只判 {@code BANNED}：{@code DEACTIVATED}（注销冷静期）按 PRD 允许编辑，但本期它
+     * <p>
+     * 状态门只判 {@code BANNED}：{@code DEACTIVATED}（注销冷静期）按 PRD 允许编辑，但本期它
      * **无路径可达**——登录判定用 {@code isActive()}，冷静期账号拿不到令牌；该冲突登记待发起人裁决，
      * 不在此处静默改登录口径。
      */
@@ -54,6 +61,8 @@ public class ProfileApplicationService {
         if (hits > HOURLY_LIMIT) {
             throw new ApiException(ResultCode.PROFILE_UPDATE_TOO_FREQUENT);
         }
+        // CR-122：限流之后、读库之前拦下违规昵称 / 签名（null = 本字段不改，由网关入口跳过）
+        moderationService.ensureAllowed(command.nickname(), command.bio());
         Account account = accountRepository.findById(userId)
                 .orElseThrow(() -> new ApiException(ResultCode.USER_NOT_FOUND));
         if (account.getStatus() == AccountStatus.BANNED) {

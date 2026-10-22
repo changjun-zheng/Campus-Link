@@ -11,6 +11,7 @@ import com.campuslink.module.account.domain.gateway.RosterGateway;
 import com.campuslink.module.account.domain.gateway.SensitiveCodec;
 import com.campuslink.module.account.domain.gateway.TokenIssuer;
 import com.campuslink.module.account.domain.gateway.VerificationTicketStore;
+import com.campuslink.module.forum.application.ModerationApplicationService;
 import com.campuslink.module.account.domain.model.Account;
 import com.campuslink.module.account.domain.model.AccountRole;
 import com.campuslink.module.account.domain.model.AccountStatus;
@@ -38,7 +39,8 @@ import static org.mockito.Mockito.when;
 /**
  * 登录态续签用例回归（CR-116 / F-ACC-001）：活跃账号换新 token；封禁 / 注销中 / 不存在一律拒绝。
  *
- * <p>续签必须重读账号而不是直接按 claims 重签——否则封禁与注销冷静期的账号都能靠续签
+ * <p>
+ * 续签必须重读账号而不是直接按 claims 重签——否则封禁与注销冷静期的账号都能靠续签
  * 把会话无限延长（这正是不续签 DEACTIVATED 的理由）。
  */
 @ExtendWith(MockitoExtension.class)
@@ -60,7 +62,7 @@ class AccountApplicationServiceRefreshTest {
                 mock(StudentVerificationService.class), accountRepository, mock(RosterGateway.class),
                 mock(VerificationTicketStore.class), mock(CaptchaService.class), mock(SensitiveCodec.class),
                 tokenIssuer, mock(RateLimitGateway.class), mock(AuditService.class), new AppProperties(),
-                mock(ApplicationEventPublisher.class));
+                mock(ApplicationEventPublisher.class), mock(ModerationApplicationService.class));
     }
 
     private Account account(AccountStatus status) {

@@ -202,6 +202,26 @@
               }
             }
           },
+          "422": {
+            "description": "内容未通过安全审核（5001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "内容审核服务暂不可用，发布已临时关闭（5002）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
           "500": {
             "description": "系统繁忙，请稍后再试（9999）",
             "content": {
@@ -1855,6 +1875,26 @@
           },
           "409": {
             "description": "该邮箱已注册（2004）；该手机号已注册（2014）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "内容未通过安全审核（5001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "内容审核服务暂不可用，发布已临时关闭（5002）",
             "content": {
               "application/json": {
                 "schema": {

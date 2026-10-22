@@ -16,6 +16,7 @@ import com.campuslink.module.account.domain.model.Account;
 import com.campuslink.module.account.domain.model.EmailAddress;
 import com.campuslink.module.account.domain.model.PhoneNumber;
 import com.campuslink.module.account.domain.service.StudentVerificationService;
+import com.campuslink.module.forum.application.ModerationApplicationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -60,7 +61,7 @@ class AccountApplicationServiceLoginTest {
                 mock(StudentVerificationService.class), accountRepository, mock(RosterGateway.class),
                 mock(VerificationTicketStore.class), captchaService, codec, tokenIssuer,
                 mock(RateLimitGateway.class), mock(AuditService.class), new AppProperties(),
-                mock(ApplicationEventPublisher.class));
+                mock(ApplicationEventPublisher.class), mock(ModerationApplicationService.class));
     }
 
     private Account phoneAccount() {

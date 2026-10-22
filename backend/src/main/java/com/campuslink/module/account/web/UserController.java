@@ -94,7 +94,8 @@ public class UserController {
     @Operation(summary = "修改我的资料（需登录）：昵称 / 专业 / 签名；字段传 null 即不改、传空串即清空（昵称除外）；全量回显 UserVo")
     @SecurityRequirement(name = ApiDocs.BEARER_AUTH)
     @ErrorCodes({ResultCode.NOT_LOGGED_IN, ResultCode.USER_NOT_FOUND,
-            ResultCode.USER_BANNED, ResultCode.PROFILE_UPDATE_TOO_FREQUENT})
+            ResultCode.USER_BANNED, ResultCode.PROFILE_UPDATE_TOO_FREQUENT,
+            ResultCode.MODERATION_BLOCKED, ResultCode.MODERATION_UNAVAILABLE})
     @PutMapping("/me")
     public ApiResponse<UserVo> updateProfile(@Valid @RequestBody UpdateProfileCommand command,
                                              Authentication authentication) {
