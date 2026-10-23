@@ -94,6 +94,19 @@ public class Post {
     }
 
     /**
+     * 作者编辑自己的帖子（F-FORUM-007 / CR-128）：只改标题、正文与派生列（contentHtml / coverUrl / tags），
+     * **版块、类型、状态、互动计数一律不动**——版块变更会让历史链接与列表归属漂移，另开 CR 才做。
+     *
+     * <p>与 {@link #acceptReply} 同为不可变写法：调用方拿新聚合，旧聚合不被就地改写。
+     * 标题在此 trim（与 {@link #publish} 同口径）；正文不做 trim，Markdown 的前导空行可能是有意的。
+     */
+    public Post revise(String title, String contentMd, String contentHtml, String coverUrl, List<String> tags) {
+        return new Post(id, boardId, authorId, type, title.trim(), contentMd, contentHtml, status,
+                replyCount, likeCount, viewCount, coverUrl, List.copyOf(tags), accepted, acceptedReplyId,
+                createdAt, updatedAt);
+    }
+
+    /**
      * 采纳最佳答案（F-QA-001）的领域规则：仅问答帖（QUESTION）可采纳；提问者不能采纳自己的回复。
      * 可更换（后一次覆盖前一次）与回复归属校验归 application（后者是仓储读得到的跨聚合事实）。
      */

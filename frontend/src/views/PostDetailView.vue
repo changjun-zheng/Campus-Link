@@ -482,9 +482,17 @@ watch(
             <el-button
               v-if="isAuthor"
               link
-              type="danger"
               size="small"
               class="ml-auto"
+              @click="router.push(`/post/${post.id}/edit`)"
+            >
+              编辑
+            </el-button>
+            <el-button
+              v-if="isAuthor"
+              link
+              type="danger"
+              size="small"
               :loading="deleting"
               @click="onDelete"
             >

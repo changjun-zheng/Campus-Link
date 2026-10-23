@@ -132,6 +132,23 @@ public class PostRepositoryImpl implements PostRepository {
     }
 
     @Override
+    public boolean revise(Long postId, String title, String contentMd, String contentHtml, String coverUrl,
+                          List<String> tags) {
+        // 条件带 is_deleted=0 + status=PUBLISHED：受影响行数即"这次是否真的改到了可见帖子"，
+        // 并发下架 / 删除时拿 false，调用方返回 3001 而不是假装成功（同 markDeleted 的纪律）。
+        // 只 SET 编辑相关列——计数与 hot_score 在读取后被并发推进，整行回写会抹掉它们。
+        return postMapper.update(null, new LambdaUpdateWrapper<PostDO>()
+                .set(PostDO::getTitle, title)
+                .set(PostDO::getContentMd, contentMd)
+                .set(PostDO::getContentHtml, contentHtml)
+                .set(PostDO::getCoverUrl, coverUrl)
+                .set(PostDO::getTags, tags == null || tags.isEmpty() ? null : String.join(",", tags))
+                .eq(PostDO::getId, postId)
+                .eq(PostDO::getIsDeleted, false)
+                .eq(PostDO::getStatus, PostStatus.PUBLISHED.name())) > 0;
+    }
+
+    @Override
     public void incrementViewCount(Long postId) {
         postMapper.update(null, new LambdaUpdateWrapper<PostDO>()
                 .eq(PostDO::getId, postId)

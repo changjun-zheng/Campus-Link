@@ -46,6 +46,14 @@ public final class ForumResults {
     }
 
     /**
+     * 编辑原文（F-FORUM-007 / CR-128）：**只给作者本人**，含 {@code contentMd}（公开详情只下发渲染后的
+     * contentHtml）与标签，供编辑页预填。
+     */
+    public record EditablePost(Long id, String boardCode, String boardName, String title,
+                               String contentMd, java.util.List<String> tags) {
+    }
+
+    /**
      * "我的帖子"条目（F-ACC-007b）：**刻意不复用 {@link PostSummary}**——后者与全站列表 / 搜索共享，
      * 往里加一个 {@code status} 等于把"这条被平台下架了"广播给所有读者，正是本条要守住的隐私面。
      *

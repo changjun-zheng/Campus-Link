@@ -1,7 +1,15 @@
 <script setup lang="ts">
-import { nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getSimilarPosts, listBoards, publishPost, type BoardVo, type SimilarPostVo } from '../api/forum'
+import {
+  getEditablePost,
+  getSimilarPosts,
+  listBoards,
+  publishPost,
+  updatePost,
+  type BoardVo,
+  type SimilarPostVo,
+} from '../api/forum'
 import { previewMarkdown } from '../api/markdown'
 import { useNarrowScreen } from '../composables/useNarrowScreen'
 import { useDraft } from '../composables/useDraft'
@@ -9,6 +17,14 @@ import SvgIcon from '../components/SvgIcon.vue'
 
 const route = useRoute()
 const router = useRouter()
+
+/**
+ * 编辑模式（F-FORUM-007 / CR-128）：路由 `/post/:id/edit` 复用本页。
+ * 版块只读（后端也不接受 boardCode）、不读写草稿、不查相似帖——那些都是"发新帖"的语义。
+ */
+const editingId = computed(() => (route.params.id ? Number(route.params.id) : null))
+const editing = computed(() => editingId.value !== null)
+const editingBoardName = ref('')
 
 const narrow = useNarrowScreen()
 const { saveDraft, loadDraft, clearDraft } = useDraft()
@@ -73,6 +89,7 @@ watch(() => form.contentMd, (md) => {
 })
 
 watch(() => form.title, (newTitle) => {
+  if (editing.value) return
   if (debounceTimer) clearTimeout(debounceTimer)
   const trimmed = newTitle.trim()
   if (trimmed.length < SIMILAR_MIN_TITLE_LENGTH) {
@@ -97,8 +114,9 @@ watch(() => form.title, (newTitle) => {
   }, 800)
 })
 
-/** beforeunload 兜底：页面关闭 / 刷新时同步写盘（localStorage.setItem 是同步的） */
+/** beforeunload 兜底：页面关闭 / 刷新时同步写盘（localStorage.setItem 是同步的；编辑模式不写草稿） */
 function handleBeforeUnload() {
+  if (editing.value) return
   if (form.boardCode && (form.title.trim() || form.contentMd.trim())) {
     saveDraft({
       boardCode: form.boardCode,
@@ -111,11 +129,11 @@ function handleBeforeUnload() {
 
 onUnmounted(() => {
   if (debounceTimer) clearTimeout(debounceTimer)
-  // flush 而非丢弃：2s 防抖窗口内导航走也落盘
+  // flush 而非丢弃：2s 防抖窗口内导航走也落盘（编辑模式无草稿）
   if (draftTimer) {
     clearTimeout(draftTimer)
     draftTimer = null
-    if (form.boardCode && (form.title.trim() || form.contentMd.trim())) {
+    if (!editing.value && form.boardCode && (form.title.trim() || form.contentMd.trim())) {
       saveDraft({
         boardCode: form.boardCode,
         title: form.title,
@@ -127,10 +145,11 @@ onUnmounted(() => {
   window.removeEventListener('beforeunload', handleBeforeUnload)
 })
 
-/* ─── 草稿自动保存（2s 防抖）：调度时捕获快照，回调使用快照而非实时 form ─── */
+/* ─── 草稿自动保存（2s 防抖）：调度时捕获快照，回调使用快照而非实时 form（编辑模式不写草稿） ─── */
 watch(
   () => [form.title, form.contentMd, form.boardCode],
   () => {
+    if (editing.value) return
     if (draftTimer) clearTimeout(draftTimer)
     if (!form.boardCode) return
     if (!form.title.trim() && !form.contentMd.trim()) return
@@ -169,8 +188,9 @@ function flushPendingDraft(boardCode: string) {
   }
 }
 
-/** 版块切换：先 flush 旧版块草稿，再尝试恢复新版块草稿 */
+/** 版块切换：先 flush 旧版块草稿，再尝试恢复新版块草稿（编辑模式版块只读，不参与） */
 watch(() => form.boardCode, (newCode, prevCode) => {
+  if (editing.value) return
   if (prevCode) flushPendingDraft(prevCode)
   if (!newCode) return
   tryRestoreDraft(newCode)
@@ -203,12 +223,27 @@ onMounted(async () => {
   window.addEventListener('beforeunload', handleBeforeUnload)
   try {
     boards.value = await listBoards()
+    if (editingId.value) {
+      // 编辑模式：一次请求取回原文（仅作者可取；非作者 403、不可见 3001 都回到详情页）
+      const editable = await getEditablePost(editingId.value)
+      editingBoardName.value = editable.boardName
+      form.boardCode = editable.boardCode
+      form.title = editable.title
+      form.contentMd = editable.contentMd
+      form.tags = editable.tags
+      return
+    }
     const fromQuery = String(route.query.board || '')
     form.boardCode = boards.value.some((b) => b.code === fromQuery) ? fromQuery : boards.value[0]?.code || ''
     // 首次加载：尝试恢复当前版块草稿（watch boardCode 不会在此触发因为初始化赋值）
     tryRestoreDraft(form.boardCode)
   } catch (e) {
-    ElMessage.error(e instanceof Error ? e.message : '版块加载失败')
+    if (editingId.value) {
+      ElMessage.error(e instanceof Error ? e.message : '帖子加载失败')
+      router.replace(`/post/${editingId.value}`)
+    } else {
+      ElMessage.error(e instanceof Error ? e.message : '版块加载失败')
+    }
   }
 })
 
@@ -247,6 +282,16 @@ async function submit() {
   }
   submitting.value = true
   try {
+    if (editingId.value) {
+      await updatePost(editingId.value, {
+        title: form.title.trim(),
+        contentMd: form.contentMd,
+        tags: form.tags,
+      })
+      ElMessage.success('修改已保存')
+      router.push(`/post/${editingId.value}`)
+      return
+    }
     const res = await publishPost({
       boardCode: form.boardCode,
       title: form.title.trim(),
@@ -270,13 +315,21 @@ async function submit() {
   <div class="overflow-hidden rounded-lg border-[0.5px] border-line bg-card">
     <!-- 顶栏：版块选择 + 字数 + 发布（掘金式极简头） -->
     <div class="flex items-center gap-3 border-b-[0.5px] border-line px-5 py-3">
-      <el-select v-model="form.boardCode" placeholder="选择版块" class="w-[180px] max-md:w-full max-md:flex-1">
+      <el-select
+        v-if="!editing"
+        v-model="form.boardCode"
+        placeholder="选择版块"
+        class="w-[180px] max-md:w-full max-md:flex-1"
+      >
         <el-option v-for="b in boards" :key="b.code" :label="b.name" :value="b.code" />
       </el-select>
+      <span v-else class="shrink-0 text-note text-ink-regular">版块：{{ editingBoardName }}</span>
       <span class="ml-auto hidden shrink-0 text-caption text-ink-meta md:inline" aria-live="polite">
         标题 {{ form.title.length }}/100 · 正文 {{ form.contentMd.length }}/20000
       </span>
-      <el-button type="primary" :loading="submitting" @click="submit">发 布</el-button>
+      <el-button type="primary" :loading="submitting" @click="submit">
+        {{ editing ? '保存修改' : '发 布' }}
+      </el-button>
     </div>
 
     <!-- 草稿恢复提示 -->
@@ -312,8 +365,8 @@ async function submit() {
       </el-select>
     </div>
 
-    <!-- 相似帖子推荐（F-FORUM-009） -->
-    <div v-if="similarPosts.length" class="mx-5 mb-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
+    <!-- 相似帖子推荐（F-FORUM-009；编辑模式不查——改的是已有帖，不是找重复提问） -->
+    <div v-if="!editing && similarPosts.length" class="mx-5 mb-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
       <div class="mb-2 flex items-center justify-between">
         <span class="text-sm font-medium text-blue-700">发现相似问题，也许已有答案</span>
         <button type="button" class="text-xs text-gray-400 hover:text-gray-600" @click="similarPosts = []">忽略</button>
@@ -402,7 +455,8 @@ async function submit() {
         </div>
       </div>
       <p class="pb-6 text-caption leading-body text-ink-meta">
-        发布内容须符合社区规范，违规内容将被下架处理 · 预览按 ADR-005 在服务端渲染并做安全净化，与发布后的正文同源
+        <template v-if="editing">编辑只改标题 / 正文 / 标签，版块不可改 · 预览与保存后的正文同源</template>
+        <template v-else>发布内容须符合社区规范，违规内容将被下架处理 · 预览按 ADR-005 在服务端渲染并做安全净化，与发布后的正文同源</template>
       </p>
     </div>
   </div>

@@ -163,6 +163,40 @@ class TagRepositoryImplTest {
         assertThat(capturedPostUpdate().getParamNameValuePairs().values()).contains("Java,MySQL");
     }
 
+    @Test
+    @DisplayName("编辑替换标签：回退旧标签 use_count、删旧关联、清冗余列后再挂新标签")
+    void replaceForPostRollsBackOldLinksAndAttachesNew() {
+        PostTagDO old = new PostTagDO();
+        old.setPostId(POST_ID);
+        old.setTagId(99L);
+        when(postTagMapper.selectList(any(Wrapper.class))).thenReturn(List.of(old));
+        when(tagMapper.selectOne(any(Wrapper.class))).thenReturn(tag(TAG_ID, "Redis"));
+
+        repository.replaceForPost(POST_ID, List.of("Redis"));
+
+        verify(postTagMapper).delete(any(Wrapper.class));
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Wrapper<TagDO>> tagUpdates = ArgumentCaptor.forClass(Wrapper.class);
+        verify(tagMapper, times(2)).update(isNull(), tagUpdates.capture());
+        List<String> tagSqlSets = tagUpdates.getAllValues().stream()
+                .map(w -> ((LambdaUpdateWrapper<TagDO>) w).getSqlSet()).toList();
+        assertThat(tagSqlSets).anySatisfy(set -> assertThat(set).contains("GREATEST(use_count - 1, 0)"));
+        assertThat(tagSqlSets).anySatisfy(set -> assertThat(set).contains("use_count = use_count + 1"));
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Wrapper<PostDO>> postUpdates = ArgumentCaptor.forClass(Wrapper.class);
+        verify(postMapper, times(2)).update(isNull(), postUpdates.capture());
+        List<LambdaUpdateWrapper<PostDO>> postWrappers = postUpdates.getAllValues().stream()
+                .map(w -> (LambdaUpdateWrapper<PostDO>) w).toList();
+        // 第一次把冗余列清空（null），第二次由 attachToPost 回写新标签
+        assertThat(postWrappers.get(0).getSqlSet()).contains("tags");
+        assertThat(postWrappers.get(0).getParamNameValuePairs().values()).containsNull();
+        assertThat(postWrappers.get(1).getParamNameValuePairs().values()).contains("Redis");
+
+        verify(postTagMapper).insert(any(PostTagDO.class));
+    }
+
     // ---------- helpers ----------
 
     private static TagDO tag(long id, String name) {

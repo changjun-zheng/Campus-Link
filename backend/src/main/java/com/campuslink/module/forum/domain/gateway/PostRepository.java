@@ -82,6 +82,20 @@ public interface PostRepository {
     Post save(Post post);
 
     /**
+     * 作者编辑（F-FORUM-007 / CR-128）：定向 UPDATE {@code title / content_md / content_html / cover_url / tags}
+     * （以及由数据库 ON UPDATE 推进的 {@code updated_at}），**条件带 id + {@code is_deleted=0} +
+     * {@code status='PUBLISHED'}**。
+     *
+     * <p>返回是否有行被改：0 行只可能是并发下别人已删 / 已下架——调用方据此返回 3001 而不是把
+     * 一次"看不见的写"当成成功（同 {@link #markDeleted} / {@link #updateStatus} 的纪律）。
+     *
+     * <p>为什么走定向 UPDATE 而非整行回写：整行回写会覆盖读取那一刻的 {@code reply_count} /
+     * {@code like_count} / {@code view_count} / {@code hot_score}，抹掉编辑期间发生的互动与阅读。
+     */
+    boolean revise(Long postId, String title, String contentMd, String contentHtml, String coverUrl,
+                   List<String> tags);
+
+    /**
      * 分配楼层号（设计 §4.1，本 Sprint 唯一并发点）：在同一事务内先把 {@code posts.reply_count} 自增
      * （行锁先行，使同一帖子的并发回帖被串行化），再读回自增后的值作为本次回复的 floor_no。
      *

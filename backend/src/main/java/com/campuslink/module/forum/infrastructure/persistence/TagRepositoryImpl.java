@@ -64,4 +64,23 @@ public class TagRepositoryImpl implements TagRepository {
                 .eq(PostDO::getId, postId)
                 .set(PostDO::getTags, joined.toString()));
     }
+
+    @Override
+    @Transactional(propagation = Propagation.REQUIRED)
+    public void replaceForPost(long postId, List<String> names) {
+        // 先解除旧关联并回退旧标签的使用数（与 attachToPost 的 +1 对称），避免编辑几次后计数只增不减
+        List<PostTagDO> existing = postTagMapper.selectList(
+                new LambdaQueryWrapper<PostTagDO>().eq(PostTagDO::getPostId, postId));
+        for (PostTagDO link : existing) {
+            tagMapper.update(null, new LambdaUpdateWrapper<TagDO>()
+                    .eq(TagDO::getId, link.getTagId())
+                    .setSql("use_count = GREATEST(use_count - 1, 0)"));
+        }
+        postTagMapper.delete(new LambdaQueryWrapper<PostTagDO>().eq(PostTagDO::getPostId, postId));
+        // 空标签时 attachToPost 直接返回，冗余列必须在这里显式清空（否则旧标签仍能被搜索 LIKE 命中）
+        postMapper.update(null, new LambdaUpdateWrapper<com.campuslink.module.forum.infrastructure.persistence.PostDO>()
+                .eq(PostDO::getId, postId)
+                .set(PostDO::getTags, null));
+        attachToPost(postId, names);
+    }
 }

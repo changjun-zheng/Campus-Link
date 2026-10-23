@@ -1,4 +1,4 @@
-import { del, get, post } from './client'
+import { del, get, post, put } from './client'
 
 /** 与后端 web/vo 一一对应（设计 §3），字段名即接口契约，勿改名 */
 export interface BoardVo {
@@ -112,6 +112,25 @@ export const listReplies = (postId: number | string, page = 1, size = 20) =>
 
 export const publishPost = (payload: { boardCode: string; title: string; contentMd: string; tags?: string[] }) =>
   post<{ id: number }>('/posts', payload)
+
+/** 编辑原文（F-FORUM-007 / CR-128）：仅作者可取，含原始 Markdown 与标签；非作者 403 / 4002、不可见 404 / 3001 */
+export interface EditablePostVo {
+  id: number
+  boardCode: string
+  boardName: string
+  title: string
+  contentMd: string
+  tags: string[]
+}
+
+export const getEditablePost = (id: number | string) => get<EditablePostVo>(`/posts/${id}/edit`)
+
+/**
+ * 编辑自己的帖子（F-FORUM-007 / CR-128）：标题 / 正文 / 标签可改，**版块不可改**；
+ * 非作者 403 / 4002、已下架或已删除 404 / 3001、机审命中 422 / 5001。
+ */
+export const updatePost = (id: number | string, payload: { title: string; contentMd: string; tags?: string[] }) =>
+  put<void>(`/posts/${id}`, payload)
 
 /**
  * 删除自己的帖子（仅作者，软删，F-FORUM-006 / CR-065）：

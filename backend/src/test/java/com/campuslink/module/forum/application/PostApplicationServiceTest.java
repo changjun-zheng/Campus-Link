@@ -7,6 +7,7 @@ import static org.mockito.Mockito.mock;
 import com.campuslink.common.result.ResultCode;
 import com.campuslink.module.forum.application.cmd.ForumResults.PublishedPost;
 import com.campuslink.module.forum.application.cmd.PublishPostCommand;
+import com.campuslink.module.forum.application.cmd.UpdatePostCommand;
 import com.campuslink.module.forum.domain.gateway.BoardRepository;
 import com.campuslink.module.forum.domain.gateway.PostRepository;
 import com.campuslink.module.forum.domain.gateway.ReplyRepository;
@@ -30,7 +31,9 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -273,6 +276,91 @@ class PostApplicationServiceTest {
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
 
         verifyNoInteractions(auditService);
+    }
+
+    @Test
+    @DisplayName("编辑：作者本人 → 定向改列、标签整组替换（规范化）、同事务记 POST_UPDATE")
+    void reviseByAuthorUpdatesColumnsTagsAndAudits() {
+        when(postRepository.findById(123L)).thenReturn(Optional.of(questionPost(42L)));
+        when(moderationGateway.moderate(any()))
+                .thenReturn(com.campuslink.module.forum.domain.gateway.ModerationGateway.ModerationVerdict.ok());
+        when(postRepository.revise(eq(123L), anyString(), anyString(), anyString(), isNull(), any()))
+                .thenReturn(true);
+
+        service.revisePost(42L, 123L, new UpdatePostCommand("  新标题  ", "**新正文**", List.of(" Java ")));
+
+        ArgumentCaptor<String> html = ArgumentCaptor.forClass(String.class);
+        verify(postRepository).revise(eq(123L), eq("新标题"), eq("**新正文**"), html.capture(),
+                isNull(), eq(List.of("Java")));
+        assertThat(html.getValue()).contains("<strong>新正文</strong>");
+        verify(tagRepository).replaceForPost(123L, List.of("Java"));
+        verify(auditService).record(eq(42L), eq("POST_UPDATE"), eq("posts"), eq(123L),
+                eq("boardId=1 title=标题"));
+    }
+
+    @Test
+    @DisplayName("编辑：非作者 → 4002，不写、不替换标签、不审计")
+    void reviseByNonAuthorIsForbidden() {
+        when(postRepository.findById(123L)).thenReturn(Optional.of(questionPost(42L)));
+
+        assertThatThrownBy(() -> service.revisePost(777L, 123L,
+                new UpdatePostCommand("新标题", "新正文", null)))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.FORBIDDEN));
+
+        verify(postRepository, never()).revise(any(), any(), any(), any(), any(), any());
+        verifyNoInteractions(tagRepository, auditService);
+    }
+
+    @Test
+    @DisplayName("编辑：已下架（status=REMOVED）→ 3001，作者也不能改被处置内容")
+    void reviseRemovedPostIsNotFound() {
+        when(postRepository.findById(123L)).thenReturn(Optional.of(post(PostStatus.REMOVED, 42L)));
+
+        assertThatThrownBy(() -> service.revisePost(42L, 123L,
+                new UpdatePostCommand("新标题", "新正文", null)))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
+
+        verify(postRepository, never()).revise(any(), any(), any(), any(), any(), any());
+        verifyNoInteractions(tagRepository, auditService);
+    }
+
+    @Test
+    @DisplayName("编辑：标签命中机审 → 5001，且不落库、不替换标签")
+    void moderatedTagBlocksRevision() {
+        when(postRepository.findById(123L)).thenReturn(Optional.of(questionPost(42L)));
+        var ok = com.campuslink.module.forum.domain.gateway.ModerationGateway.ModerationVerdict.ok();
+        when(moderationGateway.moderate("新标题")).thenReturn(ok);
+        when(moderationGateway.moderate("新正文")).thenReturn(ok);
+        when(moderationGateway.moderate("违禁词"))
+                .thenReturn(com.campuslink.module.forum.domain.gateway.ModerationGateway.ModerationVerdict
+                        .blocked("内容包含不允许的词汇"));
+
+        assertThatThrownBy(() -> service.revisePost(42L, 123L,
+                new UpdatePostCommand("新标题", "新正文", List.of("违禁词"))))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.MODERATION_BLOCKED));
+
+        verify(postRepository, never()).revise(any(), any(), any(), any(), any(), any());
+        verifyNoInteractions(tagRepository);
+    }
+
+    @Test
+    @DisplayName("编辑：并发下帖子已被下架 / 删除（0 行受影响）→ 3001，不替换标签、不记审计")
+    void concurrentLosingRevisionIsNotFound() {
+        when(postRepository.findById(123L)).thenReturn(Optional.of(questionPost(42L)));
+        when(moderationGateway.moderate(any()))
+                .thenReturn(com.campuslink.module.forum.domain.gateway.ModerationGateway.ModerationVerdict.ok());
+        when(postRepository.revise(eq(123L), anyString(), anyString(), anyString(), isNull(), any()))
+                .thenReturn(false);
+
+        assertThatThrownBy(() -> service.revisePost(42L, 123L,
+                new UpdatePostCommand("新标题", "新正文", null)))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
+
+        verifyNoInteractions(tagRepository, auditService);
     }
 
     private static Post questionPost(Long authorId) {

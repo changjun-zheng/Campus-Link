@@ -260,6 +260,29 @@ class PostRepositoryImplTest {
     }
 
     @Test
+    @DisplayName("编辑：只 SET 标题 / 正文 / 派生列，WHERE 带「未删 + PUBLISHED」；0 行即并发下架 / 删除")
+    @SuppressWarnings("unchecked")
+    void reviseOnlyTouchesEditableColumnsOnVisiblePost() {
+        when(postMapper.update(any(), any(Wrapper.class))).thenReturn(1);
+
+        boolean revised = repository.revise(POST_ID, "新标题", "新正文", "<p>新正文</p>",
+                "https://img.example/x.png", List.of("Java", "Redis"));
+
+        assertThat(revised).isTrue();
+        LambdaUpdateWrapper<PostDO> wrapper = capturedUpdateWrapper();
+        assertThat(wrapper.getSqlSet())
+                .contains("title", "content_md", "content_html", "cover_url", "tags")
+                .doesNotContain("reply_count", "like_count", "view_count", "hot_score", "status", "board_id");
+        String sql = wrapper.getSqlSegment();
+        assertThat(sql).contains("id", "is_deleted", "status");
+        assertThat(wrapper.getParamNameValuePairs().values())
+                .contains("新标题", "新正文", "<p>新正文</p>", "https://img.example/x.png", "Java,Redis");
+
+        when(postMapper.update(any(), any(Wrapper.class))).thenReturn(0);
+        assertThat(repository.revise(POST_ID, "t", "c", "<p>c</p>", null, List.of())).isFalse();
+    }
+
+    @Test
     @DisplayName("相似帖：replyCount 为 null 回落 0、isAccepted 为 null 视为 false（快照里可空的两列）")
     void findSimilarNormalizesNullableColumns() {
         PostDO row = doRow();

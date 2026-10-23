@@ -7,6 +7,7 @@ import com.campuslink.config.AppProperties;
 import com.campuslink.module.account.application.AccountApplicationService;
 import com.campuslink.module.account.application.FollowApplicationService;
 import com.campuslink.module.forum.application.cmd.ForumResults.AuthorStats;
+import com.campuslink.module.forum.application.cmd.ForumResults.EditablePost;
 import com.campuslink.module.forum.application.cmd.ForumResults.MyPostSummary;
 import com.campuslink.module.forum.application.cmd.ForumResults.MyReplyItem;
 import com.campuslink.module.forum.application.cmd.ForumResults.PostBrief;
@@ -48,7 +49,8 @@ import java.util.stream.Collectors;
 /**
  * 论坛查询用例：版块列表 / 帖子列表 / 帖子详情 / 楼层列表。
  *
- * <p>作者昵称跨上下文取，**只调 account 的 application 服务**（ADR-012），一页一次批量查、不做 N+1（设计 §4.3）。
+ * <p>
+ * 作者昵称跨上下文取，**只调 account 的 application 服务**（ADR-012），一页一次批量查、不做 N+1（设计 §4.3）。
  * 版块是固定 6 行参考数据，一次取全后按 id 取用，不再逐帖查。
  */
 @Service
@@ -90,7 +92,8 @@ public class ForumQueryApplicationService {
      * 帖子列表：boardCode 缺省为全站；sort 缺省 {@code latest}（= 引入热榜之前完全一致的行为），
      * {@code hot} 走 hot_score 倒序（F-FORUM-003）；不存在的版块按资源不存在处理（设计 §3.2）。
      *
-     * <p>sort 非法值 / 空串 → 1001，**不静默归一到 latest**——与同端点族 {@code days} 只受理 7/30/90 的口径一致：
+     * <p>
+     * sort 非法值 / 空串 → 1001，**不静默归一到 latest**——与同端点族 {@code days} 只受理 7/30/90 的口径一致：
      * 静默降级会让调用方以为拿到了热榜、实际拿到的是最新序，这种错法查不出来。
      */
     public PageResult<PostSummary> listPosts(String boardCode, String sort, int page, int size, Long viewerId) {
@@ -110,7 +113,7 @@ public class ForumQueryApplicationService {
      * 分页越界只是翻页放大，关键词过短会退化成全表扫描且 ngram 分不出词）。
      */
     public PageResult<PostSummary> searchPosts(String keyword, String boardCode, Integer days, int page, int size,
-                                               Long viewerId) {
+            Long viewerId) {
         String kw = keyword == null ? "" : keyword.trim();
         if (kw.length() < KEYWORD_MIN_CHARS || kw.length() > KEYWORD_MAX_CHARS) {
             throw new ApiException(ResultCode.INVALID_PARAM);
@@ -127,7 +130,8 @@ public class ForumQueryApplicationService {
 
     /**
      * 帖子详情：contentHtml 为发布时渲染好的 HTML，请求时零渲染（ADR-005）。
-     * viewerId 为 null（匿名）时 likedByMe / favoritedByMe 恒 false——详情端点保持公开，登录态回显是**附加**能力（F-FORUM-005）。
+     * viewerId 为 null（匿名）时 likedByMe / favoritedByMe 恒
+     * false——详情端点保持公开，登录态回显是**附加**能力（F-FORUM-005）。
      */
     public PostDetail postDetail(Long postId, Long viewerId) {
         Post post = requireVisiblePost(postId);
@@ -148,9 +152,27 @@ public class ForumQueryApplicationService {
     }
 
     /**
+     * 编辑原文（F-FORUM-007 / CR-128）：**只给作者本人**——公开详情只下发渲染后的 {@code contentHtml}，
+     * 原始 Markdown 不向任何读者泄露；非作者 → 4002，不存在 / 已删 / 已下架 → 3001（与详情同一可见性门槛）。
+     */
+    public EditablePost editablePost(Long postId, long viewerId) {
+        Post post = requireVisiblePost(postId);
+        if (!post.getAuthorId().equals(viewerId)) {
+            // 资源级授权归业务代码（框架只区分登录 / 未登录，CR-031 口径）
+            throw new ApiException(ResultCode.FORBIDDEN);
+        }
+        Board board = boardsById().get(post.getBoardId());
+        return new EditablePost(post.getId(),
+                board == null ? null : board.getCode(),
+                board == null ? null : board.getName(),
+                post.getTitle(), post.getContentMd(), post.getTags());
+    }
+
+    /**
      * 楼层列表：帖子不可读则不暴露其楼层；viewerId 为 null（匿名）时 likedByMe 恒 false（F-FORUM-005）。
      *
-     * <p>引用摘要（F-009 / CR-085）：被引楼层一页一次批量取（{@code findVisibleByIds}，可见性口径与
+     * <p>
+     * 引用摘要（F-009 / CR-085）：被引楼层一页一次批量取（{@code findVisibleByIds}，可见性口径与
      * 单条版同源），excerpt 走 {@code toPlainSummary} 120 字；被引楼层不可见（下架 / 已删除）即不渲染。
      * 引用作者的昵称**并入同一批** {@code nicknamesOf}（楼层作者 + 被引楼层作者一次取齐），不做 N+1。
      */
@@ -160,8 +182,8 @@ public class ForumQueryApplicationService {
         int pageSize = normalizeSize(size);
         PageResult<Reply> found = replyRepository.findPageByPostId(postId, currentPage, pageSize);
         Map<Long, Reply> quotedVisible = replyRepository.findVisibleByIds(
-                        found.items().stream().map(Reply::getQuotedReplyId)
-                                .filter(Objects::nonNull).collect(Collectors.toSet()))
+                found.items().stream().map(Reply::getQuotedReplyId)
+                        .filter(Objects::nonNull).collect(Collectors.toSet()))
                 .stream().collect(Collectors.toMap(Reply::getId, Function.identity()));
         Set<Long> authorIds = new LinkedHashSet<>(found.items().stream().map(Reply::getAuthorId).toList());
         quotedVisible.values().forEach(quoted -> authorIds.add(quoted.getAuthorId()));
@@ -211,12 +233,14 @@ public class ForumQueryApplicationService {
      * 我的帖子（F-ACC-007b）：本人发帖时间倒序，出参是**只面向作者**的 {@link MyPostSummary}
      * （带 status，故不复用与全站共享的 {@link PostSummary}）。
      *
-     * <p>可见性口径写在仓储侧（{@code PostRepository#findPageByAuthor}：排墓碑、不过滤 status），
+     * <p>
+     * 可见性口径写在仓储侧（{@code PostRepository#findPageByAuthor}：排墓碑、不过滤 status），
      * 本方法不再二次过滤——{@code total} 与 SQL 条件同源是这条链路的硬判据。
      * 与 {@link #listMyFavorites} 的区别也在这：收藏页的驱动分页行是 {@code favorites}，剔除必然致偏；
      * 这里驱动分页的就是 {@code posts} 本身，没有理由不做同源。
      *
-     * <p>不查作者昵称：条目本来就是本人的，跨上下文那一次批量取昵称在此是纯浪费。
+     * <p>
+     * 不查作者昵称：条目本来就是本人的，跨上下文那一次批量取昵称在此是纯浪费。
      */
     public PageResult<MyPostSummary> listMyPosts(long userId, int page, int size) {
         int currentPage = normalizePage(page);
@@ -264,24 +288,29 @@ public class ForumQueryApplicationService {
             return new PageResult<>(List.of(), 0, currentPage, pageSize);
         }
         PageResult<Post> found = postRepository.findPageByAuthors(
-                authorIds.size() > FOLLOWING_FEED_AUTHOR_CAP ? authorIds.subList(0, FOLLOWING_FEED_AUTHOR_CAP) : authorIds,
+                authorIds.size() > FOLLOWING_FEED_AUTHOR_CAP ? authorIds.subList(0, FOLLOWING_FEED_AUTHOR_CAP)
+                        : authorIds,
                 currentPage, pageSize);
         return new PageResult<>(toSummaries(found.items(), userId), found.total(), currentPage, pageSize);
     }
 
     /**
      * 他人主页的公开帖子分页（{@code GET /api/v1/users/{id}/posts}）：可见性口径与全站列表
-     * **完全一致**（{@code status='PUBLISHED' AND is_deleted=0}），出参也复用 {@link PostSummary}——
+     * **完全一致**（{@code status='PUBLISHED' AND is_deleted=0}），出参也复用
+     * {@link PostSummary}——
      * 于是主页那份时间线与首页 / 版块 / 搜索里的同一条帖子长得一样，前端得以复用同一个列表项组件。
      *
-     * <p>⚠️ 与 {@link #listMyPosts} 的口径**相反**，别弄混：那条是作者本人视角（下架的也要露出、带 status），
+     * <p>
+     * ⚠️ 与 {@link #listMyPosts} 的口径**相反**，别弄混：那条是作者本人视角（下架的也要露出、带 status），
      * 本条是路人视角（下架的一律不出现）。两者分别走仓储的 {@code findPageByAuthor}（单数）与
      * {@code findPageByAuthors}（复数），接错一个就是把平台已处置的内容重新公开。
      *
-     * <p>复用 {@code findPageByAuthors}（单元素集合）而不新写一条 SQL：它的 WHERE 与
+     * <p>
+     * 复用 {@code findPageByAuthors}（单元素集合）而不新写一条 SQL：它的 WHERE 与
      * {@code countVisibleByAuthor} 共用同一个构造点，资料卡的「帖子 N」与这份列表因此同源。
      *
-     * <p>作者存在性在本方法里过一道门（而不是交给控制器）：不存在 / 已注销 → 2007 / 404，
+     * <p>
+     * 作者存在性在本方法里过一道门（而不是交给控制器）：不存在 / 已注销 → 2007 / 404，
      * 不对外区分。跳上下文只调 account 的 application（ADR-012 / 守护测试 G4）。
      */
     public PageResult<PostSummary> listVisiblePostsByAuthor(long authorId, int page, int size, Long viewerId) {
@@ -295,7 +324,8 @@ public class ForumQueryApplicationService {
     /**
      * 作者可见帖子数（他人主页资料卡的「帖子 N」）。
      *
-     * <p>不做作者存在性校验：唯一调用方（account 的 {@code UserProfileApplicationService}）已先过一道
+     * <p>
+     * 不做作者存在性校验：唯一调用方（account 的 {@code UserProfileApplicationService}）已先过一道
      * 同一口径的门，在这里再查一次 users 是纯浪费。把它接到其它调用方时需自己补上那道门。
      */
     public long countVisiblePostsByAuthor(long authorId) {
@@ -306,11 +336,13 @@ public class ForumQueryApplicationService {
      * 作者三个对外计数（他人主页资料卡，CR-104）：**一次**取齐，不让 account 侧为三个数字来回调三次——
      * 三次调用等于允许「帖子 12 / 获赞 30 / 被采纳 3」来自三个不同时刻，同一张卡上的数会对不上。
      *
-     * <p>三个口径全部限定「可见内容」，逐条与 {@code AuthorStats} 的 javadoc 对应；
+     * <p>
+     * 三个口径全部限定「可见内容」，逐条与 {@code AuthorStats} 的 javadoc 对应；
      * {@code likeCount} 是 D-1 发起人定下的「帖子获赞 + 楼层获赞之和」，两次 SUM 相加，
      * 其中楼层侧要 JOIN 父帖（下架帖的楼层赞不计入）。
      *
-     * <p>与 {@link #countVisiblePostsByAuthor} 一样**不做作者存在性校验**：唯一调用方
+     * <p>
+     * 与 {@link #countVisiblePostsByAuthor} 一样**不做作者存在性校验**：唯一调用方
      * （account 的 {@code UserProfileApplicationService}）已先过同一口径的门。
      * 保留 {@link #countVisiblePostsByAuthor} 不删：它是本方法里「帖子 N」的单一取数点，
      * 也是既有单测断言该口径的那把把手。
@@ -327,12 +359,14 @@ public class ForumQueryApplicationService {
      * 他人主页的公开楼层时间线（{@code GET /api/v1/users/{id}/replies}，CR-104）：
      * 楼层与父帖**双可见**（{@code status='PUBLISHED' AND is_deleted=0}）才出现，时间倒序分页。
      *
-     * <p>⚠️ 与 {@link #listMyReplies} 的口径**相反**，别弄混：那条是作者本人视角（自己哪一层被下架要看得见、
+     * <p>
+     * ⚠️ 与 {@link #listMyReplies} 的口径**相反**，别弄混：那条是作者本人视角（自己哪一层被下架要看得见、
      * 故带 {@code status}），本条是路人视角（被处置的楼层不得再次公开，故出参里没有 {@code status}）。
      * 两条分别走仓储的 {@code findPageByAuthor} 与 {@code findPublicPageByAuthor}，
      * 接错一个就是把平台已处置内容重新公开——这也是本方法不复用 {@code MyReplyItem} 的原因。
      *
-     * <p>作者存在性在本方法里过一道门（同 {@link #listVisiblePostsByAuthor}）：不存在 / 已注销 → 2007 / 404，
+     * <p>
+     * 作者存在性在本方法里过一道门（同 {@link #listVisiblePostsByAuthor}）：不存在 / 已注销 → 2007 / 404，
      * 对外不区分。
      */
     public PageResult<PublicReplyItem> listPublicRepliesByAuthor(long authorId, int page, int size) {
@@ -350,11 +384,13 @@ public class ForumQueryApplicationService {
     /**
      * 帖子标题批量读（F-SOC-001 通知读时组装）：只回**可见**帖子的标题，读不到的 id 不出现在结果中。
      *
-     * <p>过滤条件与 {@link #postDetail} 同源（{@link Post#isVisible()}）——CR-066 之前这里只排墓碑行
+     * <p>
+     * 过滤条件与 {@link #postDetail} 同源（{@link Post#isVisible()}）——CR-066 之前这里只排墓碑行
      * （{@code findByIds} 的 {@code is_deleted}）不看 status，于是"帖子被管理员下架"后**标题仍留在
      * 别人的通知里**、点进去才 404。标题属内容本身，内容不可见时不该继续外泄。
      *
-     * <p>本方法与 {@link #replyBriefsOf} 是**只读摘要出口**，存在的理由是同一条架构规则：
+     * <p>
+     * 本方法与 {@link #replyBriefsOf} 是**只读摘要出口**，存在的理由是同一条架构规则：
      * notification 上下文不得引用 forum 的 domain 类型（守护测试 G4），跨上下文只能拿到 application 层的载体。
      */
     public Map<Long, PostBrief> postBriefsOf(Collection<Long> postIds) {
@@ -366,24 +402,34 @@ public class ForumQueryApplicationService {
     /**
      * 楼层归属批量读（同上）：回所属帖子与楼层号，供通知条目跳转定位。
      *
-     * <p>与 {@link #postBriefsOf} 的差别是刻意的：这里**不看 status**（见
+     * <p>
+     * 与 {@link #postBriefsOf} 的差别是刻意的：这里**不看 status**（见
      * {@code ReplyRepository#findByIds}），因为一条已下架楼层仍需要"在第几楼"这个落点；
      * 而条目能否点击由帖子侧摘要是否命中决定（帖子下架 / 已删 → 整条不可点）。
      */
     public Map<Long, ReplyBrief> replyBriefsOf(Collection<Long> replyIds) {
         return replyRepository.findByIds(replyIds).stream()
-                .collect(Collectors.toMap(Reply::getId, reply -> new ReplyBrief(reply.getPostId(), reply.getFloorNo())));
+                .collect(
+                        Collectors.toMap(Reply::getId, reply -> new ReplyBrief(reply.getPostId(), reply.getFloorNo())));
     }
 
     /**
      * Similar-post recommendation (publish-time assist, silent degradation):
-     * returns an empty list when the feature is disabled, the title is too short, or the Q&A board is missing.
-     * Title is trimmed before length checks; exceeding {@value #SIMILAR_TITLE_MAX_CHARS} chars throws 1001.
+     * returns an empty list when the feature is disabled, the title is too short,
+     * or the Q&A board is missing.
+     * Title is trimmed before length checks; exceeding
+     * {@value #SIMILAR_TITLE_MAX_CHARS} chars throws 1001.
      *
-     * <p>CR-077 Critical #1: trim + explicit max-length validation replaces the non-functional {@code @Size} on
-     * {@code @RequestParam} (which would trigger an unhandled {@code HandlerMethodValidationException} → 500).
-     * <p>CR-077 Warning #7: no longer calls {@code toSummaries()} — constructs the narrow
-     * {@link SimilarPostResult} directly from the board already fetched and the row data.
+     * <p>
+     * CR-077 Critical #1: trim + explicit max-length validation replaces the
+     * non-functional {@code @Size} on
+     * {@code @RequestParam} (which would trigger an unhandled
+     * {@code HandlerMethodValidationException} → 500).
+     * <p>
+     * CR-077 Warning #7: no longer calls {@code toSummaries()} — constructs the
+     * narrow
+     * {@link SimilarPostResult} directly from the board already fetched and the row
+     * data.
      */
     public List<SimilarPostResult> findSimilarPosts(String title, Long currentUserId) {
         AppProperties.Ai.Similar cfg = appProperties.getAi().getSimilar();
@@ -434,7 +480,9 @@ public class ForumQueryApplicationService {
      * 列表 / 收藏 / 搜索 / 关注 Feed / 他人主页五处共用的摘要映射：版块名、作者昵称、已赞集合**各自一页一次批量解析**
      * （设计 §4.3，不做 N+1）。
      *
-     * <p>{@code viewerId} 为 null（匿名）时 likedByMe 恒 false 且**一次仓储都不调**——与 {@link #postDetail}
+     * <p>
+     * {@code viewerId} 为 null（匿名）时 likedByMe 恒 false 且**一次仓储都不调**——与
+     * {@link #postDetail}
      * 同一口径（F-FORUM-005：公开可读、登录态回显是附加能力）。[CR-080] 新增此参数，是为了让列表能就地显示
      * "我赞没赞过"，而不必为每行发一次请求。
      */
@@ -454,7 +502,8 @@ public class ForumQueryApplicationService {
                             board == null ? null : board.getName(),
                             post.getTitle(),
                             nicknames.getOrDefault(post.getAuthorId(), NICKNAME_FALLBACK),
-                            post.getReplyCount(), post.getLikeCount(), post.getViewCount(), post.getCoverUrl(), post.getTags(),
+                            post.getReplyCount(), post.getLikeCount(), post.getViewCount(), post.getCoverUrl(),
+                            post.getTags(),
                             markdownRenderer.toPlainSummary(post.getContentMd(), SUMMARY_MAX_CHARS),
                             post.getCreatedAt(), post.isAccepted(), likedIds.contains(post.getId()));
                 })

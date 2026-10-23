@@ -7,6 +7,7 @@ import com.campuslink.common.result.ResultCode;
 import com.campuslink.module.account.application.AccountApplicationService;
 import com.campuslink.module.forum.application.cmd.ForumResults.PublishedPost;
 import com.campuslink.module.forum.application.cmd.PublishPostCommand;
+import com.campuslink.module.forum.application.cmd.UpdatePostCommand;
 import com.campuslink.module.forum.domain.exception.BoardNotFoundException;
 import com.campuslink.module.forum.domain.exception.PostNotFoundException;
 import com.campuslink.module.forum.domain.gateway.BoardRepository;
@@ -150,5 +151,44 @@ public class PostApplicationService {
             title = title.substring(0, AUDIT_TITLE_MAX_CHARS) + "…";
         }
         return "boardId=%s title=%s".formatted(post.getBoardId(), title);
+    }
+
+    /**
+     * 作者编辑自己的帖子（F-FORUM-007 / CR-128）：标题 / 正文 / 标签可改，**版块不可改**。
+     *
+     * <p>
+     * 可见性核验与删除同一条门槛（不存在 / 已删除 / 已下架 → 3001，不区分原因、防按 id 探测）；
+     * 非作者 → 4002。机审口径与发帖逐字相同：标题、正文、每条标签各审一次（漏一处就是一个可绕过出口），
+     * contentHtml / coverUrl 与发帖同源重算，标签走 replaceForPost 整组替换。
+     *
+     * <p>
+     * 写入条件带 {@code is_deleted=0 AND status='PUBLISHED'}：读取后到写入之间若被并发下架 / 删除，
+     * UPDATE 影响 0 行 → 3001，不把一次"看不见的写"当成成功；审计与写入同事务。
+     */
+    @Transactional
+    public void revisePost(Long authorId, long postId, UpdatePostCommand command) {
+        accountApplicationService.assertActiveForContent(authorId);
+        Post post = postRepository.findById(postId)
+                .filter(Post::isVisible)
+                .orElseThrow(PostNotFoundException::new);
+        if (!post.getAuthorId().equals(authorId)) {
+            // 资源级授权归业务代码（框架只区分登录 / 未登录，CR-031 口径）
+            throw new ApiException(ResultCode.FORBIDDEN);
+        }
+        List<String> tags = TagNames.normalize(command.tags(), 5);
+        moderateOrThrow(command.title());
+        moderateOrThrow(command.contentMd());
+        for (String tag : tags) {
+            moderateOrThrow(tag);
+        }
+        Post revised = post.revise(command.title(), command.contentMd(),
+                markdownRenderer.render(command.contentMd()),
+                CoverImages.firstHttpsImage(command.contentMd()), tags);
+        if (!postRepository.revise(postId, revised.getTitle(), revised.getContentMd(),
+                revised.getContentHtml(), revised.getCoverUrl(), tags)) {
+            throw new PostNotFoundException();
+        }
+        tagRepository.replaceForPost(postId, tags);
+        auditService.record(authorId, "POST_UPDATE", "posts", postId, auditDetail(post));
     }
 }
