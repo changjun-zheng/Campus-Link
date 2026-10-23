@@ -13,6 +13,7 @@ import {
 import { previewMarkdown } from '../api/markdown'
 import { useNarrowScreen } from '../composables/useNarrowScreen'
 import { useDraft } from '../composables/useDraft'
+import { vHighlight } from '../utils/highlight'
 import SvgIcon from '../components/SvgIcon.vue'
 
 const route = useRoute()

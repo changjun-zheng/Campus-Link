@@ -91,8 +91,9 @@ async function highlightIn(el: HTMLElement): Promise<void> {
   const hljs = await core()
   await Promise.all([...new Set(wanted.values())].map((name) => ensureLanguage(hljs, name)))
   for (const [block] of wanted) {
-    // v-html 每次替换整棵子树，元素本身是新的；这里只防同一元素被重复处理
-    block.dataset.highlighted = 'yes'
+    // 不要预写 dataset.highlighted：highlight.js 的 highlightElement 见到该标记会直接跳过
+    // （控制台只留一行 "Element previously highlighted"，页面永远不着色——CR-128 浏览器验收抓到的真实缺陷）。
+    // 标记由 highlightElement 自己写；上面的选择器已排除 [data-highlighted]，不会重复处理。
     hljs.highlightElement(block)
   }
 }
