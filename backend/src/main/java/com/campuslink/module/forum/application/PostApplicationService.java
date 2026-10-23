@@ -70,7 +70,9 @@ public class PostApplicationService {
         accountApplicationService.assertActiveForContent(authorId);
         Board board = boardRepository.findByCode(command.boardCode())
                 .orElseThrow(BoardNotFoundException::new);
-        // 机审放在版块校验之后：无效请求（版块不存在）先给出准确错误，而不是被 5002 抢占语义
+        // 机审放在版块校验之后：无效请求（版块不存在）先给出准确错误，而不是被 5002 抢占语义。
+        // 标题与正文是两段独立用户文本，必须各审一次——只审正文会让违禁词从标题绕过（CR-124）
+        moderateOrThrow(command.title());
         moderateOrThrow(command.contentMd());
         // 封面（CR-074 外链方案）：发布时从正文提取首张 https 图一次落库，读时零成本；无图即 null
         List<String> tags = TagNames.normalize(command.tags(), 5);

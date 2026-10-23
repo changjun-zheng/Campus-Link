@@ -1114,6 +1114,26 @@
               }
             }
           },
+          "422": {
+            "description": "内容未通过安全审核（5001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "内容审核服务暂不可用，发布已临时关闭（5002）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
           "500": {
             "description": "系统繁忙，请稍后再试（9999）",
             "content": {
@@ -1283,6 +1303,26 @@
           },
           "403": {
             "description": "账号已被封禁（2006）；账号注销中，请先撤销注销（2013）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "内容未通过安全审核（5001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "内容审核服务暂不可用，发布已临时关闭（5002）",
             "content": {
               "application/json": {
                 "schema": {

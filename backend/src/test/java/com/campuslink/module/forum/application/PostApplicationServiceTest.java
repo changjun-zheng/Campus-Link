@@ -100,6 +100,24 @@ class PostApplicationServiceTest {
     }
 
     @Test
+    @DisplayName("标题命中机审 → 5001，且不落库、正文机审不再触达")
+    void moderatedTitleBlocksBeforeContent() {
+        when(boardRepository.findByCode("qna"))
+                .thenReturn(Optional.of(board(1L, "qna", BoardType.QUESTION)));
+        when(moderationGateway.moderate("违规标题"))
+                .thenReturn(com.campuslink.module.forum.domain.gateway.ModerationGateway.ModerationVerdict
+                        .blocked("内容包含不允许的词汇"));
+
+        assertThatThrownBy(() -> service.publish(42L,
+                new PublishPostCommand("qna", "违规标题", "正常正文", null)))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.MODERATION_BLOCKED));
+
+        verify(postRepository, never()).save(any());
+        verify(moderationGateway, never()).moderate("正常正文");
+    }
+
+    @Test
     @DisplayName("未知 / 停用的版块 code → 3001，不落库")
     void unknownBoardIsNotFound() {
         when(boardRepository.findByCode("nope")).thenReturn(Optional.empty());

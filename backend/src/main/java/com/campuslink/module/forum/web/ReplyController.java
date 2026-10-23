@@ -63,7 +63,7 @@ public class ReplyController {
     @Operation(summary = "回帖（需登录）：返回本次楼层号；可带 quotedReplyId 引用同帖楼层（F-009 / CR-085），目标不可见或跨帖一律 404 / 3001")
     @SecurityRequirement(name = ApiDocs.BEARER_AUTH)
     @ErrorCodes({ResultCode.NOT_LOGGED_IN, ResultCode.NOT_FOUND, ResultCode.USER_BANNED,
-            ResultCode.ACCOUNT_DEACTIVATED})
+            ResultCode.ACCOUNT_DEACTIVATED, ResultCode.MODERATION_BLOCKED, ResultCode.MODERATION_UNAVAILABLE})
     @PostMapping
     public ApiResponse<PublishedReply> reply(@PathVariable("postId") Long postId,
                                              @Valid @RequestBody PublishReplyCommand command,
