@@ -14,7 +14,9 @@ import java.util.List;
 
 /**
  * 注销匿名化定时任务（F-ACC-003 / CR-082）：每小时扫一次「冷静期已满且未撤销」的注销账号，
- * 清除实名信息（email / phone / 学号与头像）、昵称置占位、anonymized = true，并逐条审计。
+ * 清除实名信息与展示资料（email / phone / 学号 / 头像 / bio / major / school / grade）、
+ * 昵称置占位、anonymized = true，并逐条审计（CR-127 补齐展示资料四列——只清实名信息会让
+ * 匿名化账号的主页继续展示原 bio / major）。
  *
  * <p>幂等：任务只挑 anonymized = 0 的行，重复执行无二次写。MVP 单实例部署，未加分布式锁
  * （热榜任务的 Redis 锁模式可复用，多实例时再引入——如实登记，实施方案 §2）。

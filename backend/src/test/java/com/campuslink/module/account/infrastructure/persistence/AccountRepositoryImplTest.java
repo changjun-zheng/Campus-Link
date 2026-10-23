@@ -159,7 +159,7 @@ class AccountRepositoryImplTest {
     }
 
     @Test
-    @DisplayName("匿名化：九个敏感 / 展示列一并置空并写 anonymized=true（只清可见数据，不动 status）")
+    @DisplayName("匿名化：十三个敏感 / 展示列一并置空并写 anonymized=true（只清可见数据，不动 status）")
     @SuppressWarnings("unchecked")
     void anonymizeClearsAllSensitiveColumns() {
         repository.anonymize(USER_ID, "已注销用户");
@@ -170,7 +170,8 @@ class AccountRepositoryImplTest {
 
         assertThat(update.getSqlSet())
                 .contains("nickname", "email_enc", "email_hash", "phone_enc", "phone_hash",
-                        "student_id_enc", "student_id_hash", "avatar_url", "anonymized")
+                        "student_id_enc", "student_id_hash", "avatar_url",
+                        "bio", "major", "school", "grade", "anonymized")
                 .doesNotContain("status", "delete_at", "role");
         assertThat(update.getParamNameValuePairs().values()).contains("已注销用户", true);
     }

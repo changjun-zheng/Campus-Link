@@ -142,6 +142,11 @@ public class AccountRepositoryImpl implements AccountRepository {
                 .set(UserDO::getStudentIdEnc, null)
                 .set(UserDO::getStudentIdHash, null)
                 .set(UserDO::getAvatarUrl, null)
+                // 展示资料同属个人信息：不清 bio / major 会让匿名化账号的主页继续泄露本人信息（CR-127）
+                .set(UserDO::getBio, null)
+                .set(UserDO::getMajor, null)
+                .set(UserDO::getSchool, null)
+                .set(UserDO::getGrade, null)
                 .set(UserDO::getAnonymized, true));
     }
 
