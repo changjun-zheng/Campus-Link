@@ -1,8 +1,15 @@
 import { get, post, put } from './client'
 import type { PageVo } from './forum'
 
-/** 通知类型码，与后端 notifications.type 落库值一致（quote 尚未实现，故不在此列出） */
-export type NotificationType = 'reply' | 'like' | 'favorite' | 'accept'
+/** 通知类型码，与后端 notifications.type 落库值一致（CR-126 起含内容处置两类） */
+export type NotificationType =
+  | 'reply'
+  | 'quote'
+  | 'like'
+  | 'favorite'
+  | 'accept'
+  | 'content_removed'
+  | 'content_restored'
 
 /**
  * 与后端 web/vo/NotificationVo 一一对应（F-SOC-001）。

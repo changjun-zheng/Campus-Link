@@ -88,6 +88,33 @@ public class NotificationApplicationService {
         notify(NotificationType.FAVORITE, favoriterId, NotificationTargetType.POST, postId, postAuthorId);
     }
 
+    /**
+     * 帖子被平台下架（F-SAFE-003 / CR-126）：actor 是处置管理员、接收人是内容作者。
+     * 自触发抑制沿用 {@code notify()} 兜底（管理员恰好是作者时不打扰自己）。
+     *
+     * <p>四个入口按"帖子 / 楼层 × 下架 / 恢复"拆开，而不是让 forum 侧传
+     * {@link NotificationTargetType}：跨上下文只允许调用 application 服务，传对方 domain 类型
+     * 会被 G4 拦下（ArchitectureGuardTest 实测）。
+     */
+    public void contentRemovedPost(long operatorId, long postId, long authorId) {
+        notify(NotificationType.CONTENT_REMOVED, operatorId, NotificationTargetType.POST, postId, authorId);
+    }
+
+    /** 楼层被平台下架（F-SAFE-003 / CR-126） */
+    public void contentRemovedReply(long operatorId, long replyId, long authorId) {
+        notify(NotificationType.CONTENT_REMOVED, operatorId, NotificationTargetType.REPLY, replyId, authorId);
+    }
+
+    /** 帖子被平台恢复（F-SAFE-003 / CR-126） */
+    public void contentRestoredPost(long operatorId, long postId, long authorId) {
+        notify(NotificationType.CONTENT_RESTORED, operatorId, NotificationTargetType.POST, postId, authorId);
+    }
+
+    /** 楼层被平台恢复（F-SAFE-003 / CR-126） */
+    public void contentRestoredReply(long operatorId, long replyId, long authorId) {
+        notify(NotificationType.CONTENT_RESTORED, operatorId, NotificationTargetType.REPLY, replyId, authorId);
+    }
+
     /** 我的通知分页；{@code unread} 为 null 不限、true 只未读、false 只已读 */
     public PageResult<NotificationItem> list(long userId, Boolean unread, int page, int size) {
         int currentPage = Math.max(page, 1);

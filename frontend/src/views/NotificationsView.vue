@@ -88,7 +88,18 @@ function actionOf(n: NotificationVo): string {
   if (n.type === 'quote') return '引用了你的回复'
   if (n.type === 'accept') return '采纳了你的回复'
   if (n.type === 'favorite') return '收藏了你的帖子'
+  if (n.type === 'content_removed') {
+    return n.targetType === 'POST' ? '下架了你的帖子' : '下架了你的回复'
+  }
+  if (n.type === 'content_restored') {
+    return n.targetType === 'POST' ? '恢复了你的帖子' : '恢复了你的回复'
+  }
   return n.targetType === 'POST' ? '点赞了你的帖子' : '点赞了你的回复'
+}
+
+/** 内容处置通知的主体是平台，不展示管理员昵称（其余类型展示触发人） */
+function actorOf(n: NotificationVo): string {
+  return n.type === 'content_removed' || n.type === 'content_restored' ? '平台' : n.actorNickname
 }
 
 /** 楼层类通知带 floor=<replyId> 让详情页定位楼层；原帖已删（服务端不下发 postId）时不给跳转 */
@@ -109,7 +120,7 @@ loadNotifications()
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div>
         <h2 class="text-title-lg font-medium text-ink">通知中心</h2>
-        <p class="mt-1.5 text-note text-ink-meta">回复、引用、采纳、点赞与收藏的站内提醒，仅本人可见</p>
+        <p class="mt-1.5 text-note text-ink-meta">回复、引用、采纳、点赞、收藏与内容处置的站内提醒，仅本人可见</p>
       </div>
       <div class="flex items-center gap-3">
         <el-radio-group v-model="onlyUnread" @change="onFilterChange">
@@ -169,7 +180,7 @@ loadNotifications()
           />
           <div class="min-w-0 flex-1">
             <p class="text-body text-ink-regular">
-              <span class="font-medium text-ink">{{ n.actorNickname }}</span>
+              <span class="font-medium text-ink">{{ actorOf(n) }}</span>
               {{ actionOf(n) }}
               <template v-if="n.floorNo">#{{ n.floorNo }} 楼</template>
             </p>

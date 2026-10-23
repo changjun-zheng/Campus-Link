@@ -9,7 +9,9 @@ import com.campuslink.module.forum.domain.gateway.ReplyRepository;
 import com.campuslink.module.forum.domain.model.BoardType;
 import com.campuslink.module.forum.domain.model.Post;
 import com.campuslink.module.forum.domain.model.PostStatus;
+import com.campuslink.module.forum.domain.model.Reply;
 import com.campuslink.module.forum.domain.model.ReplyStatus;
+import com.campuslink.module.notification.application.NotificationApplicationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,6 +20,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -33,9 +36,11 @@ import static org.mockito.Mockito.when;
 /**
  * 内容处置用例（F-SAFE-003 / CR-066）：状态迁移、幂等零审计、并发失败出口、审计口径。
  *
- * <p>本类最要紧的一组断言是**零副作用**：同状态重复调用与"条件更新 0 行"都必须一条审计都不写
+ * <p>
+ * 本类最要紧的一组断言是**零副作用**：同状态重复调用与"条件更新 0 行"都必须一条审计都不写
  * （审计是"谁在何时处置了什么"的账本，重复记账即失真）；另一组是**处置不碰作者墓碑**——
- * 断言 detail 里没有 is_deleted 痕迹做不到，改为断言只调 {@code updateStatus}、不调 {@code markDeleted}。
+ * 断言 detail 里没有 is_deleted 痕迹做不到，改为断言只调 {@code updateStatus}、不调
+ * {@code markDeleted}。
  */
 @ExtendWith(MockitoExtension.class)
 class ContentModerationApplicationServiceTest {
@@ -50,12 +55,15 @@ class ContentModerationApplicationServiceTest {
     private ReplyRepository replyRepository;
     @Mock
     private AuditService auditService;
+    @Mock
+    private NotificationApplicationService notificationService;
 
     private ContentModerationApplicationService service;
 
     @BeforeEach
     void setUp() {
-        service = new ContentModerationApplicationService(postRepository, replyRepository, auditService);
+        service = new ContentModerationApplicationService(postRepository, replyRepository, auditService,
+                notificationService);
     }
 
     @Test
@@ -72,6 +80,7 @@ class ContentModerationApplicationServiceTest {
                 .isEqualTo("from=PUBLISHED to=REMOVED reason=广告内容 boardId=1 title=标题");
         // 处置只写 status，绝不写作者墓碑（两列两义，删与下架必须能分开追问）
         verify(postRepository, never()).markDeleted(anyLong());
+        verify(notificationService).contentRemovedPost(OPERATOR, POST_ID, 42L);
     }
 
     @Test
@@ -84,6 +93,7 @@ class ContentModerationApplicationServiceTest {
 
         verify(auditService).record(eq(OPERATOR), eq("POST_RESTORE"), eq("posts"), eq(POST_ID),
                 eq("from=REMOVED to=PUBLISHED reason=误判已复核 boardId=1 title=标题"));
+        verify(notificationService).contentRestoredPost(OPERATOR, POST_ID, 42L);
     }
 
     @Test
@@ -95,6 +105,7 @@ class ContentModerationApplicationServiceTest {
 
         verify(postRepository, never()).updateStatus(any(), any(), any());
         verifyNoInteractions(auditService);
+        verifyNoInteractions(notificationService);
     }
 
     @Test
@@ -139,10 +150,11 @@ class ContentModerationApplicationServiceTest {
     }
 
     @Test
-    @DisplayName("楼层：PUBLISHED → REMOVED 走窄读 + 定向 UPDATE，记 REPLY_REMOVE")
+    @DisplayName("楼层：PUBLISHED → REMOVED 走窄读 + 定向 UPDATE，记 REPLY_REMOVE 并通知作者")
     void removeReplyWritesStatusAndAudit() {
         when(replyRepository.findStatusById(REPLY_ID)).thenReturn(Optional.of(ReplyStatus.PUBLISHED));
         when(replyRepository.updateStatus(REPLY_ID, ReplyStatus.REMOVED, ReplyStatus.PUBLISHED)).thenReturn(true);
+        when(replyRepository.findByIds(List.of(REPLY_ID))).thenReturn(List.of(reply(42L)));
 
         service.moderateReply(OPERATOR, REPLY_ID, command("REMOVED", "人身攻击"));
 
@@ -151,18 +163,21 @@ class ContentModerationApplicationServiceTest {
         // 窄读而非 findVisibleById：恢复场景必须读得到 REMOVED，故不许退化成"不可见即不存在"
         verify(replyRepository, never()).findVisibleById(any());
         verify(replyRepository, never()).adjustLikeCount(any(), eq(1));
+        verify(notificationService).contentRemovedReply(OPERATOR, REPLY_ID, 42L);
     }
 
     @Test
-    @DisplayName("楼层：REMOVED → PUBLISHED 记 REPLY_RESTORE")
+    @DisplayName("楼层：REMOVED → PUBLISHED 记 REPLY_RESTORE 并通知作者")
     void restoreReplyAudits() {
         when(replyRepository.findStatusById(REPLY_ID)).thenReturn(Optional.of(ReplyStatus.REMOVED));
         when(replyRepository.updateStatus(REPLY_ID, ReplyStatus.PUBLISHED, ReplyStatus.REMOVED)).thenReturn(true);
+        when(replyRepository.findByIds(List.of(REPLY_ID))).thenReturn(List.of(reply(42L)));
 
         service.moderateReply(OPERATOR, REPLY_ID, command("PUBLISHED", null));
 
         verify(auditService).record(OPERATOR, "REPLY_RESTORE", "replies", REPLY_ID,
                 "from=REMOVED to=PUBLISHED reason=-");
+        verify(notificationService).contentRestoredReply(OPERATOR, REPLY_ID, 42L);
     }
 
     @Test
@@ -174,6 +189,7 @@ class ContentModerationApplicationServiceTest {
 
         verify(replyRepository, never()).updateStatus(any(), any(), any());
         verifyNoInteractions(auditService);
+        verifyNoInteractions(notificationService);
     }
 
     @Test
@@ -200,6 +216,10 @@ class ContentModerationApplicationServiceTest {
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
 
         verifyNoInteractions(auditService);
+    }
+
+    private static Reply reply(long authorId) {
+        return Reply.rehydrate(REPLY_ID, POST_ID, authorId, 1, "正文", "<p>正文</p>", null, false, 0, null);
     }
 
     private static Post post(PostStatus status) {
