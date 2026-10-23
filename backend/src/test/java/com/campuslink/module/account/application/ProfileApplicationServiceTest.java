@@ -72,10 +72,26 @@ class ProfileApplicationServiceTest {
         void updateProfileRejectsModeratedBioBeforeReadingAccount() {
                 when(rateLimitGateway.hitAndCount(anyString(), any())).thenReturn(1L);
                 doThrow(new ApiException(ResultCode.MODERATION_BLOCKED))
-                                .when(moderationService).ensureAllowed(any(), eq("签名含违禁词"));
+                                .when(moderationService).ensureAllowed(any(), any(), eq("签名含违禁词"));
 
                 assertThatThrownBy(() -> service.updateProfile(USER_ID,
                                 new UpdateProfileCommand(null, null, "签名含违禁词")))
+                                .isInstanceOfSatisfying(ApiException.class,
+                                                e -> assertThat(e.getCode()).isEqualTo(ResultCode.MODERATION_BLOCKED));
+
+                verify(accountRepository, never()).findById(anyLong());
+                verify(auditService, never()).record(anyLong(), anyString(), anyString(), anyLong(), anyString());
+        }
+
+        @Test
+        @DisplayName("专业未通过机审 → 5001，且不读库、不写 UPDATE")
+        void updateProfileRejectsModeratedMajorBeforeReadingAccount() {
+                when(rateLimitGateway.hitAndCount(anyString(), any())).thenReturn(1L);
+                doThrow(new ApiException(ResultCode.MODERATION_BLOCKED))
+                                .when(moderationService).ensureAllowed(any(), eq("违规专业"), any());
+
+                assertThatThrownBy(() -> service.updateProfile(USER_ID,
+                                new UpdateProfileCommand(null, "违规专业", null)))
                                 .isInstanceOfSatisfying(ApiException.class,
                                                 e -> assertThat(e.getCode()).isEqualTo(ResultCode.MODERATION_BLOCKED));
 

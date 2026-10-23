@@ -53,7 +53,7 @@ public final class AccountCommands {
          */
         public record UpdateProfileCommand(
                         @Size(min = FieldRules.NICKNAME_MIN_CHARS, max = FieldRules.NICKNAME_MAX_CHARS, message = "昵称长度 2~32") @Pattern(regexp = FieldRules.TEXT_ALLOWED_PATTERN, message = "昵称含不允许的字符") @Pattern(regexp = FieldRules.CONTACT_BANNED_PATTERN, message = "昵称不得包含网址或站外联系方式") @Pattern(regexp = FieldRules.NON_BLANK_PATTERN, message = "昵称不能为空白") String nickname,
-                        @Size(max = FieldRules.MAJOR_MAX_CHARS, message = "专业长度不超过 64") @Pattern(regexp = FieldRules.TEXT_ALLOWED_PATTERN, message = "专业含不允许的字符") String major,
+                        @Size(max = FieldRules.MAJOR_MAX_CHARS, message = "专业长度不超过 64") @Pattern(regexp = FieldRules.TEXT_ALLOWED_PATTERN, message = "专业含不允许的字符") @Pattern(regexp = FieldRules.CONTACT_BANNED_PATTERN, message = "专业不得包含网址或站外联系方式") String major,
                         @Size(max = FieldRules.BIO_MAX_CHARS, message = "签名长度不超过 200") @Pattern(regexp = FieldRules.TEXT_ALLOWED_PATTERN, message = "签名含不允许的字符") @Pattern(regexp = FieldRules.CONTACT_BANNED_PATTERN, message = "签名不得包含网址或站外联系方式") String bio) {
         }
 

@@ -61,8 +61,8 @@ public class ProfileApplicationService {
         if (hits > HOURLY_LIMIT) {
             throw new ApiException(ResultCode.PROFILE_UPDATE_TOO_FREQUENT);
         }
-        // CR-122：限流之后、读库之前拦下违规昵称 / 签名（null = 本字段不改，由网关入口跳过）
-        moderationService.ensureAllowed(command.nickname(), command.bio());
+        // CR-122 / CR-123：限流之后、读库之前拦下违规昵称 / 专业 / 签名（null = 本字段不改，由网关入口跳过）
+        moderationService.ensureAllowed(command.nickname(), command.major(), command.bio());
         Account account = accountRepository.findById(userId)
                 .orElseThrow(() -> new ApiException(ResultCode.USER_NOT_FOUND));
         if (account.getStatus() == AccountStatus.BANNED) {

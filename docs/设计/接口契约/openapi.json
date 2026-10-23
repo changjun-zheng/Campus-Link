@@ -3446,8 +3446,7 @@
           "major": {
             "type": "string",
             "maxLength": 64,
-            "minLength": 0,
-            "pattern": "^[^<>\\p{Cntrl}\\u200B\\u200C\\u200D\\u2060\\uFEFF]*$"
+            "minLength": 0
           },
           "bio": {
             "type": "string",
