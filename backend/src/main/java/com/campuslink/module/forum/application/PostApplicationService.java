@@ -71,11 +71,15 @@ public class PostApplicationService {
         Board board = boardRepository.findByCode(command.boardCode())
                 .orElseThrow(BoardNotFoundException::new);
         // 机审放在版块校验之后：无效请求（版块不存在）先给出准确错误，而不是被 5002 抢占语义。
-        // 标题与正文是两段独立用户文本，必须各审一次——只审正文会让违禁词从标题绕过（CR-124）
+        // 标题、正文、标签是三处独立的用户公开文本，必须各审一次——漏掉任一处都是可绕过的出口
+        // （CR-124 补标题、CR-125 补标签；标签规范化不抛业务错误，放在机审前不改变错误优先级）
+        List<String> tags = TagNames.normalize(command.tags(), 5);
         moderateOrThrow(command.title());
         moderateOrThrow(command.contentMd());
+        for (String tag : tags) {
+            moderateOrThrow(tag);
+        }
         // 封面（CR-074 外链方案）：发布时从正文提取首张 https 图一次落库，读时零成本；无图即 null
-        List<String> tags = TagNames.normalize(command.tags(), 5);
         Post post = Post.publish(board.getId(), authorId, board.getType(), command.title(),
                 command.contentMd(), markdownRenderer.render(command.contentMd()),
                 CoverImages.firstHttpsImage(command.contentMd()), tags);
@@ -113,13 +117,16 @@ public class PostApplicationService {
     /**
      * 作者删除自己的帖子（F-FORUM-006）：写 {@code is_deleted=1} 墓碑，**不物理删、不级联**。
      *
-     * <p>可见性核验复用与读侧同一条门槛（不存在 / 已删除 / 非 PUBLISHED → 3001，不区分原因、防按 id 探测）；
+     * <p>
+     * 可见性核验复用与读侧同一条门槛（不存在 / 已删除 / 非 PUBLISHED → 3001，不区分原因、防按 id 探测）；
      * 非作者 → 4002。墓碑行以下，前台所有位置自动不可见：列表 / 搜索 / 热榜候选在 SQL 侧过滤 {@code is_deleted}，
      * 详情 / 楼层 / 回帖 / 点赞 / 收藏都以 {@code requireVisiblePost} 开头，通知摘要查不到标题时回落
-     * "内容已删除"——故本用例不碰 {@code replies} / {@code likes} / {@code favorites}（它们是删除后的独立事实，
+     * "内容已删除"——故本用例不碰 {@code replies} / {@code likes} /
+     * {@code favorites}（它们是删除后的独立事实，
      * 处置台与统计要用）。
      *
-     * <p>删除与审计同事务：PRD 明写"删除操作留后台审计日志"，二者必须同生同灭。
+     * <p>
+     * 删除与审计同事务：PRD 明写"删除操作留后台审计日志"，二者必须同生同灭。
      */
     @Transactional
     public void deletePost(Long operatorId, long postId) {

@@ -24,6 +24,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -115,6 +116,26 @@ class PostApplicationServiceTest {
 
         verify(postRepository, never()).save(any());
         verify(moderationGateway, never()).moderate("正常正文");
+    }
+
+    @Test
+    @DisplayName("标签命中机审 → 5001，且不落库（标题 / 正文已放行）")
+    void moderatedTagBlocksPublication() {
+        when(boardRepository.findByCode("qna"))
+                .thenReturn(Optional.of(board(1L, "qna", BoardType.QUESTION)));
+        var ok = com.campuslink.module.forum.domain.gateway.ModerationGateway.ModerationVerdict.ok();
+        when(moderationGateway.moderate("正常标题")).thenReturn(ok);
+        when(moderationGateway.moderate("正常正文")).thenReturn(ok);
+        when(moderationGateway.moderate("违禁词"))
+                .thenReturn(com.campuslink.module.forum.domain.gateway.ModerationGateway.ModerationVerdict
+                        .blocked("内容包含不允许的词汇"));
+
+        assertThatThrownBy(() -> service.publish(42L,
+                new PublishPostCommand("qna", "正常标题", "正常正文", List.of("违禁词"))))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.MODERATION_BLOCKED));
+
+        verify(postRepository, never()).save(any());
     }
 
     @Test
@@ -276,4 +297,3 @@ class PostApplicationServiceTest {
         return Board.rehydrate(id, code, code, "描述", type, 1);
     }
 }
-
