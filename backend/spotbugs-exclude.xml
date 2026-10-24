@@ -31,6 +31,8 @@
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.web.AdminReportController"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.web.PostController"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.web.ReportController"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.application.AdminTagApplicationService"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.web.AdminTagController"/></Match>
 
   <!-- ② Spring Boot 配置属性绑定（EI_EXPOSE_REP / REP2）：`@ConfigurationProperties` 的内嵌对象由 Boot
        实例化并经 setter 注入、getter 供业务读取；拷贝会切断绑定链 ⇒ 已知误报。 -->
@@ -72,6 +74,11 @@
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.account.application.cmd.FollowUsers"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.module.account.web.vo.FollowUsersVo"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.account.web.vo.FollowUsersVo"/></Match>
+  <!-- CR-132 标签管理分页载体：同型（record + 只读 List），构造后不再变更 -->
+  <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.module.forum.application.AdminTagApplicationService$AdminTags"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.application.AdminTagApplicationService$AdminTags"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.module.forum.web.vo.AdminTagsVo"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.web.vo.AdminTagsVo"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.module.forum.domain.gateway.PageResult"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.domain.gateway.PageResult"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.module.notification.domain.gateway.PageResult"/></Match>

@@ -79,3 +79,41 @@ export interface AdminDashboardVo {
 
 /** 运营看板（仅 SUPERADMIN）：进入看板 Tab 才调用 */
 export const getAdminDashboard = () => get<AdminDashboardVo>('/admin/dashboard')
+
+/**
+ * 管理端标签（F-ADMIN-004 标签侧 / CR-132，仅 SUPERADMIN）。
+ *
+ * ⚠️ `useCount` 是**累计挂载次数**（`tags.use_count`，软删帖子不回退），不是"当前可见帖子数"；
+ * 页面文案必须按此口径说明。
+ */
+export interface AdminTagVo {
+  id: number
+  name: string
+  useCount: number
+  createdAt: string
+}
+
+export interface AdminTagsVo {
+  items: AdminTagVo[]
+  total: number
+  page: number
+  size: number
+}
+
+/** 标签列表（仅 SUPERADMIN）：keyword 对名称模糊匹配；sort 只认 use_count（默认）/ name */
+export const listAdminTags = (
+  params: { keyword?: string; sort?: 'use_count' | 'name'; page?: number; size?: number } = {},
+) => {
+  const query = new URLSearchParams()
+  if (params.keyword) query.set('keyword', params.keyword)
+  query.set('sort', params.sort ?? 'use_count')
+  query.set('page', String(params.page ?? 1))
+  query.set('size', String(params.size ?? 20))
+  return get<AdminTagsVo>(`/admin/tags?${query.toString()}`)
+}
+
+/**
+ * 删除标签（仅 SUPERADMIN，破坏性操作、不可撤销）：服务端在一个事务里删 `post_tags` 关联、
+ * 清受影响帖子的 `posts.tags` 冗余列、删 `tags` 行，并记一条 `TAG_DELETE` 审计。
+ */
+export const deleteAdminTag = (id: number) => del<void>(`/admin/tags/${id}`)

@@ -10,13 +10,16 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   closeReport,
+  deleteAdminTag,
   getAdminDashboard,
+  listAdminTags,
   listReports,
   moderatePost,
   moderateReply,
   setUserStatus,
   type AdminDashboardVo,
   type AdminReportVo,
+  type AdminTagVo,
 } from '../api/admin'
 import { useAuthStore } from '../stores/auth'
 import { formatRelativeTime } from '../utils/time'
@@ -26,7 +29,7 @@ const auth = useAuthStore()
 
 const isSuperadmin = computed(() => auth.user?.role === 'SUPERADMIN')
 
-const tab = ref<'reports' | 'moderation' | 'dashboard'>('reports')
+const tab = ref<'reports' | 'moderation' | 'dashboard' | 'tags'>('reports')
 
 /* ─── 工单 ─── */
 const reportStatus = ref<'PENDING' | 'CLOSED' | ''>('')
@@ -206,10 +209,69 @@ const dashboardCards = computed(() => {
   ]
 })
 
+/* ─── 标签管理（F-ADMIN-004 标签侧 / CR-132）：进入 Tab 才加载 ─── */
+const tags = ref<AdminTagVo[]>([])
+const tagTotal = ref(0)
+const tagPage = ref(1)
+const tagSize = 20
+const tagKeyword = ref('')
+const tagSort = ref<'use_count' | 'name'>('use_count')
+const tagLoading = ref(false)
+const tagError = ref('')
+
+async function loadTags(next = tagPage.value) {
+  tagLoading.value = true
+  tagError.value = ''
+  try {
+    const res = await listAdminTags({
+      keyword: tagKeyword.value.trim() || undefined,
+      sort: tagSort.value,
+      page: next,
+      size: tagSize,
+    })
+    tags.value = res.items
+    tagTotal.value = res.total
+    tagPage.value = res.page
+  } catch (e) {
+    tags.value = []
+    tagTotal.value = 0
+    tagError.value = e instanceof Error ? e.message : '标签加载失败'
+  } finally {
+    tagLoading.value = false
+  }
+}
+
+function onTagSearch() {
+  void loadTags(1)
+}
+
+async function onDeleteTag(tag: AdminTagVo) {
+  try {
+    await ElMessageBox.confirm(
+      `确定删除标签「${tag.name}」？它会从所有帖子上移除，且该操作不可撤销。`,
+      '删除标签',
+      { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' },
+    )
+  } catch {
+    // 用户取消 / 关闭弹窗：不删、不提示
+    return
+  }
+  try {
+    await deleteAdminTag(tag.id)
+    ElMessage.success(`已删除标签「${tag.name}」`)
+    // 删掉当前页最后一条时回退一页，避免落在空页上
+    const nextPage = tagPage.value > 1 && tags.value.length === 1 ? tagPage.value - 1 : tagPage.value
+    await loadTags(nextPage)
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '删除失败')
+  }
+}
+
 watch([reportStatus, reportPage], () => loadReports())
 watch(tab, () => {
   if (tab.value === 'reports' && !reports.value.length) loadReports()
   if (tab.value === 'dashboard' && !dashboard.value) loadDashboard()
+  if (tab.value === 'tags' && !tags.value.length) loadTags()
 })
 onMounted(() => {
   if (isSuperadmin.value) loadReports()
@@ -243,6 +305,7 @@ function goLogin() {
       <el-tab-pane label="举报工单" name="reports" />
       <el-tab-pane label="内容处置台" name="moderation" />
       <el-tab-pane label="数据看板" name="dashboard" />
+      <el-tab-pane label="标签管理" name="tags" />
     </el-tabs>
 
     <!-- ─── 数据看板（F-ADMIN-005 / CR-131）：仅 SUPERADMIN；进入 Tab 才加载 ─── -->
@@ -275,6 +338,70 @@ function goLogin() {
           </div>
         </section>
       </div>
+    </el-card>
+
+    <!-- ─── 标签管理（F-ADMIN-004 标签侧 / CR-132）：仅 SUPERADMIN；进入 Tab 才加载 ─── -->
+    <el-card v-show="tab === 'tags'" shadow="never">
+      <template #header>
+        <div class="flex flex-wrap items-baseline justify-between gap-2">
+          <span class="font-medium">标签管理</span>
+          <span class="text-caption text-ink-meta">
+            「使用次数」是累计挂载次数（软删帖子不回退）；删除会同时移除帖子上的该标签，不可撤销
+          </span>
+        </div>
+      </template>
+
+      <div class="mb-4 flex flex-wrap items-center gap-2">
+        <el-input
+          v-model="tagKeyword"
+          placeholder="按名称搜索"
+          clearable
+          style="width: 220px"
+          @keyup.enter="onTagSearch"
+        />
+        <el-select v-model="tagSort" style="width: 150px" @change="onTagSearch">
+          <el-option label="按使用次数" value="use_count" />
+          <el-option label="按名称" value="name" />
+        </el-select>
+        <el-button type="primary" @click="onTagSearch">搜索</el-button>
+      </div>
+
+      <el-skeleton v-if="tagLoading" :rows="4" animated />
+      <div v-else-if="tagError" class="py-2">
+        <el-alert type="error" :closable="false" show-icon :title="tagError">
+          <el-button size="small" @click="loadTags()">重新加载</el-button>
+        </el-alert>
+      </div>
+      <div v-else-if="!tags.length" class="py-8 text-center text-body text-ink-meta">
+        没有匹配的标签
+      </div>
+      <template v-else>
+        <ul>
+          <li
+            v-for="tag in tags"
+            :key="tag.id"
+            class="flex items-center justify-between gap-3 border-b-[0.5px] border-divider py-2.5 last:border-b-0"
+          >
+            <div class="flex min-w-0 items-center gap-2">
+              <span class="truncate text-body font-medium text-ink">{{ tag.name }}</span>
+              <span class="flex-none text-caption text-ink-meta">使用 {{ tag.useCount }} 次</span>
+            </div>
+            <div class="flex flex-none items-center gap-3">
+              <span class="text-caption text-ink-meta">{{ formatRelativeTime(tag.createdAt) }}</span>
+              <el-button size="small" type="danger" plain @click="onDeleteTag(tag)">删除</el-button>
+            </div>
+          </li>
+        </ul>
+        <div v-if="tagTotal > tagSize" class="flex justify-center pt-3">
+          <el-pagination
+            layout="prev, pager, next, total"
+            :total="tagTotal"
+            :page-size="tagSize"
+            :current-page="tagPage"
+            @current-change="(next: number) => loadTags(next)"
+          />
+        </div>
+      </template>
     </el-card>
 
     <!-- ─── 举报工单 ─── -->
