@@ -6,6 +6,7 @@ import com.campuslink.common.result.ResultCode;
 import com.campuslink.common.web.ApiDocs;
 import com.campuslink.common.web.CurrentUser;
 import com.campuslink.module.account.application.FollowApplicationService;
+import com.campuslink.module.account.web.vo.FollowUsersVo;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -56,6 +58,37 @@ public class FollowController {
         long viewerId = CurrentUser.requireId(authentication);
         FollowApplicationService.FollowState s = followApplicationService.state(viewerId, targetId);
         return ApiResponse.ok(new FollowStateVo(s.following(), s.followerCount(), s.followeeCount()));
+    }
+
+    /**
+     * 粉丝列表（F-SOC-002 补齐 / CR-130）：受保护而不是公开——拉黑过滤需要 viewer 身份
+     * （匿名没有"谁拉黑了谁"的视角），也避免匿名批量枚举用户；目标不存在或已注销统一 2007，
+     * 与 {@code GET /users/{id}} 同口径。
+     */
+    @Operation(summary = "粉丝列表（需登录，分页，按关注时间倒序）：条目剔除已注销账号与登录者已拉黑账号")
+    @SecurityRequirement(name = ApiDocs.BEARER_AUTH)
+    @ErrorCodes({ResultCode.NOT_LOGGED_IN, ResultCode.USER_NOT_FOUND})
+    @GetMapping("/{targetId}/followers")
+    public ApiResponse<FollowUsersVo> followers(@PathVariable("targetId") long targetId,
+                                                @RequestParam(value = "page", defaultValue = "1") int page,
+                                                @RequestParam(value = "size", defaultValue = "20") int size,
+                                                Authentication authentication) {
+        long viewerId = CurrentUser.requireId(authentication);
+        return ApiResponse.ok(FollowUsersVo.from(
+                followApplicationService.pageFollowers(viewerId, targetId, page, size)));
+    }
+
+    @Operation(summary = "关注列表（需登录，分页，按关注时间倒序）：过滤口径同粉丝列表")
+    @SecurityRequirement(name = ApiDocs.BEARER_AUTH)
+    @ErrorCodes({ResultCode.NOT_LOGGED_IN, ResultCode.USER_NOT_FOUND})
+    @GetMapping("/{targetId}/following")
+    public ApiResponse<FollowUsersVo> followingUsers(@PathVariable("targetId") long targetId,
+                                                     @RequestParam(value = "page", defaultValue = "1") int page,
+                                                     @RequestParam(value = "size", defaultValue = "20") int size,
+                                                     Authentication authentication) {
+        long viewerId = CurrentUser.requireId(authentication);
+        return ApiResponse.ok(FollowUsersVo.from(
+                followApplicationService.pageFollowing(viewerId, targetId, page, size)));
     }
 
     /** web 视图：字段名对前端契约（following / fanCount / followCount） */

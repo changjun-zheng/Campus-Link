@@ -24,4 +24,18 @@ public interface FollowRepository {
 
     /** follower 的关注对象 id 列表（关注时间正序）；上限由调用方控制 */
     List<Long> findFolloweeIds(Long followerId, int limit);
+
+    /**
+     * 粉丝分页（CR-130）：关注了 followee 的账号 id，关注时间倒序。
+     * 两条过滤与分页在**同一条 SQL**里：已注销账号剔除（保证"列出来就点得开"）、
+     * viewer 已拉黑的账号剔除（CR-129 读侧口径）；{@code countFollowers} 用同一 WHERE，total 同源。
+     */
+    List<Long> pageFollowerIds(Long followeeId, Long viewerId, int offset, int limit);
+
+    long countFollowers(Long followeeId, Long viewerId);
+
+    /** 关注分页（CR-130）：follower 关注的账号 id，关注时间倒序；过滤口径同 {@link #pageFollowerIds} */
+    List<Long> pageFolloweeIds(Long followerId, Long viewerId, int offset, int limit);
+
+    long countFollowing(Long followerId, Long viewerId);
 }

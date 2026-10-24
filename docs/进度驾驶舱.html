@@ -1331,10 +1331,10 @@
           <div class="chips">
 
 
-            <span class="chip">数据快照 <b>2026-10-23</b></span>
+            <span class="chip">数据快照 <b>2026-10-24</b></span>
 
 
-            <span class="chip">change-log <b>v1.139</b></span>
+            <span class="chip">change-log <b>v1.141</b></span>
 
 
             <span class="chip">next-steps <b>v1.14</b></span>
@@ -1361,13 +1361,12 @@
           <div class="kpi"><b>2<small> / 4</small></b><span>Sprint 已交付（S1 · S2 MVP）</span></div>
 
 
-          <div class="kpi"><b>488<small> / 488</small></b><span>后端单测全绿（2026-10-20 实跑：默认 mvn -B -o verify 488 / 0
-              failures / 5 skipped，SPRING_IT=true 与 CI 均 488 / 0 skipped——CR-106 把契约快照比对与集成测试装进了 CI ⇒ 实际执行 362；4 例
-              skipped＝CR-090 的 SPRING_IT 默认跳过，与 AGENTS 声明的 366 一致）</span></div>
+          <div class="kpi"><b>567<small> / 567</small></b><span>后端单测全绿（2026-10-24 实跑：<code>SPRING_IT=true mvn -o verify</code> 567 / 0
+              failures / 0 skipped + SpotBugs 0；默认 <code>mvn -B -o verify</code> 有 5 例 SKIPPED＝CR-090 的 4 例 + CR-106 真身比对 1 例，与 AGENTS 声明的 567 一致）</span></div>
 
 
-          <div class="kpi"><b>42<small> / 69</small></b><span>契约端点 / schema（快照 <b>v1.19</b> · 37 路径 / 29 受保护 / 14
-              tag，2026-10-15 直接解析归档 openapi.json 实测；受保护数未变——CR-104 的新端点是公开的）</span></div>
+          <div class="kpi"><b>52<small> / 80</small></b><span>契约端点 / schema（快照 <b>v1.30</b> · 45 路径 / 39 受保护 / 14
+              tag，2026-10-24 直接解析归档 openapi.json 实测；CR-130 新增 2 个受保护列表端点）</span></div>
 
 
           <div class="kpi"><b>13<small> + </small>0</b><span>真实页面 + 占位页（/admin 已由 CR-084 转实页 ⇒ 占位清零；src/views/ 13 个 .vue
@@ -1926,7 +1925,13 @@
         </div>
 
 
-        <p>117 次登记（其中已实施 <b>117</b> 次）：完整 <b>107</b> · 部分 <b>8</b> · 未做 <b>2</b> · 在途 <b>0</b>（〔<b>v1.139
+        <p>118 次登记（其中已实施 <b>118</b> 次）：完整 <b>108</b> · 部分 <b>8</b> · 未做 <b>2</b> · 在途 <b>0</b>（〔<b>v1.141
+            注（2026-10-24，CR-130 实施完成并回置）</b>：登记 117 → <b>118</b>、已实施 117 → <b>118</b>、完整 107 →
+          <b>108</b>，部分 8 / 未做 2 不变、<b>在途清零</b>；时间线补入 CR-130。本轮：<b>粉丝 / 关注列表（F-SOC-002 补齐）</b>——两个受保护端点
+          <code>GET /users/{id}/followers</code> / <code>/following</code> + SQL 侧剔除已注销与 viewer 已拉黑（<code>total</code> 同源）+ 前端两条路由复用同一列表页 +
+          资料卡计数改链接；<code>SPRING_IT=true mvn -o verify</code> <b>567 / 0 failures / Skipped 0</b> + SpotBugs 0；真机 A 拉黑 B 后 A 视角粉丝 total <b>1
+            → 0</b>、B 视角仍 1（单向语义）、分页两页倒序、已注销账号剔除、匿名 401 / 404；真实浏览器双验收；契约 v1.30（45 路径 / 52 操作 / 80 schema / 39
+          受保护、+253/−0 纯新增）。〕〔<b>v1.139
             注（2026-10-23，CR-129 实施完成并回置）</b>：登记仍 <b>117</b>、已实施 116 → <b>117</b>、完整 106 →
           <b>107</b>，部分 8 / 未做 2 不变、<b>在途清零</b>；时间线补入 CR-129 ⇒ 按 id 去重实测 <b>116 条 ＝ §1 117 行 −
             历史缺口 1 条（CR-055）</b>。<b>本轮</b>：<b>用户拉黑 / 屏蔽（F-SOC-004）</b>——`V5__user_blocks.sql`
@@ -2171,7 +2176,7 @@
                     CR-055</b>（沿用"在途不进时间线"既有口径），本轮补入 <b>CR-089 / CR-090</b> 两行（§1 有行而数组缺，文案逐字取自 §1
                   行）。<b>仍不动</b>：KPI「Sprint
                   已交付 2 / 4」是原计划口径，未按实际重排（要改须先定 Sprint 口径，属发起人判断）。仍欠：A3-6 提测前逐页走查、A3-8 部署与机审选型（须发起人决策）、B1 / B2
-                  真实名册、F-SOC-002 粉丝与关注两页、openapi.json 无机器校验（W-05 不得关闭）、ER 图档仍停在 V1 的 12 张表。〕 · 〔v1.83 注（2026-09-24，<a
+                  真实名册、F-SOC-002 粉丝与关注两页〔v1.141 注（CR-130）：该两页已交付，见时间线 CR-130；原句保留为 v1.83 时点陈述〕、openapi.json 无机器校验（W-05 不得关闭）、ER 图档仍停在 V1 的 12 张表。〕 · 〔v1.83 注（2026-09-24，<a
                     href="变更日志/变更台账.md#cr-080">CR-080</a> 列表内点赞与点赞量展示）：本段此前为 68 / 67 / 57——⚠️
                   <b>本视图落后两轮</b>：v1.82（CR-076）当轮未同步本文件，本轮一次补齐 ⇒ 登记 <b>68 → 70</b>、已实施 <b>67 → 69</b>、完整 <b>57 →
                     59</b>（追加
@@ -2208,7 +2213,7 @@
                   2009），AGENTS 基线数 294 → 298。⚠️ <b>同批自修三处台账损伤</b>（并发会话脚本编辑造成、本轮逐行定位）：§1 的 CR-074 重复行去重（69 → 68 行，与"登记
                   68"对齐）、9 个不可见控制字符还原、6 处未转义竖线与 2 处被折断的 §4 条目。本视图同批<b>补入 CR-074 时间线行</b>并回填 CR-070 ~ CR-075
                   的提交凭证（上一轮遗留：chip
-                  停 v1.78、数组缺 CR-074）。仍欠：<b>浏览器逐项走查待发起人</b>、F-SOC-002 的粉丝 / 关注列表两页未做 ⇒
+                  停 v1.78、数组缺 CR-074）。仍欠：<b>浏览器逐项走查待发起人</b>、F-SOC-002 的粉丝 / 关注列表两页未做〔v1.141 注（CR-130）：已交付，见时间线 CR-130〕 ⇒
                   页面侧验收不签、<code>openapi.json</code>
                   仍无机器校验（W-05 不关闭）、ER 图档仍停在 V1 的 12 张表。〕 · 〔v1.79 注（2026-09-19，<a
                     href="变更日志/变更台账.md#cr-075">CR-075</a>）：本段此前为 67 / 65 / 55。CR-075（产品优化与新增业务需求建议，备料、AI
@@ -3975,6 +3980,7 @@
       { id: "CR-109", date: "2026-10-19", title: "<b>未知路由兜底（BUG-011 修复，纯前端）</b>——缺陷来源＝问题清单 <b>BUG-011</b>（由 <b>CR-108</b> 桌面逐页走查当场发现：无 catch-all ⇒ 未知路径静默放行到 App 壳层、顶栏页脚在而主区空白白页）。修法＝① 路由表<b>末尾</b>新增 catch-all <code>/:pathMatch(.*)*</code>；② 新建 <code>NotFoundView.vue</code>（<code>el-result</code> 警告态 + 标题「页面不存在」+ 副标题「地址可能输错了，或这个链接已经失效」+ 主色按钮「回到首页」，载体与 <code>PostDetailView</code> 的业务码 3001 态同源、遵循界面规范 §5.2）。<b>门槛判定</b>：属「可直接改」——根因单一（路由表缺兜底）、不改任何 API 状态码 / 错误码 / 响应形状，故未写实施方案、按轻量登记直接实施。<b>验证</b>：<code>npm run lint</code> exit 0、<code>npm run build</code> ✓ built in 1m 3s；真实栈浏览器实测（仅前端 dev server 5173、404 页不依赖后端）<code>/this-route-does-not-exist</code> 渲染出「页面不存在 / 回到首页」、<code>document.title</code> = 「页面不存在 · Campus-Link」、<b>不再白屏</b>，点「回到首页」正确落到 <code>/</code>；<b>回归</b> <code>/board/qna</code> 仍渲染版块页、未被 catch-all 抢走。⚠️ 实测<b>后端未启动</b>（首页 / 版块页「重新加载」错误态属预期，不影响本结论）；零后端 / 零契约 / 零迁移", type: "前端（路由兜底）", status: "full", review: "🟢 发起人指令「继续进行下一个任务」（**未点名具体项**）；本轮项（修 BUG-011）由 AI 选定并如实登记", hash: "—" },
       { id: "CR-108", date: "2026-10-17", title: "<b>W-03 补偿③ 的桌面逐页走查执行并归档</b>（走查取证 + 纯文档，零代码）——自建 <b>CDP 通道</b>（隔离无头 Edge 155 + 独立 <code>--user-data-dir</code> + Node 内置 <code>WebSocket</code>，<code>Emulation.setDeviceMetricsOverride</code> 强制 <b>1440×900 @ DPR 1</b>）绕开「自动化浏览器视口被钉在 676×395、Zoom 与最大化均无效」的死结，对 PRD §5.1 现行 <b>13 条路由</b>逐页走查（匿名 9 页 + 登录 7 页）：<b>全部可达并渲染、零错误条 / 零控制台错误 / 零空锚点</b>，<code>/admin</code> 匿名正确跳 <code>/login?redirect=/admin</code>，<code>/post/999999</code> 走 3001 专用不存在态；另加 2 条探针（未知路由、搜索结果态）。<b>17 张截图 + 4 份原始 JSON</b> 归档于 <b>界面规范</b> <b>§8.5</b> 与 <code>screenshots/walkthrough-desktop-2026-10-17/</code>；<b>新登记 BUG-011</b>（未知路由无 catch-all ⇒ 顶栏页脚仍在、主区空白白页，只登记不处置）。同批：流程偏离记录 v1.12（W-03 状态行）、问题清单 v1.23（V-002 加注 + BUG-011）、界面规范 v1.12。⚠️ <b>三条边界</b>：走查系<b>程序化</b>采集（<b>不充抵补偿② 的人工采集口径</b>）、窄屏 / 移动端一侧仍按 CR-053 <b>暂缓</b>、<b>W-03 仍开放、A3-6 未闭环（属发起人判断）</b>。本轮前置＝排查前端 dev server 硬崩（退出码 <code>0xC0000409</code>），结论为 <b>OS 环境侧原生误判、非产品缺陷</b>（WER 无 node 记录、esbuild 二进制自检正常）", type: "文档（治理）+ 验证（走查取证）", status: "full", review: "🟢 发起人选定本轮方向（原话「就此结案，回 W-03 走查」）", hash: "—" },
       { id: "CR-107", date: "2026-10-17", title: "<b>文档完整性修复轮（纯文档）</b>——① <b>台账悬空锚点全类清零</b>：复核发现 E-010 记的「悬空 4 处」<b>早已过时</b>（自 CR-029「轻量登记」起新增 CR 不建 §2 小节、也无人补 <code>&lt;a id&gt;</code>）⇒ 实测 <b>25 处</b>；在 §2 建两段「轻量登记区」补 29 个锚点与轻量指针，<b>机器复核：锚点 100 ≥ 引用 99、悬空 0</b>；② <code>AGENTS.md</code>「测试约定」+1 条（自由文本进 HTML 前须有服务端净化断言，E-013 候选③）；③ 修一处跨文件锚点尾缀（CR-059 方案 → 问题清单 <code>#bug-001…已修复</code>）。⚠️ <b>不做</b>：不代填 CR-077 / 078 / 079 / 092 四条 §1 缺行、不补写任何 CR 的事后叙事、不重复处置已由 CR-089 完成的 E-009", type: "文档（治理）", status: "full", review: "🟢 发起人选定「先做不依赖起栈的治理项」（MySQL80 因权限起不来、重复栈验证类工作如实推迟）", hash: "—" },
+      { id: "CR-130", date: "2026-10-24", title: "<b>粉丝 / 关注列表（F-SOC-002 补齐）</b>——两个受保护端点 <code>GET /users/{id}/followers</code> / <code>/following</code>（分页倒序、条目 id / nickname / major / bio）+ SQL 侧剔除已注销与 viewer 已拉黑（<code>COUNT</code> 与分页同 WHERE ⇒ <code>total</code> 同源）+ 前端两条路由 <code>/u/:id/followers</code> / <code>/u/:id/following</code> 复用同一 <code>FollowListView.vue</code> + 资料卡「粉丝 / 关注」计数改链接。<b>验证</b>：<code>SPRING_IT=true mvn -o verify</code> <b>553 → 567 / 0 failures / Skipped 0</b> + SpotBugs 0（+14 例）；真机 A 拉黑 B 后 A 视角粉丝 <code>total</code> <b>1 → 0</b>（SQL 同源）、B 视角仍 1、分页 <code>size=2</code> 两页 <b>[39,38] / [37]</b>、已注销账号造行后 <b>total 3 而非 4</b>、匿名 <code>401 / 4001</code>、目标不存在 <code>404 / 2007</code>；真实浏览器双验收（登录态 6 步 + 匿名回跳）；契约 <b>v1.30</b>（45 路径 / 52 操作 / 80 schema / 39 受保护、+253/−0 纯新增；⚠️ 新方法名 <code>following</code> 与既有 operationId 撞车，实测后改 <code>followingUsers</code>）。", type: "功能（互动，P1 补齐）+ 接口契约", status: "full", review: "✅ 发起人确认「按这个方案开始实施」", hash: "待提交" },
       { id: "CR-129", date: "2026-10-23", title: "<b>用户拉黑 / 屏蔽（F-SOC-004）</b>——新建 <code>V5__user_blocks.sql</code>（联合主键 <code>(blocker_id, blocked_id)</code> + <code>idx_blocked</code>）+ 四个受保护端点（<code>POST</code> / <code>DELETE /users/{targetId}/block</code>、<code>GET /users/{targetId}/block-state</code>、<code>GET /users/me/blocks</code>）+ 读侧六处 SQL 过滤（全站 / 版块列表、搜索、关注 Feed、他人主页、楼层、收藏，<code>total</code> 与条目同源）+ 互动阻断（关注 / 回帖 / 点赞 / 收藏 → <code>403 / 4002</code>）+ 通知抑制（接收人拉黑触发者不落库）+ 前端主页「拉黑 / 已拉黑」与设置页「黑名单」；仅新插入记 <code>USER_BLOCK</code> / <code>USER_UNBLOCK</code> 审计。<b>验证</b>：<code>SPRING_IT=true mvn -o verify</code> <b>553 / 0 failures / Skipped 0</b> + SpotBugs 0（+16 例）；真机双账号（E 拉黑 F 后带 E 令牌）列表 <code>total</code> <b>26 → 25</b> 且不含 F、搜索不含 F、F 详情 <code>404 / 3001</code>，解除后恢复 26；真实浏览器双验收通过；契约 v1.29（43 路径 / 50 操作 / 77 schema / 37 受保护、145804 字节、+386/−0 纯新增）。⚠️ 残余三条：并发拉黑 / 解除以最后写入为准、公开回帖时间线未接过滤、拉黑前历史通知不清理。", type: "功能（社交安全）+ 接口契约", status: "full", review: "✅ 发起人确认「按这个方案实施」", hash: "f1d506b" },
       { id: "CR-128", date: "2026-10-23", title: "<b>帖子编辑（F-FORUM-007）</b>——两个受保护端点 <code>GET /posts/{id}/edit</code>（仅作者取原文，含 contentMd 与 tags）+ <code>PUT /posts/{id}</code>（标题 / 正文 / 标签，<b>版块不可改</b>）+ 领域 <code>Post.revise</code> + 端口 <code>PostRepository.revise</code>（定向 UPDATE，条件 <code>is_deleted=0 AND status='PUBLISHED'</code>，0 行 → 3001）+ <code>TagRepository.replaceForPost</code>（旧关联与 use_count 回退后重挂）+ <code>POST_UPDATE</code> 审计 + 前端 <code>/post/:id/edit</code> 复用发布页（版块只读 / 不写草稿 / 不查相似帖）与详情页「编辑」入口。<b>不做</b>：编辑历史 / 版本 / 改版块 / 编辑已下架帖 / 并发版本锁 / 编辑后重算热榜与通知。<b>验证</b>：<code>SPRING_IT=true mvn -o verify</code> <b>537 / 0 failures / Skipped 0</b> + SpotBugs 0（+7 例）；lint exit 0 / build ✓；真机 local 模式作者取原文 200、非作者 GET/PUT 403、编辑后详情与标签搜索同步（编辑前 0 → 编辑后 1）、违禁词 <code>422/5001</code>、下架后 GET/PUT 404；契约 v1.28（40 路径 / 46 操作 / 72 schema / 33 受保护，+2 操作 / +1 路径 / +3 schema，既有零变化）。", type: "功能（论坛）+ 接口契约", status: "full", review: "✅ 发起人确认「按这个方案实施」", hash: "待提交" },
       { id: "CR-127", date: "2026-10-23", title: "<b>注销匿名化补清展示资料（bio / major / school / grade）</b>——取证发现 <code>AccountRepositoryImpl.anonymize</code> 自 CR-082 起只清 <code>nickname / email_* / phone_* / student_id_* / avatar_url</code>，<b>bio / major / school / grade 四列原样保留</b>，而 <code>UserProfileVo</code> 会下发 major / bio ⇒ 匿名化账号主页仍可读出原个人资料。修法：补清四列（共 <b>13 列</b>）、<code>UserAnonymizationScheduler</code> javadoc 同步；<code>AccountRepositoryImplTest</code> 断言扩为 13 列且 <code>doesNotContain(status, delete_at, role)</code>；新增 <code>UserAnonymizationSchedulerTest</code> 2 例（逐账号匿名化 + 逐条审计 / 无到期零副作用）。同批更正 <code>SettingsView.vue</code> 顶部注释（原写注销「零实现」与 CR-082 事实相反）。<b>验证</b>：<code>SPRING_IT=true mvn -o verify</code> <b>530 / 0 failures / Skipped 0</b> + SpotBugs 0；真机 dev-stu-45（id 76）改资料 → 注销 → <code>delete_at</code> 置过去 → 重启后端 60s 调度器执行 → 13 列全空、昵称「已注销用户」、<code>anonymized=1</code>，公开主页 <code>2007</code>、审计 <code>ACCOUNT_ANONYMIZE</code>。零契约 / 零迁移。", type: "安全（个人信息）", status: "full", review: "🟢 发起人指令「进行下一步任务开发」", hash: "待提交" },

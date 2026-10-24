@@ -41,6 +41,7 @@ class FollowRepositoryImplTest {
 
     private static final long FOLLOWER_ID = 42L;
     private static final long FOLLOWEE_ID = 7L;
+    private static final long VIEWER_ID = 5L;
 
     @Mock
     private FollowMapper followMapper;
@@ -148,7 +149,75 @@ class FollowRepositoryImplTest {
         assertThat(capturedSelectList().getSqlSegment()).contains("LIMIT 1");
     }
 
+    @Test
+    @DisplayName("粉丝分页（CR-130）：参数原样交给 Mapper；负 offset / 0 limit 兜底")
+    void pageFollowerIdsPassesParamsAndFloors() {
+        when(followMapper.pageFollowerIds(FOLLOWEE_ID, VIEWER_ID, 0, 1)).thenReturn(List.of(7L));
+
+        assertThat(repository.pageFollowerIds(FOLLOWEE_ID, VIEWER_ID, -5, 0)).containsExactly(7L);
+
+        verify(followMapper).pageFollowerIds(FOLLOWEE_ID, VIEWER_ID, 0, 1);
+    }
+
+    @Test
+    @DisplayName("关注分页与两个计数：直接委托 Mapper（viewer 过滤在 SQL 侧）")
+    void followeePageAndCountsDelegate() {
+        when(followMapper.pageFolloweeIds(FOLLOWER_ID, VIEWER_ID, 20, 10)).thenReturn(List.of(7L));
+        when(followMapper.countFollowers(FOLLOWEE_ID, VIEWER_ID)).thenReturn(3L);
+        when(followMapper.countFollowing(FOLLOWER_ID, VIEWER_ID)).thenReturn(5L);
+
+        assertThat(repository.pageFolloweeIds(FOLLOWER_ID, VIEWER_ID, 20, 10)).containsExactly(7L);
+        assertThat(repository.countFollowers(FOLLOWEE_ID, VIEWER_ID)).isEqualTo(3L);
+        assertThat(repository.countFollowing(FOLLOWER_ID, VIEWER_ID)).isEqualTo(5L);
+    }
+
+    /**
+     * 列表 SQL 的三条口径读注解文本断言（结构与 CR-104 的 {@code @Select} 断言同法）：
+     * ① 已注销剔除（否则条目点进主页 2007，"列出来却点不开"）；② viewer 拉黑剔除（CR-129 读侧口径）；
+     * ③ 计数与列表复用同一 WHERE（total 同源），分页参数化、次序稳定。
+     */
+    @Test
+    @DisplayName("粉丝 / 关注 SQL：注销与拉黑过滤 + 计数同源 + 参数化分页")
+    void listSqlKeepsVisibilityAndPagingConditions() throws NoSuchMethodException {
+        String followers = selectSql("pageFollowerIds", long.class, long.class, int.class, int.class);
+        assertThat(followers)
+                .contains("JOIN users u ON u.id = f.follower_id")
+                .contains("u.status <> 'DEACTIVATED'")
+                .contains("NOT EXISTS (SELECT 1 FROM user_blocks ub")
+                .contains("ub.blocker_id = #{viewerId}")
+                .contains("ub.blocked_id = f.follower_id")
+                .contains("ORDER BY f.created_at DESC, f.follower_id DESC")
+                .contains("LIMIT #{limit} OFFSET #{offset}");
+
+        String followerCount = selectSql("countFollowers", long.class, long.class);
+        assertThat(followerCount)
+                .contains("COUNT(*)")
+                .contains("u.status <> 'DEACTIVATED'")
+                .contains("user_blocks")
+                .contains("ub.blocked_id = f.follower_id");
+
+        String following = selectSql("pageFolloweeIds", long.class, long.class, int.class, int.class);
+        assertThat(following)
+                .contains("JOIN users u ON u.id = f.followee_id")
+                .contains("u.status <> 'DEACTIVATED'")
+                .contains("ub.blocked_id = f.followee_id")
+                .contains("ORDER BY f.created_at DESC, f.followee_id DESC")
+                .contains("LIMIT #{limit} OFFSET #{offset}");
+
+        String followingCount = selectSql("countFollowing", long.class, long.class);
+        assertThat(followingCount)
+                .contains("COUNT(*)")
+                .contains("u.status <> 'DEACTIVATED'")
+                .contains("user_blocks")
+                .contains("ub.blocked_id = f.followee_id");
+    }
+
     // ---------- helpers ----------
+
+    private static String selectSql(String name, Class<?>... parameterTypes) throws NoSuchMethodException {
+        var method = FollowMapper.class.getMethod(name, parameterTypes);
+        return String.join("", method.getAnnotation(org.apache.ibatis.annotations.Select.class).value());
+    }
 
     private static FollowDO link(long followeeId) {
         FollowDO d = new FollowDO();

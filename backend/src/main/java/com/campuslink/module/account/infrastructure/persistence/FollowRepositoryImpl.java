@@ -64,4 +64,24 @@ public class FollowRepositoryImpl implements FollowRepository {
                 .map(FollowDO::getFolloweeId)
                 .toList();
     }
+
+    @Override
+    public List<Long> pageFollowerIds(Long followeeId, Long viewerId, int offset, int limit) {
+        return followMapper.pageFollowerIds(followeeId, viewerId, Math.max(offset, 0), Math.max(limit, 1));
+    }
+
+    @Override
+    public long countFollowers(Long followeeId, Long viewerId) {
+        return followMapper.countFollowers(followeeId, viewerId);
+    }
+
+    @Override
+    public List<Long> pageFolloweeIds(Long followerId, Long viewerId, int offset, int limit) {
+        return followMapper.pageFolloweeIds(followerId, viewerId, Math.max(offset, 0), Math.max(limit, 1));
+    }
+
+    @Override
+    public long countFollowing(Long followerId, Long viewerId) {
+        return followMapper.countFollowing(followerId, viewerId);
+    }
 }

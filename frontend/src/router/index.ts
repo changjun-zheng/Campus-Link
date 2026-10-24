@@ -14,6 +14,10 @@ const router = createRouter({
     // 他人主页（F-ACC-002）：**不设 requiresAuth**——两个后端端点都是公开的，
     // 未登录也该能打开从帖子详情点过来的作者名；关注按钮由页内自己引到登录回跳
     { path: '/u/:id', name: 'profile', component: () => import('../views/ProfileView.vue'), meta: { title: '个人主页' } },
+    // 粉丝 / 关注列表（F-SOC-002 补齐 / CR-130）：两条路由复用同一组件，后端两个端点受保护，
+    // 故需登录；匿名从资料卡计数点进来时由守卫跳登录并带回跳
+    { path: '/u/:id/followers', name: 'follow-followers', component: () => import('../views/FollowListView.vue'), meta: { title: '粉丝', requiresAuth: true } },
+    { path: '/u/:id/following', name: 'follow-following', component: () => import('../views/FollowListView.vue'), meta: { title: '关注', requiresAuth: true } },
     { path: '/notifications', name: 'notifications', component: () => import('../views/NotificationsView.vue'), meta: { title: '通知', requiresAuth: true } },
     { path: '/favorites', name: 'favorites', component: () => import('../views/MyFavoritesView.vue'), meta: { title: '我的收藏', requiresAuth: true } },
     { path: '/settings', name: 'settings', component: () => import('../views/SettingsView.vue'), meta: { title: '设置', requiresAuth: true } },

@@ -388,14 +388,16 @@ watch(userId, () => void loadAll(), { immediate: true })
               <span class="text-title-sm font-medium text-ink tabular-nums">{{ profile.acceptedCount }}</span>
               被采纳
             </span>
-            <span>
+            <!-- 粉丝 / 关注可点（F-SOC-002 补齐 / CR-130）：列表路由 requiresAuth，
+                 匿名点击由守卫跳登录带回跳；数字是关系事实数，与列表 total（剔除已注销 / 拉黑）口径不同 -->
+            <RouterLink :to="`/u/${profile.id}/followers`" class="hover:text-link">
               <span class="text-title-sm font-medium text-ink tabular-nums">{{ profile.followerCount }}</span>
               粉丝
-            </span>
-            <span>
+            </RouterLink>
+            <RouterLink :to="`/u/${profile.id}/following`" class="hover:text-link">
               <span class="text-title-sm font-medium text-ink tabular-nums">{{ profile.followingCount }}</span>
               关注
-            </span>
+            </RouterLink>
           </div>
         </div>
       </div>
