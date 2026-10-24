@@ -264,4 +264,22 @@ public class AccountApplicationService {
         }
         return account;
     }
+
+    /**
+     * 运营看板（F-ADMIN-005 / CR-131）：按状态分组的账号计数，供 forum 侧数据看板消费。
+     *
+     * <p>跨上下文方向合法（ADR-012：只调对方 application）；只读、不做任何逐行扫描。
+     * {@code total} 含已注销账号（它们仍是账号记录），由看板单列 {@code deactivated}。
+     */
+    public AccountStats accountStats() {
+        Map<AccountStatus, Long> byStatus = accountRepository.countByStatus();
+        return new AccountStats(byStatus.values().stream().mapToLong(Long::longValue).sum(),
+                byStatus.getOrDefault(AccountStatus.ACTIVE, 0L),
+                byStatus.getOrDefault(AccountStatus.BANNED, 0L),
+                byStatus.getOrDefault(AccountStatus.DEACTIVATED, 0L));
+    }
+
+    /** 运营看板用户组出参（application 层载体，web 层再映射成 VO） */
+    public record AccountStats(long total, long active, long banned, long deactivated) {
+    }
 }

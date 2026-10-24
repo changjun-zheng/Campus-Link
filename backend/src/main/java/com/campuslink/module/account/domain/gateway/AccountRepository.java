@@ -7,6 +7,7 @@ import com.campuslink.module.account.domain.model.ProfileField;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -65,4 +66,12 @@ public interface AccountRepository {
 
     /** 冷静期已满且尚未匿名化的注销账号（status=DEACTIVATED AND 0 < delete_at <= now AND anonymized = 0） */
     List<Account> findExpiredDeactivations(java.time.Instant now);
+
+    /**
+     * 运营看板（F-ADMIN-005 / CR-131）：按 {@code users.status} 分组的只读计数。
+     *
+     * <p>只返回库里实际出现的状态键；调用方用 {@code getOrDefault(..., 0L)} 补齐。
+     * {@code DEACTIVATED} 同样计入总数（注销账号仍是一条账号记录），由调用方单列。
+     */
+    Map<AccountStatus, Long> countByStatus();
 }

@@ -53,6 +53,10 @@
       "description": "收藏"
     },
     {
+      "name": "admin-dashboard",
+      "description": "运营后台 · 数据看板（仅 SUPERADMIN）"
+    },
+    {
       "name": "admin-roster",
       "description": "学籍名册导入（仅 SUPERADMIN）"
     },
@@ -4174,6 +4178,62 @@
           }
         ]
       }
+    },
+    "/api/v1/admin/dashboard": {
+      "get": {
+        "tags": [
+          "admin-dashboard"
+        ],
+        "summary": "数据看板（仅 SUPERADMIN）：用户 / 帖子 / 楼层 / 举报四组计数；今日按 UTC 日界",
+        "operationId": "dashboard",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseAdminDashboardVo"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未登录（4001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "无权限（4002）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "系统繁忙，请稍后再试（9999）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -5854,6 +5914,89 @@
           "size": {
             "type": "integer",
             "format": "int32"
+          }
+        }
+      },
+      "AdminDashboardVo": {
+        "type": "object",
+        "properties": {
+          "userTotal": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "userActive": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "userBanned": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "userDeactivated": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "postTotal": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "postPublished": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "postRemoved": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "postTodayCreated": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "replyTotal": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "replyPublished": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "replyRemoved": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "replyTodayCreated": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "reportTotal": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "reportPending": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "reportClosed": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "ApiResponseAdminDashboardVo": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/AdminDashboardVo"
+          },
+          "traceId": {
+            "type": "string"
           }
         }
       },

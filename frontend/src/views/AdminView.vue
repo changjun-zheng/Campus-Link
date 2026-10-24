@@ -10,10 +10,12 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   closeReport,
+  getAdminDashboard,
   listReports,
   moderatePost,
   moderateReply,
   setUserStatus,
+  type AdminDashboardVo,
   type AdminReportVo,
 } from '../api/admin'
 import { useAuthStore } from '../stores/auth'
@@ -24,7 +26,7 @@ const auth = useAuthStore()
 
 const isSuperadmin = computed(() => auth.user?.role === 'SUPERADMIN')
 
-const tab = ref<'reports' | 'moderation'>('reports')
+const tab = ref<'reports' | 'moderation' | 'dashboard'>('reports')
 
 /* ─── 工单 ─── */
 const reportStatus = ref<'PENDING' | 'CLOSED' | ''>('')
@@ -143,9 +145,71 @@ async function doSetUserStatus(status: 'ACTIVE' | 'BANNED') {
   }
 }
 
+/* ─── 数据看板（F-ADMIN-005 / CR-131）：进入 Tab 才加载，不在首屏多打一次聚合 ─── */
+const dashboard = ref<AdminDashboardVo | null>(null)
+const dashboardLoading = ref(false)
+const dashboardError = ref('')
+
+async function loadDashboard() {
+  dashboardLoading.value = true
+  dashboardError.value = ''
+  try {
+    dashboard.value = await getAdminDashboard()
+  } catch (e) {
+    dashboard.value = null
+    dashboardError.value = e instanceof Error ? e.message : '看板加载失败'
+  } finally {
+    dashboardLoading.value = false
+  }
+}
+
+/** 四张卡片的数据源：分组与标签只在模板外组装一次，模板只负责渲染 */
+const dashboardCards = computed(() => {
+  const d = dashboard.value
+  if (!d) return []
+  return [
+    {
+      title: '用户',
+      items: [
+        { label: '总数', value: d.userTotal },
+        { label: '活跃', value: d.userActive },
+        { label: '封禁', value: d.userBanned },
+        { label: '已注销', value: d.userDeactivated },
+      ],
+    },
+    {
+      title: '帖子',
+      items: [
+        { label: '总数', value: d.postTotal },
+        { label: '已发布', value: d.postPublished },
+        { label: '已下架', value: d.postRemoved },
+        { label: '今日新增', value: d.postTodayCreated },
+      ],
+    },
+    {
+      title: '楼层',
+      items: [
+        { label: '总数', value: d.replyTotal },
+        { label: '已发布', value: d.replyPublished },
+        { label: '已下架', value: d.replyRemoved },
+        { label: '今日新增', value: d.replyTodayCreated },
+      ],
+    },
+    {
+      title: '举报',
+      items: [
+        { label: '总数', value: d.reportTotal },
+        { label: '待处理', value: d.reportPending },
+        { label: '已闭环', value: d.reportClosed },
+      ],
+    },
+  ]
+})
+
 watch([reportStatus, reportPage], () => loadReports())
 watch(tab, () => {
   if (tab.value === 'reports' && !reports.value.length) loadReports()
+  if (tab.value === 'dashboard' && !dashboard.value) loadDashboard()
 })
 onMounted(() => {
   if (isSuperadmin.value) loadReports()
@@ -178,7 +242,40 @@ function goLogin() {
     <el-tabs v-model="tab" class="mb-5">
       <el-tab-pane label="举报工单" name="reports" />
       <el-tab-pane label="内容处置台" name="moderation" />
+      <el-tab-pane label="数据看板" name="dashboard" />
     </el-tabs>
+
+    <!-- ─── 数据看板（F-ADMIN-005 / CR-131）：仅 SUPERADMIN；进入 Tab 才加载 ─── -->
+    <el-card v-show="tab === 'dashboard'" shadow="never" class="mb-5">
+      <template #header>
+        <div class="flex flex-wrap items-baseline justify-between gap-2">
+          <span class="font-medium">数据看板</span>
+          <span class="text-caption text-ink-meta">今日按 UTC 自然日；作者自删不计，平台下架单列</span>
+        </div>
+      </template>
+
+      <el-skeleton v-if="dashboardLoading" :rows="4" animated />
+      <div v-else-if="dashboardError" class="py-2">
+        <el-alert type="error" :closable="false" show-icon :title="dashboardError">
+          <el-button size="small" @click="loadDashboard">重新加载</el-button>
+        </el-alert>
+      </div>
+      <div v-else-if="dashboard" class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <section
+          v-for="card in dashboardCards"
+          :key="card.title"
+          class="rounded-md border-[0.5px] border-divider p-4"
+        >
+          <h3 class="text-body font-medium text-ink">{{ card.title }}</h3>
+          <div class="mt-3 grid grid-cols-2 gap-3">
+            <div v-for="item in card.items" :key="item.label">
+              <p class="text-title-lg font-medium text-ink tabular-nums">{{ item.value }}</p>
+              <p class="mt-0.5 text-caption text-ink-meta">{{ item.label }}</p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </el-card>
 
     <!-- ─── 举报工单 ─── -->
     <el-card v-show="tab === 'reports'" shadow="never" :body-style="{ padding: 0 }">

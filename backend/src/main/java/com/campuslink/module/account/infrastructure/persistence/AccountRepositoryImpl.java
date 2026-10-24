@@ -16,8 +16,10 @@ import org.springframework.stereotype.Repository;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /** 适配器：AccountRepository 端口的 MyBatis-Plus 实现（适配器模式） */
 @Repository
@@ -159,5 +161,12 @@ public class AccountRepositoryImpl implements AccountRepository {
                 .le(UserDO::getDeleteAt, now)).stream()
                 .map(d -> AccountConverter.toDomain(d, codec))
                 .toList();
+    }
+
+    @Override
+    public Map<AccountStatus, Long> countByStatus() {
+        return userMapper.countByStatus().stream()
+                .collect(Collectors.toMap(row -> AccountStatus.valueOf(row.getStatus()),
+                        StatusCountRow::getCnt, Long::sum));
     }
 }

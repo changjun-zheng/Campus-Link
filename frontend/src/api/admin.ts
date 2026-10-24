@@ -52,3 +52,30 @@ export const submitReport = (payload: {
   reason: string
   detail?: string
 }) => post<{ id: number; status: string }>('/reports', payload)
+
+/**
+ * 数据看板（F-ADMIN-005 / CR-131，仅 SUPERADMIN）：四组扁平计数。
+ *
+ * 口径：内容组 `total` 只含未删内容，`removed` 是平台下架且计入 total，作者自删不计；
+ * `*TodayCreated` 按 **UTC 自然日**；用户组 `userTotal` 含已注销、并单列 `userDeactivated`。
+ */
+export interface AdminDashboardVo {
+  userTotal: number
+  userActive: number
+  userBanned: number
+  userDeactivated: number
+  postTotal: number
+  postPublished: number
+  postRemoved: number
+  postTodayCreated: number
+  replyTotal: number
+  replyPublished: number
+  replyRemoved: number
+  replyTodayCreated: number
+  reportTotal: number
+  reportPending: number
+  reportClosed: number
+}
+
+/** 运营看板（仅 SUPERADMIN）：进入看板 Tab 才调用 */
+export const getAdminDashboard = () => get<AdminDashboardVo>('/admin/dashboard')
