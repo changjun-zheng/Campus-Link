@@ -12,6 +12,7 @@ import {
   closeReport,
   deleteAdminTag,
   getAdminDashboard,
+  getReviewQueue,
   listAdminTags,
   listReports,
   moderatePost,
@@ -20,6 +21,7 @@ import {
   type AdminDashboardVo,
   type AdminReportVo,
   type AdminTagVo,
+  type ReviewQueueItemVo,
 } from '../api/admin'
 import { useAuthStore } from '../stores/auth'
 import { formatRelativeTime } from '../utils/time'
@@ -29,7 +31,7 @@ const auth = useAuthStore()
 
 const isSuperadmin = computed(() => auth.user?.role === 'SUPERADMIN')
 
-const tab = ref<'reports' | 'moderation' | 'dashboard' | 'tags'>('reports')
+const tab = ref<'reports' | 'moderation' | 'dashboard' | 'tags' | 'review'>('reports')
 
 /* ─── 工单 ─── */
 const reportStatus = ref<'PENDING' | 'CLOSED' | ''>('')
@@ -267,11 +269,68 @@ async function onDeleteTag(tag: AdminTagVo) {
   }
 }
 
+/* ─── 内容巡查（F-SAFE-004 / CR-133）：进入 Tab 才加载；处置复用既有端点 ─── */
+const reviewKind = ref<'post' | 'reply'>('post')
+const reviewItems = ref<ReviewQueueItemVo[]>([])
+const reviewTotal = ref(0)
+const reviewPage = ref(1)
+const reviewSize = 20
+const reviewLoading = ref(false)
+const reviewError = ref('')
+
+async function loadReviewQueue(next = reviewPage.value) {
+  reviewLoading.value = true
+  reviewError.value = ''
+  try {
+    const res = await getReviewQueue({ kind: reviewKind.value, page: next, size: reviewSize })
+    reviewItems.value = res.items
+    reviewTotal.value = res.total
+    reviewPage.value = res.page
+    reviewKind.value = res.kind
+  } catch (e) {
+    reviewItems.value = []
+    reviewTotal.value = 0
+    reviewError.value = e instanceof Error ? e.message : '巡查队列加载失败'
+  } finally {
+    reviewLoading.value = false
+  }
+}
+
+function onReviewKindChange() {
+  void loadReviewQueue(1)
+}
+
+async function onReviewModerate(item: ReviewQueueItemVo) {
+  const next = item.status === 'REMOVED' ? 'PUBLISHED' : 'REMOVED'
+  const actionLabel = next === 'REMOVED' ? '下架' : '恢复'
+  try {
+    await ElMessageBox.confirm(
+      `确定${actionLabel}「${item.title}」？该操作会记录审计。`,
+      `${actionLabel}内容`,
+      { type: 'warning', confirmButtonText: actionLabel, cancelButtonText: '取消' },
+    )
+  } catch {
+    return
+  }
+  try {
+    if (item.kind === 'reply') {
+      await moderateReply(item.id, next, '巡查队列操作')
+    } else {
+      await moderatePost(item.id, next, '巡查队列操作')
+    }
+    ElMessage.success(`已${actionLabel}`)
+    await loadReviewQueue()
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : `${actionLabel}失败`)
+  }
+}
+
 watch([reportStatus, reportPage], () => loadReports())
 watch(tab, () => {
   if (tab.value === 'reports' && !reports.value.length) loadReports()
   if (tab.value === 'dashboard' && !dashboard.value) loadDashboard()
   if (tab.value === 'tags' && !tags.value.length) loadTags()
+  if (tab.value === 'review' && !reviewItems.value.length) loadReviewQueue()
 })
 onMounted(() => {
   if (isSuperadmin.value) loadReports()
@@ -306,6 +365,7 @@ function goLogin() {
       <el-tab-pane label="内容处置台" name="moderation" />
       <el-tab-pane label="数据看板" name="dashboard" />
       <el-tab-pane label="标签管理" name="tags" />
+      <el-tab-pane label="内容巡查" name="review" />
     </el-tabs>
 
     <!-- ─── 数据看板（F-ADMIN-005 / CR-131）：仅 SUPERADMIN；进入 Tab 才加载 ─── -->
@@ -399,6 +459,73 @@ function goLogin() {
             :page-size="tagSize"
             :current-page="tagPage"
             @current-change="(next: number) => loadTags(next)"
+          />
+        </div>
+      </template>
+    </el-card>
+
+    <!-- ─── 内容巡查（F-SAFE-004 / CR-133）：仅 SUPERADMIN；进入 Tab 才加载 ─── -->
+    <el-card v-show="tab === 'review'" shadow="never">
+      <template #header>
+        <div class="flex flex-wrap items-baseline justify-between gap-2">
+          <span class="font-medium">内容巡查</span>
+          <span class="text-caption text-ink-meta">
+            按发布时间倒序；只列未删内容，已下架仍列出可恢复；处置会记录审计
+          </span>
+        </div>
+      </template>
+
+      <div class="mb-4 flex flex-wrap items-center gap-2">
+        <el-select v-model="reviewKind" style="width: 140px" @change="onReviewKindChange">
+          <el-option label="帖子" value="post" />
+          <el-option label="楼层" value="reply" />
+        </el-select>
+      </div>
+
+      <el-skeleton v-if="reviewLoading" :rows="4" animated />
+      <div v-else-if="reviewError" class="py-2">
+        <el-alert type="error" :closable="false" show-icon :title="reviewError">
+          <el-button size="small" @click="loadReviewQueue()">重新加载</el-button>
+        </el-alert>
+      </div>
+      <div v-else-if="!reviewItems.length" class="py-8 text-center text-body text-ink-meta">
+        暂无内容
+      </div>
+      <template v-else>
+        <ul>
+          <li
+            v-for="item in reviewItems"
+            :key="`${item.kind}-${item.id}`"
+            class="flex items-center justify-between gap-3 border-b-[0.5px] border-divider py-2.5 last:border-b-0"
+          >
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-body font-medium text-ink">{{ item.title }}</p>
+              <p class="mt-0.5 text-caption text-ink-meta">
+                {{ item.boardName }} · {{ item.authorNickname }} · {{ formatRelativeTime(item.createdAt) }}
+              </p>
+            </div>
+            <div class="flex flex-none items-center gap-3">
+              <el-tag :type="item.status === 'REMOVED' ? 'danger' : 'success'" size="small">
+                {{ item.status === 'REMOVED' ? '已下架' : '正常' }}
+              </el-tag>
+              <el-button
+                size="small"
+                :type="item.status === 'REMOVED' ? 'primary' : 'danger'"
+                plain
+                @click="onReviewModerate(item)"
+              >
+                {{ item.status === 'REMOVED' ? '恢复' : '下架' }}
+              </el-button>
+            </div>
+          </li>
+        </ul>
+        <div v-if="reviewTotal > reviewSize" class="flex justify-center pt-3">
+          <el-pagination
+            layout="prev, pager, next, total"
+            :total="reviewTotal"
+            :page-size="reviewSize"
+            :current-page="reviewPage"
+            @current-change="(next: number) => loadReviewQueue(next)"
           />
         </div>
       </template>

@@ -117,3 +117,38 @@ export const listAdminTags = (
  * 清受影响帖子的 `posts.tags` 冗余列、删 `tags` 行，并记一条 `TAG_DELETE` 审计。
  */
 export const deleteAdminTag = (id: number) => del<void>(`/admin/tags/${id}`)
+
+/**
+ * 内容巡查队列（F-SAFE-004 / CR-133，仅 SUPERADMIN）。
+ *
+ * 只列未删内容、**已下架仍列出**（可恢复）；`kind=reply` 时 `title` 是楼层正文纯文本前 60 字（不含 HTML）。
+ * 处置不在本组：复用 `moderatePost` / `moderateReply`（审计仍为 `MODERATE_POST` / `MODERATE_REPLY`）。
+ */
+export interface ReviewQueueItemVo {
+  id: number
+  kind: 'post' | 'reply'
+  title: string
+  boardName: string
+  authorNickname: string
+  status: 'PUBLISHED' | 'REMOVED'
+  createdAt: string
+}
+
+export interface ReviewQueueVo {
+  kind: 'post' | 'reply'
+  items: ReviewQueueItemVo[]
+  total: number
+  page: number
+  size: number
+}
+
+/** 巡查队列（仅 SUPERADMIN）：kind 只认 reply，其余服务端归一为 post */
+export const getReviewQueue = (
+  params: { kind?: 'post' | 'reply'; page?: number; size?: number } = {},
+) => {
+  const query = new URLSearchParams()
+  query.set('kind', params.kind ?? 'post')
+  query.set('page', String(params.page ?? 1))
+  query.set('size', String(params.size ?? 20))
+  return get<ReviewQueueVo>(`/admin/review-queue?${query.toString()}`)
+}
