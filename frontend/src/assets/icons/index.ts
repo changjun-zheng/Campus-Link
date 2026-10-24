@@ -27,6 +27,7 @@ const ICON_NAMES = [
   'eye',
   'link',
   'list',
+  'mail',
   'message-2',
   'message-circle',
   'messages',
@@ -34,6 +35,7 @@ const ICON_NAMES = [
   'photo',
   'school',
   'search',
+  'send',
   'thumb-up',
   'trophy',
 ] as const

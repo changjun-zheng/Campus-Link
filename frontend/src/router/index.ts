@@ -19,6 +19,9 @@ const router = createRouter({
     { path: '/u/:id/followers', name: 'follow-followers', component: () => import('../views/FollowListView.vue'), meta: { title: '粉丝', requiresAuth: true } },
     { path: '/u/:id/following', name: 'follow-following', component: () => import('../views/FollowListView.vue'), meta: { title: '关注', requiresAuth: true } },
     { path: '/notifications', name: 'notifications', component: () => import('../views/NotificationsView.vue'), meta: { title: '通知', requiresAuth: true } },
+    // 私信（F-SOC-003 / CR-135）：两个页面都是本人私有数据，均需登录
+    { path: '/messages', name: 'messages', component: () => import('../views/MessagesView.vue'), meta: { title: '私信', requiresAuth: true } },
+    { path: '/messages/:peerId', name: 'conversation', component: () => import('../views/ConversationView.vue'), meta: { title: '私信', requiresAuth: true } },
     { path: '/favorites', name: 'favorites', component: () => import('../views/MyFavoritesView.vue'), meta: { title: '我的收藏', requiresAuth: true } },
     { path: '/settings', name: 'settings', component: () => import('../views/SettingsView.vue'), meta: { title: '设置', requiresAuth: true } },
     { path: '/me/posts', name: 'my-posts', component: () => import('../views/MyPostsView.vue'), meta: { title: '我的帖子', requiresAuth: true } },

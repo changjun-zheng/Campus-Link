@@ -32,6 +32,7 @@ public enum ResultCode {
     REPORT_DUPLICATED(2012, 429, "24 小时内已举报过该内容"),
     ACCOUNT_DEACTIVATED(2013, 403, "账号注销中，请先撤销注销"),
     PHONE_EXISTS(2014, 409, "该手机号已注册"),
+    CANNOT_MESSAGE_SELF(2015, 400, "不能给自己发私信"),
 
     STUDENT_VERIFY_FAILED(2101, 400, "学籍信息校验未通过"),
     VERIFY_TICKET_INVALID(2102, 400, "核验票据无效或已过期，请重新核验"),

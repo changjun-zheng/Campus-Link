@@ -260,6 +260,12 @@ async function toggleFollow() {
   }
 }
 
+/** 私信入口（F-SOC-003 / CR-135）：未登录先走登录回跳；对方不可达时聊天页自己给空态 */
+function openChat() {
+  if (!requireLoginOrRedirect()) return
+  router.push(`/messages/${userId.value}`)
+}
+
 async function toggleBlock() {
   if (!requireLoginOrRedirect()) return
   const action = blocked.value ? '解除拉黑' : '拉黑'
@@ -359,6 +365,10 @@ watch(userId, () => void loadAll(), { immediate: true })
                 @click="toggleFollow"
               >
                 {{ following ? '已关注' : '＋ 关注' }}
+              </el-button>
+              <el-button size="small" @click="openChat">
+                <SvgIcon name="mail" :size="13" class="mr-1" />
+                私信
               </el-button>
               <el-button
                 size="small"

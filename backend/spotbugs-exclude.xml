@@ -84,6 +84,13 @@
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.application.ReviewQueueApplicationService$ReviewQueue"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.module.forum.web.vo.ReviewQueueVo"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.web.vo.ReviewQueueVo"/></Match>
+  <!-- CR-135 私信分页载体：同型（record + 只读 List），构造后不再变更 -->
+  <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.module.messaging.application.cmd.MessagingResults$ConversationPage"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.messaging.application.cmd.MessagingResults$ConversationPage"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.module.messaging.application.cmd.MessagingResults$MessagePage"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.messaging.application.cmd.MessagingResults$MessagePage"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.module.messaging.web.vo.PageVo"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.messaging.web.vo.PageVo"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.module.forum.domain.gateway.PageResult"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.domain.gateway.PageResult"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.module.notification.domain.gateway.PageResult"/></Match>

@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from './stores/auth'
 import { useUnreadNotifications } from './composables/useUnreadNotifications'
+import { useUnreadMessages } from './composables/useUnreadMessages'
 import { BOARDS } from './constants/boards'
 import UserAvatar from './components/UserAvatar.vue'
 import SvgIcon from './components/SvgIcon.vue'
@@ -11,6 +12,8 @@ const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 const { unreadCount } = useUnreadNotifications()
+/** 私信未读角标（F-SOC-003 / CR-135）：30 秒轮询 + 会话页发送 / 已读后主动刷新 */
+const { unreadCount: unreadMessages } = useUnreadMessages()
 
 const nickname = computed(() => auth.user?.nickname || '')
 const isLoggedIn = computed(() => auth.isLoggedIn)
@@ -111,6 +114,11 @@ function onSearchSubmit() {
               <SvgIcon name="bell" :size="18" />
             </el-badge>
           </RouterLink>
+          <RouterLink to="/messages" class="text-ink-regular hover:text-link" aria-label="私信">
+            <el-badge :value="unreadMessages" :max="99" :hidden="!unreadMessages">
+              <SvgIcon name="mail" :size="18" />
+            </el-badge>
+          </RouterLink>
           <el-dropdown v-if="isLoggedIn">
             <span class="flex cursor-pointer items-center gap-1.5">
               <UserAvatar :src="auth.user?.avatarUrl" :name="nickname" :size="28" />
@@ -120,6 +128,7 @@ function onSearchSubmit() {
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item @click="router.push('/notifications')">通知中心</el-dropdown-item>
+                <el-dropdown-item @click="router.push('/messages')">私信</el-dropdown-item>
                   <el-dropdown-item v-if="auth.user?.role === 'SUPERADMIN'" divided @click="router.push('/admin')">管理后台</el-dropdown-item>
                 <el-dropdown-item @click="router.push('/me/posts')">我的帖子</el-dropdown-item>
                 <el-dropdown-item @click="router.push('/me/replies')">我的回帖</el-dropdown-item>
