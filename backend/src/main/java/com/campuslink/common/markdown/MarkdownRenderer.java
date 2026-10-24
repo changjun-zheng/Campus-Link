@@ -10,6 +10,7 @@ import org.jsoup.safety.Safelist;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Markdown → HTML 的服务端唯一渲染出口（ADR-005，论坛安全生命线）。
@@ -57,7 +58,44 @@ public class MarkdownRenderer {
      * 记号规则（表格 / 链接 / 代码块）只需在此维护一份，摘要与正文永不漂移。
      */
     public String toPlainSummary(String markdown, int maxChars) {
-        String text = Jsoup.parse(render(markdown)).text().trim();
+        return truncate(plainText(markdown), maxChars);
+    }
+
+    /**
+     * 搜索命中摘要（F-FORUM-009 / CR-136）：纯文本化后把**首个命中词**放进窗口中心，
+     * 前后按需加省略号；关键词不在纯文本里时回落首段摘要。
+     *
+     * <p>与 {@link #toPlainSummary} 共用同一条渲染 + 净化链路：Markdown 记号规则仍只有一份，
+     * 摘要不会因为命中位置在表格 / 链接 / 代码块里而露出原始记号。
+     * 关键词比较忽略大小写（英文），中文无需分词——调用方已保证 2 字以上。
+     */
+    public String toPlainSnippet(String markdown, String keyword, int maxChars) {
+        String text = plainText(markdown);
+        if (text.length() <= maxChars) {
+            return text;
+        }
+        String needle = keyword == null ? "" : keyword.strip();
+        int at = needle.isEmpty()
+                ? -1
+                : text.toLowerCase(Locale.ROOT).indexOf(needle.toLowerCase(Locale.ROOT));
+        if (at < 0) {
+            return truncate(text, maxChars);
+        }
+        // 命中词前留 1/3 窗口作上下文；窗口贴尾时整体左移，保证长度不超 maxChars（省略号另计）
+        int start = Math.max(0, at - maxChars / 3);
+        int end = Math.min(text.length(), start + maxChars);
+        start = Math.max(0, end - maxChars);
+        String prefix = start > 0 ? "…" : "";
+        String suffix = end < text.length() ? "…" : "";
+        return prefix + text.substring(start, end) + suffix;
+    }
+
+    /** Markdown → 纯文本：渲染 + 净化后取 text（摘要 / 引用 / 搜索共用，避免自行剥记号导致口径漂移） */
+    private String plainText(String markdown) {
+        return Jsoup.parse(render(markdown)).text().trim();
+    }
+
+    private static String truncate(String text, int maxChars) {
         return text.length() <= maxChars ? text : text.substring(0, maxChars);
     }
 }

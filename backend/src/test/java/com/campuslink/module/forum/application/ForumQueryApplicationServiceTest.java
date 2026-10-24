@@ -352,6 +352,21 @@ class ForumQueryApplicationServiceTest {
     }
 
     @Test
+    @DisplayName("搜索摘要（F-FORUM-009 / CR-136）：命中词在正文深处时围绕它取窗口，而不是只给首段")
+    void searchSummaryCentersOnKeyword() {
+        String deepContent = "前".repeat(120) + "命中词" + "后".repeat(120);
+        when(postRepository.search("命中词", null, null, java.util.Set.of(), 1, 20))
+                .thenReturn(new PageResult<>(List.of(post(1L, 100L, deepContent)), 1, 1, 20));
+        when(boardRepository.findAllEnabled()).thenReturn(List.of(board(1L, "qna", "技术问答")));
+        when(accountApplicationService.nicknamesOf(List.of(100L))).thenReturn(Map.of(100L, "张三"));
+
+        PageResult<PostSummary> page = service.searchPosts("命中词", null, null, 1, 20, null);
+
+        assertThat(page.items().getFirst().summary())
+                .contains("命中词").startsWith("…").endsWith("…");
+    }
+
+    @Test
     @DisplayName("搜索：keyword 过短（1 字，ngram 分不出词）→ 1001，且不查仓储")
     void searchRejectsSingleCharKeyword() {
         assertThatThrownBy(() -> service.searchPosts("R", null, null, 1, 20, null))

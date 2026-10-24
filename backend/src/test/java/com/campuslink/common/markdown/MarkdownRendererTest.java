@@ -59,4 +59,52 @@ class MarkdownRendererTest {
         assertThat(out).contains("<li>");
         assertThat(out).contains("<table>");
     }
+
+    @Test
+    @DisplayName("搜索摘要：命中词在正文深处时窗口居中，并带前后省略号")
+    void snippetCentersDeepKeyword() {
+        String markdown = "前".repeat(120) + "命中词" + "后".repeat(120);
+
+        String snippet = renderer.toPlainSnippet(markdown, "命中词", 120);
+
+        assertThat(snippet).contains("命中词").startsWith("…").endsWith("…");
+        assertThat(snippet.length()).isLessThanOrEqualTo(122);
+    }
+
+    @Test
+    @DisplayName("搜索摘要：关键词不在纯文本里（或为空）时回落首段摘要")
+    void snippetFallsBackWhenKeywordMissing() {
+        String markdown = "甲".repeat(200);
+
+        assertThat(renderer.toPlainSnippet(markdown, "找不到", 120))
+                .isEqualTo(renderer.toPlainSummary(markdown, 120));
+        assertThat(renderer.toPlainSnippet(markdown, null, 120))
+                .isEqualTo(renderer.toPlainSummary(markdown, 120));
+    }
+
+    @Test
+    @DisplayName("搜索摘要：短文本原样返回，不截断、不加省略号")
+    void snippetKeepsShortText() {
+        assertThat(renderer.toPlainSnippet("短正文", "正文", 120)).isEqualTo("短正文");
+    }
+
+    @Test
+    @DisplayName("搜索摘要：英文关键词忽略大小写")
+    void snippetIsCaseInsensitive() {
+        String markdown = "x".repeat(150) + " Spring Boot " + "y".repeat(50);
+
+        String snippet = renderer.toPlainSnippet(markdown, "spring", 120);
+
+        assertThat(snippet).contains("Spring Boot");
+    }
+
+    @Test
+    @DisplayName("搜索摘要：Markdown 记号先被纯文本化，命中词在加粗里也不露出 **")
+    void snippetStripsMarkdownMarkup() {
+        String markdown = "这是一段包含 **Spring Boot** 的正文。";
+
+        String snippet = renderer.toPlainSnippet(markdown, "Spring Boot", 120);
+
+        assertThat(snippet).contains("Spring Boot").doesNotContain("**");
+    }
 }

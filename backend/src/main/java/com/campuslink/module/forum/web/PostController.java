@@ -101,7 +101,7 @@ public class PostController {
                 result.total(), result.page(), result.size()));
     }
 
-    @Operation(summary = "站内搜索（公开）：keyword 2~50 字搜标题（ngram 全文）与标签；boardCode / days（仅 7、30、90）可筛选；按相关度 + 时间排序")
+    @Operation(summary = "站内搜索（公开）：keyword 2~50 字搜标题 / 正文（ngram 全文）与标签；boardCode / days（仅 7、30、90）可筛选；按相关度 + 时间排序")
     @ErrorCodes({ ResultCode.NOT_FOUND })
     @PublicEndpoint
     @GetMapping("/search")

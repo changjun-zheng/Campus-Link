@@ -2,13 +2,14 @@
 
 | 文档信息 | 内容 |
 |---------|------|
-| 版本 | v1.2 |
+| 版本 | v1.3 |
 | 状态 | 已归档（设计门行动项 **A3-5** 交付物，[CR-035](../变更日志/变更台账.md)） |
 | 维护人 | 技术负责人（发起人兼任） |
 | 最后更新 | 2026-10-24 |
 
 > **变更记录**
 >
+> - **v1.3（2026-10-24）**——同步 `V7__post_content_fulltext.sql`（[CR-136](../变更日志/变更台账.md#cr-136) 正文全文检索）：`posts` 新增 `ft_posts_content (content_md) WITH PARSER ngram`。§4 索引清单 +1 行、§5 扩容触发点改写；**表数仍 16 张、不改任何表结构**。
 > - **v1.2（2026-10-24）**——同步 `V6__direct_messages.sql`（[CR-135](../变更日志/变更台账.md#cr-135) 私信）：新建 `conversations` / `messages` 两表。§2 / §3 表数 **14 → 16 张**、§4 索引清单补 `uk_conversations_pair` / 两个会话侧索引 / 两个消息侧索引、§5 补两表量级；**本文不引入任何结构变更**，事实源扩为 V1~V6。
 > - **v1.1（2026-10-24）**——同步 V3~V5 结构变更（[CR-134](../变更日志/变更台账.md#cr-134)）：`V4` 给 `posts` 加 `view_count` / `cover_url` 两列并新建 `follows`（[CR-074](../变更日志/变更台账.md)），`V5` 新建 `user_blocks`（[CR-129](../变更日志/变更台账.md)），`V3` 给 `posts` / `replies` 各加一个作者维度复合索引（[CR-071](../变更日志/变更台账.md)）。§2 / §3 表数 **12 → 14 张**、§4 索引清单补 4 个索引、§5 补两表量级；**本文不引入任何结构变更**，事实源扩为 V1~V5。
 > - **v1.0（2026-09-13）**——初版（[CR-035](../变更日志/变更台账.md)，设计门 A3-5）。§2 ER 图以 `V1__init_schema.sql` 实际 12 张表为唯一事实源；§5 量级预估以 [PRD](../需求/产品需求文档.md) §4 容量基线为输入。
@@ -16,7 +17,7 @@
 ## 1. 目的、事实源与边界
 
 - **目的**：为设计门行动项 A3-5 提供两件东西——① 现有数据模型的**实体关系可视化**（文字定义在[技术方案 §4](技术方案.md)，本图为可视化对照）；② 按 PRD 容量基线的**数据量级与索引水位预估**，作为测试阶段造数规模与发布阶段容量验收的参考。
-- **事实源**：`backend/src/main/resources/db/migration/` 下的**全部迁移**（V1 基线 12 张表 + `V2__seed_boards.sql` 仅种入 6 个版块数据、无结构 + `V3__my_content_indexes.sql` 两个作者维度索引 + `V4__post_views_and_follows.sql` 给 `posts` 加两列并新建 `follows` + `V5__user_blocks.sql` 新建 `user_blocks` + `V6__direct_messages.sql` 新建 `conversations` / `messages`；**已执行迁移不可改**）。**表结构、字段、索引以迁移文件为准**——本文与其冲突时，以迁移文件为准并须修正本文。
+- **事实源**：`backend/src/main/resources/db/migration/` 下的**全部迁移**（V1 基线 12 张表 + `V2__seed_boards.sql` 仅种入 6 个版块数据、无结构 + `V3__my_content_indexes.sql` 两个作者维度索引 + `V4__post_views_and_follows.sql` 给 `posts` 加两列并新建 `follows` + `V5__user_blocks.sql` 新建 `user_blocks` + `V6__direct_messages.sql` 新建 `conversations` / `messages` + `V7__post_content_fulltext.sql` 给 `posts` 加正文 FULLTEXT 索引；**已执行迁移不可改**）。**表结构、字段、索引以迁移文件为准**——本文与其冲突时，以迁移文件为准并须修正本文。
 - **边界**：本文**不引入任何表结构 / 索引变更**；量级数字均为工程估算（见 §5 口径），**非性能承诺**——性能承诺以 PRD §4 的 P90 / P95 指标为准，由测试阶段实测验收。
 - **维护约定**：后续新增 `V<n>__*.sql` 结构变更时，**该 CR 必须同步更新本文**（§2 图、§3 表清单、§4 索引清单、§5 水位），否则视为该 CR 的文档同步遗漏。
 
@@ -201,7 +202,8 @@ erDiagram
 | `posts` | `idx_posts_board_list (board_id, status, is_deleted, created_at)` | 复合 | 版块列表页（最常用路径） |
 | `posts` | `idx_posts_latest (status, is_deleted, created_at)` | 复合 | 首页"最新"流 |
 | `posts` | `idx_posts_hot (hot_score)` | 普通 | 首页"热门"流（ADR-006 定时刷新分数） |
-| `posts` | `ft_posts_title (title) WITH PARSER ngram` | FULLTEXT | 中文标题检索（ngram 分词；若 F-FORUM-009 上 MeiliSearch，此索引可评估下线） |
+| `posts` | `ft_posts_title (title) WITH PARSER ngram` | FULLTEXT | 中文标题检索（ngram 分词） |
+| `posts` | `ft_posts_content (content_md) WITH PARSER ngram` | FULLTEXT | 正文全文检索（V7 / [CR-136](../变更日志/变更台账.md#cr-136)；与标题索引分开建，相关度才能按「标题 × 2 + 正文 × 1」分别计分） |
 | `posts` | `idx_posts_author_list (author_id, is_deleted, created_at)` | 复合 | "我的帖子"列表（V3 / [CR-071](../变更日志/变更台账.md)） |
 | `replies` | `idx_replies_author_list (author_id, is_deleted, created_at)` | 复合 | "我的回复"列表（V3 / [CR-071](../变更日志/变更台账.md)，父帖可见性在 JOIN 上判） |
 | `tags` | `uk_tags_name` | UNIQUE | 标签归一 |
@@ -246,6 +248,6 @@ erDiagram
 |--------|---------|
 | 库总量 > **20 GB** 或 `posts` > **50 万行** | 冷帖归档（`is_deleted` + 老帖迁历史表）或按 `created_at` 做 RANGE 分区 |
 | `posts` / `replies` 平均正文显著超 15 KB（如长代码块） | 评估正文外置对象存储、库内只留摘要指针（改动较大，须先按 CR-034 写实施方案） |
-| 全文检索 QPS / 内存成为瓶颈 | 引入 MeiliSearch（PRD F-FORUM-009 预案），`ft_posts_title` 评估下线 |
+| 全文检索 QPS / 内存成为瓶颈 | 引入 MeiliSearch（规模升级预案；正文当前已由 MySQL ngram 承担，[CR-136](../变更日志/变更台账.md#cr-136)），届时评估两条 FULLTEXT 索引下线 |
 | `notifications` 未读数查询变慢 | 未读计数上 Redis（走 `RedisKeys` 前缀约定） |
 | 单帖楼层接近 **1000 楼上限**常态化 | 楼层分页游标化（当前 `(post_id, floor_no)` 复合索引已支撑，仅需改查询形态） |

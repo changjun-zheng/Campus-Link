@@ -9,7 +9,7 @@
  * CR-085：卡片重排为 CSDN / 掘金式——作者行（头像 + 昵称 + 时间）提到标题上方，
  * 标签 chips 与互动计数（点赞 / 回复 / 阅读）沉到摘要下方，信息层级与参考站一致。
  */
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { togglePostLike, type PostSummaryVo } from '../api/forum'
 import { boardNameOf } from '../constants/boards'
@@ -26,9 +26,45 @@ const props = withDefaults(
     showBoard?: boolean
     /** 是否显示摘要（默认显示，两行截断） */
     showSummary?: boolean
+    /** 搜索页关键词：标题与摘要里的命中片段用 <mark> 高亮（分段渲染，不使用 v-html） */
+    highlight?: string
   }>(),
-  { showBoard: false, showSummary: true },
+  { showBoard: false, showSummary: true, highlight: '' },
 )
+
+interface TextPart {
+  text: string
+  hit: boolean
+}
+
+/**
+ * 按关键词把纯文本切成「命中 / 未命中」片段（忽略大小写）。
+ *
+ * <p>刻意不走 `v-html`：后端 summary 是纯文本，前端再拼 HTML 等于把 XSS 面重新打开；
+ * 这里只产出纯文本片段，由模板用 `<mark>` 元素渲染，命中样式走令牌（--cl-color-primary-soft）。
+ */
+function splitByKeyword(text: string, keyword?: string): TextPart[] {
+  const kw = keyword?.trim()
+  if (!text || !kw) return [{ text, hit: false }]
+  const haystack = text.toLowerCase()
+  const needle = kw.toLowerCase()
+  const parts: TextPart[] = []
+  let cursor = 0
+  while (cursor < text.length) {
+    const at = haystack.indexOf(needle, cursor)
+    if (at < 0) {
+      parts.push({ text: text.slice(cursor), hit: false })
+      break
+    }
+    if (at > cursor) parts.push({ text: text.slice(cursor, at), hit: false })
+    parts.push({ text: text.slice(at, at + kw.length), hit: true })
+    cursor = at + kw.length
+  }
+  return parts
+}
+
+const titleParts = computed(() => splitByKeyword(props.post.title, props.highlight))
+const summaryParts = computed(() => splitByKeyword(props.post.summary, props.highlight))
 
 const route = useRoute()
 const router = useRouter()
@@ -80,7 +116,10 @@ async function onLike() {
             :to="`/post/${post.id}`"
             class="min-w-0 flex-1 truncate text-title font-medium text-ink hover:text-link"
           >
-            {{ post.title }}
+            <template v-for="(part, i) in titleParts" :key="i">
+              <mark v-if="part.hit" class="bg-primary-soft text-ink">{{ part.text }}</mark>
+              <template v-else>{{ part.text }}</template>
+            </template>
           </RouterLink>
         </div>
 
@@ -89,7 +128,10 @@ async function onLike() {
           v-if="showSummary && post.summary"
           class="mt-1.5 truncate text-note leading-body text-ink-regular"
         >
-          {{ post.summary }}
+          <template v-for="(part, i) in summaryParts" :key="i">
+            <mark v-if="part.hit" class="bg-primary-soft text-ink">{{ part.text }}</mark>
+            <template v-else>{{ part.text }}</template>
+          </template>
         </p>
 
         <!-- 元信息行（CR-091，参考 CSDN）：计数改"图标 + 文字 + 数字"并拉宽间距，去点分隔；

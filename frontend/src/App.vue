@@ -84,7 +84,7 @@ function onSearchSubmit() {
           >
             <el-input
               v-model="searchKeyword"
-              placeholder="搜索帖子标题 / 标签"
+              placeholder="搜索帖子标题 / 正文 / 标签"
               maxlength="50"
               clearable
               @keyup.enter="onSearchSubmit"

@@ -108,13 +108,13 @@ onMounted(async () => {
 
   <el-card shadow="never" class="mb-5">
     <h2 class="text-title-lg font-medium text-ink">站内搜索</h2>
-    <p class="mt-1.5 text-note text-ink-meta">按标题与标签检索，至少 2 个字；结果按相关度排序</p>
+    <p class="mt-1.5 text-note text-ink-meta">按标题、正文与标签检索，至少 2 个字；结果按相关度排序</p>
     <div class="mt-4 flex flex-col gap-3 md:flex-row md:items-center">
       <el-input
         ref="inputRef"
         v-model="keyword"
         class="md:flex-1"
-        placeholder="搜索帖子标题 / 标签（至少 2 个字）"
+        placeholder="搜索帖子标题 / 正文 / 标签（至少 2 个字）"
         maxlength="50"
         clearable
         @keyup.enter="onSubmit"
@@ -165,7 +165,7 @@ onMounted(async () => {
     </div>
 
     <div v-else-if="!searched" class="py-10 text-center">
-      <p class="text-body text-ink-regular">输入关键词搜索帖子标题与标签</p>
+      <p class="text-body text-ink-regular">输入关键词搜索帖子标题、正文与标签</p>
     </div>
 
     <div v-else-if="!posts.length" class="py-10 text-center">
@@ -180,7 +180,7 @@ onMounted(async () => {
         共 {{ total }} 条结果
       </div>
       <ul>
-        <PostListItem v-for="p in posts" :key="p.id" :post="p" show-board />
+        <PostListItem v-for="p in posts" :key="p.id" :post="p" show-board :highlight="effectiveKeyword" />
       </ul>
       <div v-if="total > size" class="flex justify-center px-5 py-4">
         <el-pagination

@@ -110,8 +110,9 @@ public class ForumQueryApplicationService {
     }
 
     /**
-     * 站内搜索（F-FORUM-008）：标题全文（ngram，中文 2 字起可命中）+ tags 冗余列 LIKE 兜底，
-     * 按相关度 + 时间排序，可按版块 / 时间窗筛选；出参与帖子列表同口径（{@link PostSummary}）。
+     * 站内搜索（F-FORUM-008 + F-FORUM-009 / CR-136）：标题 / 正文双 ngram 全文（中文 2 字起可命中）+ tags 冗余列 LIKE 兜底，
+     * 按相关度（标题权重 2、正文权重 1）+ 时间排序，可按版块 / 时间窗筛选；出参与帖子列表同口径（{@link PostSummary}），
+     * 唯一差异是 {@code summary} 改为**围绕首个命中词**的窗口摘要（命中在正文深处时读者才看得到依据）。
      * keyword 去首尾空白后长度须 2~50，days 只接受 7 / 30 / 90——不满足即 1001，不静默归一（与分页口径不同：
      * 分页越界只是翻页放大，关键词过短会退化成全表扫描且 ngram 分不出词）。
      */
@@ -129,7 +130,7 @@ public class ForumQueryApplicationService {
         Long boardId = boardIdOf(boardCode);
         PageResult<Post> found = postRepository.search(kw, boardId, days, blockedAuthorIds(viewerId),
                 currentPage, pageSize);
-        return new PageResult<>(toSummaries(found.items(), viewerId), found.total(), currentPage, pageSize);
+        return new PageResult<>(toSearchSummaries(found.items(), viewerId, kw), found.total(), currentPage, pageSize);
     }
 
     /**
@@ -508,6 +509,21 @@ public class ForumQueryApplicationService {
      * "我赞没赞过"，而不必为每行发一次请求。
      */
     private List<PostSummary> toSummaries(List<Post> posts, Long viewerId) {
+        return toSummaries(posts, viewerId,
+                post -> markdownRenderer.toPlainSummary(post.getContentMd(), SUMMARY_MAX_CHARS));
+    }
+
+    /** 搜索结果专用：摘要窗口围绕首个命中词（F-FORUM-009 / CR-136），其余字段与普通列表完全同口径 */
+    private List<PostSummary> toSearchSummaries(List<Post> posts, Long viewerId, String keyword) {
+        return toSummaries(posts, viewerId,
+                post -> markdownRenderer.toPlainSnippet(post.getContentMd(), keyword, SUMMARY_MAX_CHARS));
+    }
+
+    /**
+     * 摘要映射的共享骨架：版块名 / 作者昵称 / 已赞集合各一页一次批量解析，只有 {@code summaryFactory} 随场景变化
+     * （列表取首段、搜索取命中窗口）。拆出工厂参数是为了让两种摘要共用同一套批量查询，避免复制粘贴后漂移。
+     */
+    private List<PostSummary> toSummaries(List<Post> posts, Long viewerId, Function<Post, String> summaryFactory) {
         Map<Long, Board> boardsById = boardsById();
         Map<Long, String> nicknames = accountApplicationService.nicknamesOf(
                 posts.stream().map(Post::getAuthorId).toList());
@@ -525,7 +541,7 @@ public class ForumQueryApplicationService {
                             nicknames.getOrDefault(post.getAuthorId(), NICKNAME_FALLBACK),
                             post.getReplyCount(), post.getLikeCount(), post.getViewCount(), post.getCoverUrl(),
                             post.getTags(),
-                            markdownRenderer.toPlainSummary(post.getContentMd(), SUMMARY_MAX_CHARS),
+                            summaryFactory.apply(post),
                             post.getCreatedAt(), post.isAccepted(), likedIds.contains(post.getId()));
                 })
                 .toList();
