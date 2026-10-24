@@ -29,14 +29,19 @@ public class ReplyRepositoryImpl implements ReplyRepository {
     private final ReplyMapper replyMapper;
 
     @Override
-    public PageResult<Reply> findPageByPostId(Long postId, int page, int size) {
-        IPage<ReplyDO> result = replyMapper.selectPage(new Page<>(page, size), new LambdaQueryWrapper<ReplyDO>()
+    public PageResult<Reply> findPageByPostId(Long postId, Collection<Long> excludedAuthorIds,
+                                              int page, int size) {
+        LambdaQueryWrapper<ReplyDO> query = new LambdaQueryWrapper<ReplyDO>()
                 .eq(ReplyDO::getPostId, postId)
                 .eq(ReplyDO::getStatus, STATUS_PUBLISHED)
-                .eq(ReplyDO::getIsDeleted, false)
-                // 最佳答案置顶（F-QA-001）：is_accepted 至多一行为 1，其余按楼层号升序，分页口径不变
-                .orderByDesc(ReplyDO::getIsAccepted)
-                .orderByAsc(ReplyDO::getFloorNo));
+                .eq(ReplyDO::getIsDeleted, false);
+        // 拉黑过滤在 SQL 侧完成：total 与楼层列表同源（CR-129）
+        if (excludedAuthorIds != null && !excludedAuthorIds.isEmpty()) {
+            query.notIn(ReplyDO::getAuthorId, excludedAuthorIds);
+        }
+        query.orderByDesc(ReplyDO::getIsAccepted)
+                .orderByAsc(ReplyDO::getFloorNo);
+        IPage<ReplyDO> result = replyMapper.selectPage(new Page<>(page, size), query);
         return new PageResult<>(result.getRecords().stream().map(ReplyConverter::toDomain).toList(),
                 result.getTotal(), page, size);
     }

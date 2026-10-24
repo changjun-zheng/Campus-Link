@@ -67,13 +67,16 @@ class ForumQueryApplicationServiceUserPostsTest {
     @Mock
     private FollowApplicationService followApplicationService;
 
+    @Mock
+    private com.campuslink.module.account.application.UserBlockApplicationService userBlockApplicationService;
+
     private ForumQueryApplicationService service;
 
     @BeforeEach
     void setUp() {
         service = new ForumQueryApplicationService(boardRepository, postRepository, replyRepository,
-                likeRepository, favoriteRepository, accountApplicationService, followApplicationService,
-                new MarkdownRenderer(), new AppProperties());
+                likeRepository, favoriteRepository, accountApplicationService, userBlockApplicationService,
+                followApplicationService, new MarkdownRenderer(), new AppProperties());
     }
 
     @Test
@@ -86,14 +89,14 @@ class ForumQueryApplicationServiceUserPostsTest {
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.USER_NOT_FOUND));
 
-        verify(postRepository, never()).findPageByAuthors(any(), anyInt(), anyInt());
+        verify(postRepository, never()).findPageByAuthors(any(), any(), anyInt(), anyInt());
         verify(boardRepository, never()).findAllEnabled();
     }
 
     @Test
     @DisplayName("正常分页：出参与全站列表同形（PostSummary），版块名与昵称照常规批量解析")
     void listsAuthorPostsAsStandardSummaries() {
-        when(postRepository.findPageByAuthors(List.of(AUTHOR_ID), 1, 20))
+        when(postRepository.findPageByAuthors(List.of(AUTHOR_ID), java.util.Set.of(), 1, 20))
                 .thenReturn(new PageResult<>(List.of(post(7L, AUTHOR_ID)), 1, 1, 20));
         when(boardRepository.findAllEnabled()).thenReturn(List.of(board(1L, "qna", "技术问答")));
         when(accountApplicationService.nicknamesOf(List.of(AUTHOR_ID))).thenReturn(Map.of(AUTHOR_ID, "张三同学"));
@@ -111,7 +114,7 @@ class ForumQueryApplicationServiceUserPostsTest {
     @Test
     @DisplayName("反证守门：走 findPageByAuthors（复数 / 路人视角），绝不走 findPageByAuthor（单数 / 作者视角）")
     void deliberatelyUsesThePublicVisibilityPath() {
-        when(postRepository.findPageByAuthors(List.of(AUTHOR_ID), 1, 20))
+        when(postRepository.findPageByAuthors(List.of(AUTHOR_ID), java.util.Set.of(), 1, 20))
                 .thenReturn(new PageResult<>(List.of(), 0, 1, 20));
         when(boardRepository.findAllEnabled()).thenReturn(List.of());
 
@@ -123,7 +126,7 @@ class ForumQueryApplicationServiceUserPostsTest {
     @Test
     @DisplayName("分页归一：page<1 → 1、size>100 → 100，响应回显生效值（与全站列表同一口径）")
     void pagingIsNormalized() {
-        when(postRepository.findPageByAuthors(List.of(AUTHOR_ID), 1, 100))
+        when(postRepository.findPageByAuthors(List.of(AUTHOR_ID), java.util.Set.of(), 1, 100))
                 .thenReturn(new PageResult<>(List.of(), 0, 1, 100));
         when(boardRepository.findAllEnabled()).thenReturn(List.of());
 

@@ -80,7 +80,7 @@ class PostRepositoryImplTest {
         when(postMapper.selectPage(any(IPage.class), any(Wrapper.class)))
                 .thenReturn(pageOf(List.of(doRow()), 1));
 
-        PageResult<Post> result = repository.findPage(null, PostSortOrder.LATEST, 1, 20);
+        PageResult<Post> result = repository.findPage(null, PostSortOrder.LATEST, java.util.Set.of(), 1, 20);
 
         assertThat(result.total()).isEqualTo(1);
         assertThat(result.items()).hasSize(1);
@@ -101,7 +101,7 @@ class PostRepositoryImplTest {
         when(postMapper.selectPage(any(IPage.class), any(Wrapper.class)))
                 .thenReturn(pageOf(List.of(), 0));
 
-        repository.findPage(BOARD_ID, PostSortOrder.HOT, 2, 10);
+        repository.findPage(BOARD_ID, PostSortOrder.HOT, java.util.Set.of(), 2, 10);
 
         LambdaQueryWrapper<PostDO> query = capturedPageQuery();
         String sql = query.getSqlSegment();
@@ -112,14 +112,14 @@ class PostRepositoryImplTest {
     @Test
     @DisplayName("搜索：关键词 / 版块 / 天数三参原样透传给 Mapper，出参转领域并按页回显")
     void searchPassesParamsThrough() {
-        when(postMapper.search(any(IPage.class), eq("事务"), eq(BOARD_ID), eq(30)))
+        when(postMapper.search(any(IPage.class), eq("事务"), eq(BOARD_ID), eq(30), any()))
                 .thenReturn(pageOf(List.of(doRow()), 1));
 
-        PageResult<Post> result = repository.search("事务", BOARD_ID, 30, 1, 20);
+        PageResult<Post> result = repository.search("事务", BOARD_ID, 30, java.util.Set.of(), 1, 20);
 
         assertThat(result.items()).hasSize(1);
         assertThat(result.total()).isEqualTo(1);
-        verify(postMapper).search(any(IPage.class), eq("事务"), eq(BOARD_ID), eq(30));
+        verify(postMapper).search(any(IPage.class), eq("事务"), eq(BOARD_ID), eq(30), any());
     }
 
     @Test

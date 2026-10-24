@@ -67,13 +67,16 @@ class ForumQueryApplicationServicePublicTimelineTest {
     @Mock
     private FollowApplicationService followApplicationService;
 
+    @Mock
+    private com.campuslink.module.account.application.UserBlockApplicationService userBlockApplicationService;
+
     private ForumQueryApplicationService service;
 
     @BeforeEach
     void setUp() {
         service = new ForumQueryApplicationService(boardRepository, postRepository, replyRepository,
-                likeRepository, favoriteRepository, accountApplicationService, followApplicationService,
-                new MarkdownRenderer(), new AppProperties());
+                likeRepository, favoriteRepository, accountApplicationService, userBlockApplicationService,
+                followApplicationService, new MarkdownRenderer(), new AppProperties());
     }
 
     @Test

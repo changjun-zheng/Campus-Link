@@ -3,6 +3,7 @@ package com.campuslink.module.notification.application;
 import com.campuslink.common.exception.ApiException;
 import com.campuslink.common.result.ResultCode;
 import com.campuslink.module.account.application.AccountApplicationService;
+import com.campuslink.module.account.application.UserBlockApplicationService;
 import com.campuslink.module.forum.application.ForumQueryApplicationService;
 import com.campuslink.module.forum.application.cmd.ForumResults.PostBrief;
 import com.campuslink.module.forum.application.cmd.ForumResults.ReplyBrief;
@@ -51,6 +52,7 @@ public class NotificationApplicationService {
 
     private final NotificationRepository notificationRepository;
     private final AccountApplicationService accountApplicationService;
+    private final UserBlockApplicationService userBlockApplicationService;
     private final ForumQueryApplicationService forumQueryService;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -182,6 +184,10 @@ public class NotificationApplicationService {
     private void notify(NotificationType type, long actorId, NotificationTargetType targetType,
             long targetId, long recipientId) {
         if (actorId == recipientId) {
+            return;
+        }
+        // 拉黑抑制（CR-129）：接收人拉黑了触发者 → 不落库、不推送；解除后新互动恢复
+        if (userBlockApplicationService.isBlocked(recipientId, actorId)) {
             return;
         }
         notificationRepository.save(Notification.of(type, actorId, targetType, targetId, recipientId));

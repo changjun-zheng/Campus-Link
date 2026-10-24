@@ -6,6 +6,7 @@ import com.campuslink.common.result.ResultCode;
 import com.campuslink.config.AppProperties;
 import com.campuslink.module.account.application.AccountApplicationService;
 import com.campuslink.module.account.application.FollowApplicationService;
+import com.campuslink.module.account.application.UserBlockApplicationService;
 import com.campuslink.module.forum.application.cmd.ForumResults.AuthorStats;
 import com.campuslink.module.forum.application.cmd.ForumResults.EditablePost;
 import com.campuslink.module.forum.application.cmd.ForumResults.MyPostSummary;
@@ -80,6 +81,7 @@ public class ForumQueryApplicationService {
     private final LikeRepository likeRepository;
     private final FavoriteRepository favoriteRepository;
     private final AccountApplicationService accountApplicationService;
+    private final UserBlockApplicationService userBlockApplicationService;
     private final FollowApplicationService followApplicationService;
     private final MarkdownRenderer markdownRenderer;
     private final AppProperties appProperties;
@@ -102,7 +104,8 @@ public class ForumQueryApplicationService {
         int currentPage = normalizePage(page);
         int pageSize = normalizeSize(size);
         Long boardId = boardIdOf(boardCode);
-        PageResult<Post> found = postRepository.findPage(boardId, sortOrder, currentPage, pageSize);
+        PageResult<Post> found = postRepository.findPage(boardId, sortOrder, blockedAuthorIds(viewerId),
+                currentPage, pageSize);
         return new PageResult<>(toSummaries(found.items(), viewerId), found.total(), currentPage, pageSize);
     }
 
@@ -124,7 +127,8 @@ public class ForumQueryApplicationService {
         int currentPage = normalizePage(page);
         int pageSize = normalizeSize(size);
         Long boardId = boardIdOf(boardCode);
-        PageResult<Post> found = postRepository.search(kw, boardId, days, currentPage, pageSize);
+        PageResult<Post> found = postRepository.search(kw, boardId, days, blockedAuthorIds(viewerId),
+                currentPage, pageSize);
         return new PageResult<>(toSummaries(found.items(), viewerId), found.total(), currentPage, pageSize);
     }
 
@@ -135,6 +139,10 @@ public class ForumQueryApplicationService {
      */
     public PostDetail postDetail(Long postId, Long viewerId) {
         Post post = requireVisiblePost(postId);
+        // 拉黑后其帖子对本人按"不存在"处理（CR-129）：与已删除 / 已下架同一门槛，不另行暴露原因
+        if (viewerId != null && blockedAuthorIds(viewerId).contains(post.getAuthorId())) {
+            throw new PostNotFoundException();
+        }
         Board board = boardsById().get(post.getBoardId());
         String nickname = accountApplicationService.nicknamesOf(List.of(post.getAuthorId()))
                 .getOrDefault(post.getAuthorId(), NICKNAME_FALLBACK);
@@ -180,7 +188,8 @@ public class ForumQueryApplicationService {
         requireVisiblePost(postId);
         int currentPage = normalizePage(page);
         int pageSize = normalizeSize(size);
-        PageResult<Reply> found = replyRepository.findPageByPostId(postId, currentPage, pageSize);
+        PageResult<Reply> found = replyRepository.findPageByPostId(postId, blockedAuthorIds(viewerId),
+                currentPage, pageSize);
         Map<Long, Reply> quotedVisible = replyRepository.findVisibleByIds(
                 found.items().stream().map(Reply::getQuotedReplyId)
                         .filter(Objects::nonNull).collect(Collectors.toSet()))
@@ -226,7 +235,11 @@ public class ForumQueryApplicationService {
         int currentPage = normalizePage(page);
         int pageSize = normalizeSize(size);
         PageResult<Post> found = favoriteRepository.findFavoritePosts(userId, currentPage, pageSize);
-        return new PageResult<>(toSummaries(found.items(), userId), found.total(), currentPage, pageSize);
+        // 收藏行不删，但被拉黑者的帖子从页内剔除——与"不可见帖剔除、total 为收藏行数"的既有取舍同源（CR-048）
+        List<Post> visible = found.items().stream()
+                .filter(post -> !blockedAuthorIds(userId).contains(post.getAuthorId()))
+                .toList();
+        return new PageResult<>(toSummaries(visible, userId), found.total(), currentPage, pageSize);
     }
 
     /**
@@ -290,7 +303,7 @@ public class ForumQueryApplicationService {
         PageResult<Post> found = postRepository.findPageByAuthors(
                 authorIds.size() > FOLLOWING_FEED_AUTHOR_CAP ? authorIds.subList(0, FOLLOWING_FEED_AUTHOR_CAP)
                         : authorIds,
-                currentPage, pageSize);
+                blockedAuthorIds(userId), currentPage, pageSize);
         return new PageResult<>(toSummaries(found.items(), userId), found.total(), currentPage, pageSize);
     }
 
@@ -317,7 +330,8 @@ public class ForumQueryApplicationService {
         accountApplicationService.publicAccountOf(authorId);
         int currentPage = normalizePage(page);
         int pageSize = normalizeSize(size);
-        PageResult<Post> found = postRepository.findPageByAuthors(List.of(authorId), currentPage, pageSize);
+        PageResult<Post> found = postRepository.findPageByAuthors(List.of(authorId),
+                blockedAuthorIds(viewerId), currentPage, pageSize);
         return new PageResult<>(toSummaries(found.items(), viewerId), found.total(), currentPage, pageSize);
     }
 
@@ -448,10 +462,17 @@ public class ForumQueryApplicationService {
             return List.of();
         }
         List<SimilarPostRow> rows = postRepository.findSimilar(t, board.getId(), currentUserId, cfg.getMaxResults());
+        Set<Long> blocked = blockedAuthorIds(currentUserId);
         return rows.stream()
+                .filter(row -> !blocked.contains(row.authorId()))
                 .map(row -> new SimilarPostResult(row.id(), row.title(), board.getCode(), board.getName(),
                         row.replyCount(), row.accepted(), row.createdAt()))
                 .toList();
+    }
+
+    /** 读侧过滤集合：匿名不查库；登录态一次取（CR-129） */
+    private Set<Long> blockedAuthorIds(Long viewerId) {
+        return viewerId == null ? Set.of() : userBlockApplicationService.blockedIdsOf(viewerId);
     }
 
     /** 不可读（不存在 / 已删除 / 非 PUBLISHED）统一 404 / 3001，三种情况不对外区分——防按 id 探测 */

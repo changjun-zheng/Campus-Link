@@ -62,9 +62,21 @@ class NotificationApplicationServiceTest {
     private ForumQueryApplicationService forumQueryService;
     @Mock
     private ApplicationEventPublisher eventPublisher;
+    @Mock
+    private com.campuslink.module.account.application.UserBlockApplicationService userBlockApplicationService;
 
     @InjectMocks
     private NotificationApplicationService service;
+
+    @Test
+    @DisplayName("接收人拉黑触发者 → 不落库、不推送（CR-129）")
+    void blockedActorSuppressesNotification() {
+        when(userBlockApplicationService.isBlocked(RECIPIENT, 7L)).thenReturn(true);
+
+        service.postReplied(7L, 11L, RECIPIENT);
+
+        verifyNoInteractions(notificationRepository, eventPublisher);
+    }
 
     @Test
     @DisplayName("触发：落一条事实四元组，type / target 由入口决定，接收人是内容作者")

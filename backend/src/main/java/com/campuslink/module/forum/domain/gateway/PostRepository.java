@@ -22,7 +22,8 @@ public interface PostRepository {
      * <p>与 {@link #findById} 不同，这里在 SQL 侧一并过滤 status——列表的 total 必须与查询条件同源，
      * 不能在内存里剔除后再算页数。
      */
-    PageResult<Post> findPage(Long boardId, PostSortOrder sort, int page, int size);
+    PageResult<Post> findPage(Long boardId, PostSortOrder sort, Collection<Long> excludedAuthorIds,
+                              int page, int size);
 
     /**
      * "我的帖子"分页（F-ACC-007b）：本人发帖时间倒序，{@code author_id = ? AND is_deleted = 0}，
@@ -64,7 +65,8 @@ public interface PostRepository {
      * 站内搜索（F-FORUM-008）：标题全文（ngram）+ tags 冗余列 LIKE 兜底，只搜 PUBLISHED 且未删除，
      * 按相关度得分 DESC、created_at DESC 排序。{@code boardId} 为 null 表示全站；{@code days} 为 null 表示不限时间窗。
      */
-    PageResult<Post> search(String keyword, Long boardId, Integer days, int page, int size);
+    PageResult<Post> search(String keyword, Long boardId, Integer days, Collection<Long> excludedAuthorIds,
+                            int page, int size);
 
     /**
      * 按 id 查**未删除**的帖子（{@code is_deleted=1} 视为不存在，属仓储读侧约定：软删是行级墓碑，
@@ -177,7 +179,8 @@ public interface PostRepository {
      * 「关注」Feed 分页（CR-074）：{@code author_id IN (?) AND status='PUBLISHED' AND is_deleted=0}，
      * 时间序倒排（与 {@link #findPage} 的 LATEST 同序、id DESC 兜底）。空集合由实现短路，不发 {@code IN ()}。
      */
-    PageResult<Post> findPageByAuthors(Collection<Long> authorIds, int page, int size);
+    PageResult<Post> findPageByAuthors(Collection<Long> authorIds, Collection<Long> excludedAuthorIds,
+                                       int page, int size);
 
     /**
      * Similar-post recommendation (publish-time assist): full-text search on title within the given board,

@@ -10,6 +10,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { deactivateAccount, updateProfile } from '../api/auth'
+import { listBlockedUsers, unblockUser, type BlockedUserVo } from '../api/block'
 import { listMyFavorites, listMyPosts, listMyReplies } from '../api/forum'
 import type { IconName } from '../assets/icons'
 import { useAuthStore } from '../stores/auth'
@@ -69,6 +70,7 @@ function fillFromUser() {
 onMounted(async () => {
   fillFromUser()
   loadCounts()
+  loadBlocked()
   try {
     // 令牌可能在别处改过资料或已失效，进页先拉一次全量回显，避免表单落在过期值上
     await auth.fetchMe()
@@ -120,6 +122,46 @@ async function loadCounts() {
     listMyReplies(1, 1).then((res) => (counts.replies = res.total)),
     listMyFavorites(1, 1).then((res) => (counts.favorites = res.total)),
   ])
+}
+
+/** 黑名单（F-SOC-004 / CR-129）：按拉黑时间倒序，解除即恢复对方内容与互动 */
+const blockedUsers = ref<BlockedUserVo[]>([])
+const blockedTotal = ref(0)
+const blockedPage = ref(1)
+const blockedLoading = ref(false)
+const blockedSize = 20
+
+async function loadBlocked(page = 1) {
+  blockedLoading.value = true
+  try {
+    const res = await listBlockedUsers(page, blockedSize)
+    blockedUsers.value = page === 1 ? res.items : [...blockedUsers.value, ...res.items]
+    blockedTotal.value = res.total
+    blockedPage.value = page
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '黑名单加载失败')
+  } finally {
+    blockedLoading.value = false
+  }
+}
+
+async function onUnblock(target: BlockedUserVo) {
+  try {
+    await ElMessageBox.confirm(`解除后，「${target.nickname}」的帖子、回帖与互动将重新可见。`, '解除拉黑', {
+      confirmButtonText: '解除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+  } catch {
+    return
+  }
+  try {
+    await unblockUser(target.id)
+    await loadBlocked(1)
+    ElMessage.success('已解除拉黑')
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '解除失败')
+  }
 }
 
 function logout() {
@@ -271,7 +313,36 @@ async function onDeactivate() {
       </ul>
     </el-card>
 
-    <!-- 区块 3：账号 -->
+    <!-- 区块 3：黑名单（F-SOC-004 / CR-129） -->
+    <el-card shadow="never" class="mb-5" :body-style="{ padding: 0 }">
+      <template #header>
+        <div class="flex flex-wrap items-baseline gap-x-2">
+          <span class="font-medium">黑名单</span>
+          <span class="text-caption text-ink-meta">被拉黑者的帖子与回帖不再出现在你的列表 / 搜索中，对方也无法关注或互动你的内容</span>
+        </div>
+      </template>
+      <p v-if="!blockedLoading && blockedUsers.length === 0" class="px-5 py-4 text-note text-ink-meta">
+        还没有拉黑任何人
+      </p>
+      <ul v-else>
+        <li
+          v-for="u in blockedUsers"
+          :key="u.id"
+          class="flex items-center gap-3 border-b-[0.5px] border-divider px-5 py-3 last:border-b-0"
+        >
+          <UserAvatar :name="u.nickname" :size="32" />
+          <span class="min-w-0 flex-1 truncate text-body text-ink">{{ u.nickname }}</span>
+          <el-button link type="danger" size="small" @click="onUnblock(u)">解除</el-button>
+        </li>
+      </ul>
+      <div v-if="blockedUsers.length < blockedTotal" class="px-5 py-3">
+        <el-button link size="small" :loading="blockedLoading" @click="loadBlocked(blockedPage + 1)">
+          加载更多（{{ blockedUsers.length }} / {{ blockedTotal }}）
+        </el-button>
+      </div>
+    </el-card>
+
+    <!-- 区块 4：账号 -->
     <el-card shadow="never">
       <template #header>
         <span class="font-medium">账号</span>

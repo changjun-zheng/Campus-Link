@@ -96,7 +96,7 @@ class PostRepositoryImplCountVisibleByAuthorTest {
         when(postMapper.selectPage(any(), any())).thenReturn(new Page<>(1, 20).setRecords(List.of()).setTotal(0L));
 
         repository.countVisibleByAuthor(AUTHOR_ID);
-        repository.findPageByAuthors(List.of(AUTHOR_ID), 1, 20);
+        repository.findPageByAuthors(List.of(AUTHOR_ID), java.util.Set.of(), 1, 20);
 
         assertThat(visibilitySignature(capturedCountQuery())).isEqualTo(visibilitySignature(capturedPageQuery()));
     }

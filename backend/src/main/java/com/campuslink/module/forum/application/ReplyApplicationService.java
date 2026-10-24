@@ -29,6 +29,7 @@ public class ReplyApplicationService {
     private final NotificationApplicationService notificationService;
     private final ModerationGateway moderationGateway;
     private final AccountApplicationService accountApplicationService;
+    private final com.campuslink.module.account.application.UserBlockApplicationService userBlockApplicationService;
 
     /**
      * 回帖：楼层号与 {@code reply_count} 由**同一次递增**派生——{@code incrementReplyCountAndGet} 的
@@ -43,6 +44,10 @@ public class ReplyApplicationService {
         Post post = postRepository.findById(postId)
                 .filter(Post::isVisible)
                 .orElseThrow(PostNotFoundException::new);
+        // 拉黑阻断（CR-129）：作者拉黑了回帖者 → 回帖统一 403，不提示"你被拉黑"
+        if (userBlockApplicationService.isBlocked(post.getAuthorId(), authorId)) {
+            throw new ApiException(ResultCode.FORBIDDEN);
+        }
         // 引用校验（F-009 / CR-085）先于机审与楼层号分配：楼层号是计数产物，无效请求不应消耗；
         // 语义排序与下一条机审注一致——目标不存在 / 跨帖一律 3001（不区分，防按 id 探测他帖楼层）
         Reply quoted = null;

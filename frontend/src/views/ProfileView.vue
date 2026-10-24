@@ -25,6 +25,7 @@ import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getUserPosts, getUserProfile, getUserReplies, type PublicReplyVo, type UserProfileVo } from '../api/user'
 import { followUser, getFollowState, unfollowUser } from '../api/follow'
+import { blockUser, getBlockState, unblockUser } from '../api/block'
 import { ApiError } from '../api/client'
 import type { PostSummaryVo } from '../api/forum'
 import PostListItem from '../components/PostListItem.vue'
@@ -74,6 +75,9 @@ const repliesFetched = ref(false)
 
 const following = ref(false)
 const followBusy = ref(false)
+/** 拉黑状态（F-SOC-004 / CR-129）：仅本人视角；被拉黑者无感知 */
+const blocked = ref(false)
+const blockBusy = ref(false)
 
 /** 请求序号守卫：只有最新一轮加载的响应才能落到 ref（快速切换用户时丢弃陈旧响应） */
 let reqSeq = 0
@@ -162,6 +166,7 @@ async function loadReplies(seq: number) {
 /** 关注状态：只在「已登录 + 不是本人」时查；失败静默（按钮回落未关注态） */
 async function loadFollowState(seq: number) {
   following.value = false
+  blocked.value = false
   if (!auth.isLoggedIn || isSelf.value) return
   try {
     const state = await getFollowState(userId.value)
@@ -169,6 +174,13 @@ async function loadFollowState(seq: number) {
     following.value = state.following
   } catch {
     // 静默：关注状态不是本页主体，拉不到不该弹错
+  }
+  try {
+    const state = await getBlockState(userId.value)
+    if (seq !== reqSeq) return
+    blocked.value = state.blocked
+  } catch {
+    // 静默：拉黑状态同理
   }
 }
 
@@ -248,6 +260,40 @@ async function toggleFollow() {
   }
 }
 
+async function toggleBlock() {
+  if (!requireLoginOrRedirect()) return
+  const action = blocked.value ? '解除拉黑' : '拉黑'
+  try {
+    await ElMessageBox.confirm(
+      blocked.value
+        ? '解除后，对方的帖子、回帖与互动将重新可见。'
+        : '拉黑后，对方的帖子与回帖将从你的列表 / 搜索中消失，对方也无法关注、回帖或点赞你的内容；对方不会收到通知。',
+      action,
+      { confirmButtonText: action, cancelButtonText: '取消', type: 'warning' },
+    )
+  } catch {
+    return
+  }
+  blockBusy.value = true
+  try {
+    if (blocked.value) {
+      await unblockUser(userId.value)
+      blocked.value = false
+      ElMessage.success('已解除拉黑')
+    } else {
+      await blockUser(userId.value)
+      blocked.value = true
+      ElMessage.success('已拉黑')
+      following.value = false
+    }
+    void loadAll()
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '操作失败')
+  } finally {
+    blockBusy.value = false
+  }
+}
+
 watch(userId, () => void loadAll(), { immediate: true })
 </script>
 
@@ -304,15 +350,26 @@ watch(userId, () => void loadAll(), { immediate: true })
                 <el-button size="small">我的收藏</el-button>
               </RouterLink>
             </template>
-            <el-button
-              v-else
-              size="small"
-              :type="following ? 'default' : 'primary'"
-              :loading="followBusy"
-              @click="toggleFollow"
-            >
-              {{ following ? '已关注' : '＋ 关注' }}
-            </el-button>
+            <div v-else class="flex items-center gap-2">
+              <el-button
+                size="small"
+                :type="following ? 'default' : 'primary'"
+                :loading="followBusy"
+                :disabled="blocked"
+                @click="toggleFollow"
+              >
+                {{ following ? '已关注' : '＋ 关注' }}
+              </el-button>
+              <el-button
+                size="small"
+                type="danger"
+                plain
+                :loading="blockBusy"
+                @click="toggleBlock"
+              >
+                {{ blocked ? '已拉黑' : '拉黑' }}
+              </el-button>
+            </div>
           </div>
 
           <p v-if="metaText" class="mt-1 text-note text-ink-meta">{{ metaText }}</p>

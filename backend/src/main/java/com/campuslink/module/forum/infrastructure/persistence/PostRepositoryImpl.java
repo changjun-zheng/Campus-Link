@@ -28,13 +28,18 @@ public class PostRepositoryImpl implements PostRepository {
     private final PostMapper postMapper;
 
     @Override
-    public PageResult<Post> findPage(Long boardId, PostSortOrder sort, int page, int size) {
+    public PageResult<Post> findPage(Long boardId, PostSortOrder sort, Collection<Long> excludedAuthorIds,
+                                     int page, int size) {
         LambdaQueryWrapper<PostDO> query = new LambdaQueryWrapper<>();
         if (boardId != null) {
             query.eq(PostDO::getBoardId, boardId);
         }
         query.eq(PostDO::getStatus, PostStatus.PUBLISHED.name())
                 .eq(PostDO::getIsDeleted, false);
+        // 拉黑过滤在 SQL 侧完成：total 与查询条件同源，翻页不会出现"少了但计数还在"（CR-129）
+        if (excludedAuthorIds != null && !excludedAuthorIds.isEmpty()) {
+            query.notIn(PostDO::getAuthorId, excludedAuthorIds);
+        }
         if (sort == PostSortOrder.HOT) {
             query.orderByDesc(PostDO::getHotScore);
         }
@@ -59,12 +64,17 @@ public class PostRepositoryImpl implements PostRepository {
     }
 
     @Override
-    public PageResult<Post> findPageByAuthors(Collection<Long> authorIds, int page, int size) {
+    public PageResult<Post> findPageByAuthors(Collection<Long> authorIds, Collection<Long> excludedAuthorIds,
+                                              int page, int size) {
         if (authorIds == null || authorIds.isEmpty()) {
             return new PageResult<>(List.of(), 0, page, size);
         }
-        IPage<PostDO> result = postMapper.selectPage(new Page<>(page, size), visibleQuery()
-                .in(PostDO::getAuthorId, authorIds)
+        LambdaQueryWrapper<PostDO> query = visibleQuery()
+                .in(PostDO::getAuthorId, authorIds);
+        if (excludedAuthorIds != null && !excludedAuthorIds.isEmpty()) {
+            query.notIn(PostDO::getAuthorId, excludedAuthorIds);
+        }
+        IPage<PostDO> result = postMapper.selectPage(new Page<>(page, size), query
                 .orderByDesc(PostDO::getCreatedAt)
                 .orderByDesc(PostDO::getId));
         return new PageResult<>(result.getRecords().stream().map(PostConverter::toDomain).toList(),
@@ -98,8 +108,9 @@ public class PostRepositoryImpl implements PostRepository {
     }
 
     @Override
-    public PageResult<Post> search(String keyword, Long boardId, Integer days, int page, int size) {
-        IPage<PostDO> result = postMapper.search(new Page<>(page, size), keyword, boardId, days);
+    public PageResult<Post> search(String keyword, Long boardId, Integer days, Collection<Long> excludedAuthorIds,
+                                   int page, int size) {
+        IPage<PostDO> result = postMapper.search(new Page<>(page, size), keyword, boardId, days, excludedAuthorIds);
         return new PageResult<>(result.getRecords().stream().map(PostConverter::toDomain).toList(),
                 result.getTotal(), page, size);
     }
@@ -255,7 +266,7 @@ public class PostRepositoryImpl implements PostRepository {
     @Override
     public List<SimilarPostRow> findSimilar(String title, Long boardId, Long excludeAuthorId, int limit) {
         return postMapper.findSimilar(title, boardId, excludeAuthorId, limit).stream()
-                .map(d -> new SimilarPostRow(d.getId(), d.getBoardId(), d.getTitle(),
+                .map(d -> new SimilarPostRow(d.getId(), d.getBoardId(), d.getAuthorId(), d.getTitle(),
                         d.getReplyCount() == null ? 0 : d.getReplyCount(),
                         Boolean.TRUE.equals(d.getIsAccepted()), d.getCreatedAt()))
                 .toList();

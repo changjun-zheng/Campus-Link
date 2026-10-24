@@ -11,6 +11,7 @@ import java.time.Instant;
  */
 public record SimilarPostRow(Long id,
                              Long boardId,
+                             Long authorId,
                              String title,
                              int replyCount,
                              boolean accepted,

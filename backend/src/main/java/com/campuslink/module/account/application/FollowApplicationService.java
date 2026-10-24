@@ -20,10 +20,15 @@ public class FollowApplicationService {
 
     private final FollowRepository followRepository;
     private final AccountApplicationService accountApplicationService;
+    private final UserBlockApplicationService userBlockApplicationService;
 
     public void follow(long followerId, long targetId) {
         requireNotSelf(followerId, targetId);
         accountApplicationService.accountOf(targetId);
+        // 拉黑阻断（CR-129）：目标拉黑了关注者 → 统一 403，不提示"你被拉黑"
+        if (userBlockApplicationService.isBlocked(targetId, followerId)) {
+            throw new ApiException(ResultCode.FORBIDDEN);
+        }
         followRepository.follow(followerId, targetId);
     }
 

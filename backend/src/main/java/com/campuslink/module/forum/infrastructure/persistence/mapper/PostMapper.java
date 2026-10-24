@@ -24,13 +24,20 @@ public interface PostMapper extends BaseMapper<PostDO> {
               AND (MATCH(title) AGAINST(#{keyword}) OR tags LIKE CONCAT('%', #{keyword}, '%'))
               <if test="boardId != null">AND board_id = #{boardId}</if>
               <if test="days != null">AND created_at &gt;= DATE_SUB(NOW(), INTERVAL #{days} DAY)</if>
+              <if test="excludedAuthorIds != null and excludedAuthorIds.size() > 0">
+                AND author_id NOT IN
+                <foreach collection="excludedAuthorIds" item="excludedId" open="(" separator="," close=")">
+                  #{excludedId}
+                </foreach>
+              </if>
             ORDER BY relevance DESC, created_at DESC, id DESC
             </script>
             """)
     IPage<PostDO> search(IPage<PostDO> page,
                          @Param("keyword") String keyword,
                          @Param("boardId") Long boardId,
-                         @Param("days") Integer days);
+                         @Param("days") Integer days,
+                         @Param("excludedAuthorIds") java.util.Collection<Long> excludedAuthorIds);
 
     /**
      * Similar-post recommendation (publish-time assist): full-text search on title (ngram),
@@ -40,7 +47,7 @@ public interface PostMapper extends BaseMapper<PostDO> {
      * <p>显式列清单（CR-077 Warning #7）：只取推荐条目需要的 6 列，避免 SELECT * 拉出 content_md / content_html 等大字段。
      */
     @Select("""
-            SELECT id, board_id, title, reply_count, is_accepted, created_at,
+            SELECT id, board_id, author_id, title, reply_count, is_accepted, created_at,
                    MATCH(title) AGAINST(#{keyword} IN NATURAL LANGUAGE MODE) AS relevance
             FROM posts
             WHERE status = 'PUBLISHED' AND is_deleted = 0

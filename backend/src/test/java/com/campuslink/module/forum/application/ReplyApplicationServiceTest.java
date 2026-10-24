@@ -53,15 +53,18 @@ class ReplyApplicationServiceTest {
     private com.campuslink.module.forum.domain.gateway.ModerationGateway moderationGateway;
     @Mock
     private com.campuslink.module.account.application.AccountApplicationService accountApplicationService;
+    @Mock
+    private com.campuslink.module.account.application.UserBlockApplicationService userBlockApplicationService;
 
     private ReplyApplicationService service;
 
     @BeforeEach
     void setUp() {
         // lenient：missingPost / removedPost 两条用例在帖子可见性校验即失败，不会走到机审（严格模式下全局桩需放行）
-        lenient().when(moderationGateway.moderate(any())).thenReturn(com.campuslink.module.forum.domain.gateway.ModerationGateway.ModerationVerdict.ok());
+        lenient().when(moderationGateway.moderate(any()))
+                .thenReturn(com.campuslink.module.forum.domain.gateway.ModerationGateway.ModerationVerdict.ok());
         service = new ReplyApplicationService(postRepository, replyRepository, new MarkdownRenderer(),
-                notificationService, moderationGateway, accountApplicationService);
+                notificationService, moderationGateway, accountApplicationService, userBlockApplicationService);
     }
 
     @Test
@@ -183,6 +186,21 @@ class ReplyApplicationServiceTest {
 
     private static Reply quoted(Long authorId) {
         return Reply.rehydrate(11L, POST_ID, authorId, 1, "被引内容", "<p>被引内容</p>", null, false, 0, Instant.now());
+    }
+
+    @Test
+    @DisplayName("作者拉黑回帖者 → 403，不分配楼层号、不落库、不通知（CR-129）")
+    void blockedReplierIsForbidden() {
+        when(postRepository.findById(POST_ID)).thenReturn(Optional.of(post(PostStatus.PUBLISHED)));
+        when(userBlockApplicationService.isBlocked(7L, AUTHOR_ID)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.reply(POST_ID, AUTHOR_ID, new PublishReplyCommand("hi", null)))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.FORBIDDEN));
+
+        verify(postRepository, never()).incrementReplyCountAndGet(org.mockito.ArgumentMatchers.anyLong());
+        verify(replyRepository, never()).save(org.mockito.ArgumentMatchers.any());
+        org.mockito.Mockito.verifyNoInteractions(notificationService);
     }
 
     private static Post post(PostStatus status) {

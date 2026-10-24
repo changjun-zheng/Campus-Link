@@ -53,13 +53,15 @@ class InteractionApplicationServiceTest {
     private FavoriteRepository favoriteRepository;
     @Mock
     private NotificationApplicationService notificationService;
+    @Mock
+    private com.campuslink.module.account.application.UserBlockApplicationService userBlockApplicationService;
 
     private InteractionApplicationService service;
 
     @BeforeEach
     void setUp() {
         service = new InteractionApplicationService(postRepository, replyRepository,
-                likeRepository, favoriteRepository, notificationService);
+                likeRepository, favoriteRepository, notificationService, userBlockApplicationService);
     }
 
     @Test
@@ -136,6 +138,20 @@ class InteractionApplicationServiceTest {
 
         verify(likeRepository, never()).toggle(anyLong(), any(), anyLong());
         verify(replyRepository, never()).adjustLikeCount(anyLong(), anyInt());
+        verifyNoInteractions(notificationService);
+    }
+
+    @Test
+    @DisplayName("作者拉黑点赞者 → 403，零互动、零通知（CR-129）")
+    void blockedLikerIsForbidden() {
+        when(postRepository.findById(9L)).thenReturn(Optional.of(post()));
+        when(userBlockApplicationService.isBlocked(100L, 42L)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.togglePostLike(42L, 9L))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.FORBIDDEN));
+
+        verify(likeRepository, never()).toggle(anyLong(), any(), anyLong());
         verifyNoInteractions(notificationService);
     }
 
