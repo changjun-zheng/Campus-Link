@@ -3,7 +3,7 @@ package com.campuslink.common.result;
 import lombok.Getter;
 
 /**
- * 统一错误码（技术方案第 5 节）：0 成功；1xxx 通用；2xxx 账号（21xx 学籍核验）；3xxx 版块与帖子；4xxx 权限；5xxx 安全与机审。
+ * 统一错误码（技术方案第 5 节）：0 成功；1xxx 通用；2xxx 账号（21xx 学籍核验）；3xxx 版块与帖子；4xxx 权限；5xxx 安全与机审；6xxx 组队。
  */
 @Getter
 public enum ResultCode {
@@ -45,7 +45,15 @@ public enum ResultCode {
     FORBIDDEN(4002, 403, "无权限"),
 
     MODERATION_BLOCKED(5001, 422, "内容未通过安全审核"),
-    MODERATION_UNAVAILABLE(5002, 503, "内容审核服务暂不可用，发布已临时关闭");
+    MODERATION_UNAVAILABLE(5002, 503, "内容审核服务暂不可用，发布已临时关闭"),
+
+    TEAM_NOT_FOUND(6001, 404, "组队不存在"),
+    TEAM_NOT_RECRUITING(6002, 409, "组队已停止招募"),
+    TEAM_FULL(6003, 409, "组队名额已满"),
+    TEAM_APPLICATION_EXISTS(6004, 409, "已提交过申请"),
+    CANNOT_APPLY_OWN_TEAM(6005, 400, "不能申请自己发起的组队"),
+    /** 已处理的申请重复审批同一决定时幂等返回，换一个决定则按本条拒绝 */
+    TEAM_APPLICATION_NOT_FOUND(6006, 404, "申请不存在或已处理");
 
     private final int code;
     private final int httpStatus;

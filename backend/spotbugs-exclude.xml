@@ -33,6 +33,7 @@
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.web.ReportController"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.application.AdminTagApplicationService"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.web.AdminTagController"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.team.infrastructure.persistence.TeamMemberRepositoryImpl"/></Match>
 
   <!-- ② Spring Boot 配置属性绑定（EI_EXPOSE_REP / REP2）：`@ConfigurationProperties` 的内嵌对象由 Boot
        实例化并经 setter 注入、getter 供业务读取；拷贝会切断绑定链 ⇒ 已知误报。 -->
@@ -91,6 +92,19 @@
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.messaging.application.cmd.MessagingResults$MessagePage"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.module.messaging.web.vo.PageVo"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.messaging.web.vo.PageVo"/></Match>
+  <!-- CR-137 组队分页 / 详情载体：同型（record + 只读 List），构造后不再变更 -->
+  <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.module.team.application.cmd.TeamResults$TeamPage"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.team.application.cmd.TeamResults$TeamPage"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.module.team.application.cmd.TeamResults$MyTeamPage"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.team.application.cmd.TeamResults$MyTeamPage"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.module.team.application.cmd.TeamResults$ApplicationPage"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.team.application.cmd.TeamResults$ApplicationPage"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.module.team.application.cmd.TeamResults$TeamDetail"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.team.application.cmd.TeamResults$TeamDetail"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.module.team.web.vo.PageVo"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.team.web.vo.PageVo"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.module.team.web.vo.TeamDetailVo"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.team.web.vo.TeamDetailVo"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.module.forum.domain.gateway.PageResult"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.domain.gateway.PageResult"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.module.notification.domain.gateway.PageResult"/></Match>

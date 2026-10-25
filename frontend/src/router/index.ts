@@ -22,6 +22,11 @@ const router = createRouter({
     // 私信（F-SOC-003 / CR-135）：两个页面都是本人私有数据，均需登录
     { path: '/messages', name: 'messages', component: () => import('../views/MessagesView.vue'), meta: { title: '私信', requiresAuth: true } },
     { path: '/messages/:peerId', name: 'conversation', component: () => import('../views/ConversationView.vue'), meta: { title: '私信', requiresAuth: true } },
+    // 组队广场（F-TEAM-001 / CR-137）：列表与详情公开可读；发起 / 我的需登录
+    { path: '/teams', name: 'teams', component: () => import('../views/TeamsView.vue'), meta: { title: '组队广场' } },
+    { path: '/teams/new', name: 'team-create', component: () => import('../views/TeamCreateView.vue'), meta: { title: '发起组队', requiresAuth: true } },
+    { path: '/teams/mine', name: 'my-teams', component: () => import('../views/MyTeamsView.vue'), meta: { title: '我的组队', requiresAuth: true } },
+    { path: '/teams/:id', name: 'team-detail', component: () => import('../views/TeamDetailView.vue'), meta: { title: '组队详情' } },
     { path: '/favorites', name: 'favorites', component: () => import('../views/MyFavoritesView.vue'), meta: { title: '我的收藏', requiresAuth: true } },
     { path: '/settings', name: 'settings', component: () => import('../views/SettingsView.vue'), meta: { title: '设置', requiresAuth: true } },
     { path: '/me/posts', name: 'my-posts', component: () => import('../views/MyPostsView.vue'), meta: { title: '我的帖子', requiresAuth: true } },

@@ -154,6 +154,13 @@ function onSearchSubmit() {
           >
             {{ b.name }}
           </RouterLink>
+          <!-- 组队广场（F-TEAM-001 / CR-137）：与 6 个版块并列，保持同一胶囊样式 -->
+          <RouterLink
+            to="/teams"
+            class="whitespace-nowrap rounded-full border-[0.5px] border-line bg-card px-3 py-1 text-body text-ink transition-colors hover:bg-primary-soft hover:text-link md:rounded-md md:border-0 md:bg-transparent md:px-3 md:py-1.5 [&.router-link-active]:bg-primary-soft [&.router-link-active]:font-medium [&.router-link-active]:text-link"
+          >
+            组队
+          </RouterLink>
         </nav>
       </div>
     </el-header>
