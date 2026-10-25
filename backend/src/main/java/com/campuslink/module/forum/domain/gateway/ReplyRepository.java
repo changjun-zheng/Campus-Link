@@ -13,7 +13,8 @@ import java.util.Optional;
 public interface ReplyRepository {
 
     /** 某帖的楼层分页：固定 {@code status='PUBLISHED' AND is_deleted=0}，按 is_accepted DESC、floor_no ASC（F-QA-001 最佳答案置顶，设计 §3.5） */
-    PageResult<Reply> findPageByPostId(Long postId, Collection<Long> excludedAuthorIds, int page, int size);
+    PageResult<Reply> findPageByPostId(Long postId, Collection<Long> excludedAuthorIds,
+                                       Collection<Long> excludedReplyIds, int page, int size);
 
     /**
      * "我的回帖"分页（F-ACC-007c）：本人楼层时间倒序，**父帖不可见即整条不出现**

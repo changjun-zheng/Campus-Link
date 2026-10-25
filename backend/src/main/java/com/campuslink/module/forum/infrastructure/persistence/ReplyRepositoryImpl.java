@@ -30,7 +30,7 @@ public class ReplyRepositoryImpl implements ReplyRepository {
 
     @Override
     public PageResult<Reply> findPageByPostId(Long postId, Collection<Long> excludedAuthorIds,
-                                              int page, int size) {
+                                              Collection<Long> excludedReplyIds, int page, int size) {
         LambdaQueryWrapper<ReplyDO> query = new LambdaQueryWrapper<ReplyDO>()
                 .eq(ReplyDO::getPostId, postId)
                 .eq(ReplyDO::getStatus, STATUS_PUBLISHED)
@@ -38,6 +38,10 @@ public class ReplyRepositoryImpl implements ReplyRepository {
         // 拉黑过滤在 SQL 侧完成：total 与楼层列表同源（CR-129）
         if (excludedAuthorIds != null && !excludedAuthorIds.isEmpty()) {
             query.notIn(ReplyDO::getAuthorId, excludedAuthorIds);
+        }
+        // 举报人对本人待处理举报的楼层按"不存在"处理（F-SAFE-002 / CR-140）：与拉黑同为 SQL 侧过滤、total 同源
+        if (excludedReplyIds != null && !excludedReplyIds.isEmpty()) {
+            query.notIn(ReplyDO::getId, excludedReplyIds);
         }
         query.orderByDesc(ReplyDO::getIsAccepted)
                 .orderByAsc(ReplyDO::getFloorNo);

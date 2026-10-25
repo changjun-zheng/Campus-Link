@@ -27,6 +27,7 @@ import com.campuslink.module.forum.domain.gateway.LikeRepository;
 import com.campuslink.module.forum.domain.gateway.PageResult;
 import com.campuslink.module.forum.domain.gateway.PostRepository;
 import com.campuslink.module.forum.domain.gateway.ReplyRepository;
+import com.campuslink.module.forum.domain.gateway.ReportRepository;
 import com.campuslink.module.forum.domain.model.Board;
 import com.campuslink.module.forum.domain.model.LikeTargetType;
 import com.campuslink.module.forum.domain.model.MyReplyRow;
@@ -34,6 +35,7 @@ import com.campuslink.module.forum.domain.model.Post;
 import com.campuslink.module.forum.domain.model.PostSortOrder;
 import com.campuslink.module.forum.domain.model.PublicReplyRow;
 import com.campuslink.module.forum.domain.model.Reply;
+import com.campuslink.module.forum.domain.model.ReportedTargets;
 import com.campuslink.module.forum.domain.model.SimilarPostRow;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -85,6 +87,7 @@ public class ForumQueryApplicationService {
     private final AccountApplicationService accountApplicationService;
     private final UserBlockApplicationService userBlockApplicationService;
     private final FollowApplicationService followApplicationService;
+    private final ReportRepository reportRepository;
     private final MarkdownRenderer markdownRenderer;
     private final AppProperties appProperties;
 
@@ -107,7 +110,7 @@ public class ForumQueryApplicationService {
         int pageSize = normalizeSize(size);
         Long boardId = boardIdOf(boardCode);
         PageResult<Post> found = postRepository.findPage(boardId, sortOrder, blockedAuthorIds(viewerId),
-                currentPage, pageSize);
+                reportedTargetsOf(viewerId).postIds(), currentPage, pageSize);
         return new PageResult<>(toSummaries(found.items(), viewerId), found.total(), currentPage, pageSize);
     }
 
@@ -131,7 +134,7 @@ public class ForumQueryApplicationService {
         int pageSize = normalizeSize(size);
         Long boardId = boardIdOf(boardCode);
         PageResult<Post> found = postRepository.search(kw, boardId, days, blockedAuthorIds(viewerId),
-                currentPage, pageSize);
+                reportedTargetsOf(viewerId).postIds(), currentPage, pageSize);
         return new PageResult<>(toSearchSummaries(found.items(), viewerId, kw), found.total(), currentPage, pageSize);
     }
 
@@ -145,6 +148,11 @@ public class ForumQueryApplicationService {
         // 拉黑后其帖子对本人按"不存在"处理（CR-129）：与已删除 / 已下架同一门槛，不另行暴露原因。
         // 匿名帖例外（CR-139 / D4）：若按真实作者过滤，"看不到某人的匿名帖"就成了身份侧信道
         if (!post.isAnonymous() && viewerId != null && blockedAuthorIds(viewerId).contains(post.getAuthorId())) {
+            throw new PostNotFoundException();
+        }
+        // 本人举报且工单未闭环的帖子同样按"不存在"处理（F-SAFE-002 / CR-140）：与拉黑同一门槛，
+        // 不向举报人暴露工单状态；工单闭环后（驳回）恢复可见
+        if (viewerId != null && reportedTargetsOf(viewerId).postIds().contains(postId)) {
             throw new PostNotFoundException();
         }
         Board board = boardsById().get(post.getBoardId());
@@ -197,12 +205,16 @@ public class ForumQueryApplicationService {
         requireVisiblePost(postId);
         int currentPage = normalizePage(page);
         int pageSize = normalizeSize(size);
+        ReportedTargets reported = reportedTargetsOf(viewerId);
         PageResult<Reply> found = replyRepository.findPageByPostId(postId, blockedAuthorIds(viewerId),
-                currentPage, pageSize);
+                reported.replyIds(), currentPage, pageSize);
         Map<Long, Reply> quotedVisible = replyRepository.findVisibleByIds(
                 found.items().stream().map(Reply::getQuotedReplyId)
                         .filter(Objects::nonNull).collect(Collectors.toSet()))
-                .stream().collect(Collectors.toMap(Reply::getId, Function.identity()));
+                .stream()
+                // 本人举报且工单未闭环的被引楼层不渲染引用块（F-SAFE-002 / CR-140）：与"不可见不外泄"同口径
+                .filter(quoted -> !reported.replyIds().contains(quoted.getId()))
+                .collect(Collectors.toMap(Reply::getId, Function.identity()));
         Set<Long> authorIds = new LinkedHashSet<>(found.items().stream().map(Reply::getAuthorId).toList());
         quotedVisible.values().forEach(quoted -> authorIds.add(quoted.getAuthorId()));
         Map<Long, String> nicknames = accountApplicationService.nicknamesOf(List.copyOf(authorIds));
@@ -244,10 +256,13 @@ public class ForumQueryApplicationService {
         int currentPage = normalizePage(page);
         int pageSize = normalizeSize(size);
         PageResult<Post> found = favoriteRepository.findFavoritePosts(userId, currentPage, pageSize);
-        // 收藏行不删，但被拉黑者的帖子从页内剔除——与"不可见帖剔除、total 为收藏行数"的既有取舍同源（CR-048）。
-        // 匿名帖例外（CR-139 / D4）：按真实作者剔除会泄露"这条匿名帖是谁发的"
+        // 收藏行不删，但被拉黑者 / 本人待处理举报的帖子从页内剔除——与"不可见帖剔除、total 为收藏行数"
+        // 的既有取舍同源（CR-048 / CR-140）。
+        // 匿名帖例外（CR-139 / D4）：按真实作者剔除会泄露"这条匿名帖是谁发的"；举报是按帖子 id、不涉及作者，故不设例外
+        ReportedTargets reported = reportedTargetsOf(userId);
         List<Post> visible = found.items().stream()
                 .filter(post -> post.isAnonymous() || !blockedAuthorIds(userId).contains(post.getAuthorId()))
+                .filter(post -> !reported.postIds().contains(post.getId()))
                 .toList();
         return new PageResult<>(toSummaries(visible, userId), found.total(), currentPage, pageSize);
     }
@@ -313,7 +328,7 @@ public class ForumQueryApplicationService {
         PageResult<Post> found = postRepository.findPageByAuthors(
                 authorIds.size() > FOLLOWING_FEED_AUTHOR_CAP ? authorIds.subList(0, FOLLOWING_FEED_AUTHOR_CAP)
                         : authorIds,
-                blockedAuthorIds(userId), currentPage, pageSize);
+                blockedAuthorIds(userId), reportedTargetsOf(userId).postIds(), currentPage, pageSize);
         return new PageResult<>(toSummaries(found.items(), userId), found.total(), currentPage, pageSize);
     }
 
@@ -341,7 +356,7 @@ public class ForumQueryApplicationService {
         int currentPage = normalizePage(page);
         int pageSize = normalizeSize(size);
         PageResult<Post> found = postRepository.findPageByAuthors(List.of(authorId),
-                blockedAuthorIds(viewerId), currentPage, pageSize);
+                blockedAuthorIds(viewerId), reportedTargetsOf(viewerId).postIds(), currentPage, pageSize);
         return new PageResult<>(toSummaries(found.items(), viewerId), found.total(), currentPage, pageSize);
     }
 
@@ -474,7 +489,8 @@ public class ForumQueryApplicationService {
         if (board == null) {
             return List.of();
         }
-        List<SimilarPostRow> rows = postRepository.findSimilar(t, board.getId(), currentUserId, cfg.getMaxResults());
+        List<SimilarPostRow> rows = postRepository.findSimilar(t, board.getId(), currentUserId,
+                reportedTargetsOf(currentUserId).postIds(), cfg.getMaxResults());
         Set<Long> blocked = blockedAuthorIds(currentUserId);
         return rows.stream()
                 .filter(row -> !blocked.contains(row.authorId()))
@@ -486,6 +502,16 @@ public class ForumQueryApplicationService {
     /** 读侧过滤集合：匿名不查库；登录态一次取（CR-129） */
     private Set<Long> blockedAuthorIds(Long viewerId) {
         return viewerId == null ? Set.of() : userBlockApplicationService.blockedIdsOf(viewerId);
+    }
+
+    /**
+     * 本人待处理举报目标（F-SAFE-002 / CR-140）：匿名不查库；登录态一次取齐帖子 / 楼层两组 id。
+     *
+     * <p>只返回工单 {@code PENDING} 的目标——闭环后（驳回）内容恢复可见；处置（下架 / 封禁）的内容
+     * 本身已由状态机挡住，不靠本集合。
+     */
+    private ReportedTargets reportedTargetsOf(Long viewerId) {
+        return viewerId == null ? ReportedTargets.EMPTY : reportRepository.findPendingTargetsByReporter(viewerId);
     }
 
     /** 不可读（不存在 / 已删除 / 非 PUBLISHED）统一 404 / 3001，三种情况不对外区分——防按 id 探测 */

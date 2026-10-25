@@ -29,7 +29,7 @@ public class PostRepositoryImpl implements PostRepository {
 
     @Override
     public PageResult<Post> findPage(Long boardId, PostSortOrder sort, Collection<Long> excludedAuthorIds,
-                                     int page, int size) {
+                                     Collection<Long> excludedPostIds, int page, int size) {
         LambdaQueryWrapper<PostDO> query = new LambdaQueryWrapper<>();
         if (boardId != null) {
             query.eq(PostDO::getBoardId, boardId);
@@ -42,6 +42,11 @@ public class PostRepositoryImpl implements PostRepository {
         if (excludedAuthorIds != null && !excludedAuthorIds.isEmpty()) {
             query.and(w -> w.eq(PostDO::getIsAnonymous, true)
                     .or().notIn(PostDO::getAuthorId, excludedAuthorIds));
+        }
+        // 举报人对本人待处理举报的帖子按"不存在"处理（F-SAFE-002 / CR-140）：与拉黑同为 SQL 侧过滤，
+        // total 与查询条件同源，翻页不会出现"少了但计数还在"
+        if (excludedPostIds != null && !excludedPostIds.isEmpty()) {
+            query.notIn(PostDO::getId, excludedPostIds);
         }
         if (sort == PostSortOrder.HOT) {
             query.orderByDesc(PostDO::getHotScore);
@@ -68,7 +73,7 @@ public class PostRepositoryImpl implements PostRepository {
 
     @Override
     public PageResult<Post> findPageByAuthors(Collection<Long> authorIds, Collection<Long> excludedAuthorIds,
-                                              int page, int size) {
+                                              Collection<Long> excludedPostIds, int page, int size) {
         if (authorIds == null || authorIds.isEmpty()) {
             return new PageResult<>(List.of(), 0, page, size);
         }
@@ -78,6 +83,9 @@ public class PostRepositoryImpl implements PostRepository {
                 .in(PostDO::getAuthorId, authorIds);
         if (excludedAuthorIds != null && !excludedAuthorIds.isEmpty()) {
             query.notIn(PostDO::getAuthorId, excludedAuthorIds);
+        }
+        if (excludedPostIds != null && !excludedPostIds.isEmpty()) {
+            query.notIn(PostDO::getId, excludedPostIds);
         }
         IPage<PostDO> result = postMapper.selectPage(new Page<>(page, size), query
                 .orderByDesc(PostDO::getCreatedAt)
@@ -116,8 +124,9 @@ public class PostRepositoryImpl implements PostRepository {
 
     @Override
     public PageResult<Post> search(String keyword, Long boardId, Integer days, Collection<Long> excludedAuthorIds,
-                                   int page, int size) {
-        IPage<PostDO> result = postMapper.search(new Page<>(page, size), keyword, boardId, days, excludedAuthorIds);
+                                   Collection<Long> excludedPostIds, int page, int size) {
+        IPage<PostDO> result = postMapper.search(new Page<>(page, size), keyword, boardId, days,
+                excludedAuthorIds, excludedPostIds);
         return new PageResult<>(result.getRecords().stream().map(PostConverter::toDomain).toList(),
                 result.getTotal(), page, size);
     }
@@ -271,8 +280,9 @@ public class PostRepositoryImpl implements PostRepository {
     }
 
     @Override
-    public List<SimilarPostRow> findSimilar(String title, Long boardId, Long excludeAuthorId, int limit) {
-        return postMapper.findSimilar(title, boardId, excludeAuthorId, limit).stream()
+    public List<SimilarPostRow> findSimilar(String title, Long boardId, Long excludeAuthorId,
+                                          Collection<Long> excludedPostIds, int limit) {
+        return postMapper.findSimilar(title, boardId, excludeAuthorId, excludedPostIds, limit).stream()
                 .map(d -> new SimilarPostRow(d.getId(), d.getBoardId(), d.getAuthorId(), d.getTitle(),
                         d.getReplyCount() == null ? 0 : d.getReplyCount(),
                         Boolean.TRUE.equals(d.getIsAccepted()), d.getCreatedAt()))

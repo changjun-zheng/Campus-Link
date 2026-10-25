@@ -31,7 +31,7 @@ class PostMapperSqlTest {
     }
 
     @Test
-    @DisplayName("搜索 SQL：可见性、版块、时间窗、拉黑作者全部参数化，不拼字符串")
+    @DisplayName("搜索 SQL：可见性、版块、时间窗、拉黑作者、举报目标全部参数化，不拼字符串")
     void searchSqlKeepsFiltersParameterized() throws NoSuchMethodException {
         String sql = selectSql("search");
 
@@ -42,6 +42,24 @@ class PostMapperSqlTest {
                 // 匿名帖不受拉黑过滤（CR-139 / D4）：否则"看不到某人的匿名帖"就是身份侧信道
                 .contains("(is_anonymous = 1 OR author_id NOT IN")
                 .contains("#{excludedId}")
+                // 本人举报且未闭环的帖子从搜索结果剔除（CR-140）
+                .contains("AND id NOT IN")
+                .contains("#{excludedPostId}")
+                .doesNotContain("${");
+    }
+
+    @Test
+    @DisplayName("相似帖 SQL：本人举报且未闭环的帖子不进入推荐（CR-140）")
+    void similarSqlExcludesReportedPosts() throws NoSuchMethodException {
+        String sql = String.join("", PostMapper.class.getMethod("findSimilar", String.class, Long.class,
+                        Long.class, java.util.Collection.class, int.class)
+                .getAnnotation(Select.class).value())
+                .replaceAll("\\s+", " ");
+
+        assertThat(sql)
+                .contains("AND author_id != #{excludeAuthorId}")
+                .contains("AND id NOT IN")
+                .contains("#{excludedPostId}")
                 .doesNotContain("${");
     }
 
@@ -63,7 +81,8 @@ class PostMapperSqlTest {
         // 换行与缩进只是可读性，断言前归一为单空格，口径判断不受排版影响
         return String.join("", PostMapper.class.getMethod(name,
                         com.baomidou.mybatisplus.core.metadata.IPage.class, String.class, Long.class,
-                        Integer.class, java.util.Collection.class).getAnnotation(Select.class).value())
+                        Integer.class, java.util.Collection.class, java.util.Collection.class)
+                .getAnnotation(Select.class).value())
                 .replaceAll("\\s+", " ");
     }
 }

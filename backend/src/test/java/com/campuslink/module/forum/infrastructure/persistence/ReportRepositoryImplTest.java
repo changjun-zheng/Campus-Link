@@ -9,6 +9,7 @@ import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.campuslink.module.forum.domain.gateway.PageResult;
 import com.campuslink.module.forum.domain.model.Report;
+import com.campuslink.module.forum.domain.model.ReportedTargets;
 import com.campuslink.module.forum.infrastructure.persistence.mapper.ReportMapper;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.junit.jupiter.api.BeforeAll;
@@ -105,6 +106,41 @@ class ReportRepositoryImplTest {
 
         when(reportMapper.selectById(REPORT_ID)).thenReturn(doRow());
         assertThat(repository.findById(REPORT_ID)).map(Report::id).hasValue(REPORT_ID);
+    }
+
+    @Test
+    @DisplayName("待处理举报目标：WHERE 带举报人 + PENDING，只归并 POST / REPLY，USER 类不入集合（CR-140）")
+    @SuppressWarnings("unchecked")
+    void findPendingTargetsGroupsPostAndReplyOnly() {
+        ReportDO post = doRow();
+        ReportDO reply = doRow();
+        reply.setTargetType(Report.TARGET_REPLY);
+        reply.setTargetId(8L);
+        ReportDO user = doRow();
+        user.setTargetType(Report.TARGET_USER);
+        user.setTargetId(77L);
+        when(reportMapper.selectList(any(Wrapper.class))).thenReturn(List.of(post, reply, user));
+
+        ReportedTargets targets = repository.findPendingTargetsByReporter(REPORTER_ID);
+
+        assertThat(targets.postIds()).containsExactly(TARGET_ID);
+        assertThat(targets.replyIds()).containsExactly(8L);
+
+        ArgumentCaptor<Wrapper<ReportDO>> captor = ArgumentCaptor.forClass(Wrapper.class);
+        verify(reportMapper).selectList(captor.capture());
+        LambdaQueryWrapper<ReportDO> query = (LambdaQueryWrapper<ReportDO>) captor.getValue();
+        assertThat(query.getSqlSegment()).contains("reporter_id", "status");
+        assertThat(query.getParamNameValuePairs().values()).contains(REPORTER_ID, "PENDING");
+    }
+
+    @Test
+    @DisplayName("待处理举报目标：空结果与匿名（null 举报人）均回 EMPTY，不查库")
+    void findPendingTargetsReturnsEmpty() {
+        when(reportMapper.selectList(any(Wrapper.class))).thenReturn(List.of());
+        assertThat(repository.findPendingTargetsByReporter(REPORTER_ID)).isSameAs(ReportedTargets.EMPTY);
+
+        assertThat(repository.findPendingTargetsByReporter(null)).isSameAs(ReportedTargets.EMPTY);
+        verify(reportMapper, org.mockito.Mockito.times(1)).selectList(any(Wrapper.class));
     }
 
     @Test

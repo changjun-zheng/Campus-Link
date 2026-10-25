@@ -79,7 +79,7 @@ class ReplyRepositoryImplVisibleTest {
             page.setTotal(0);
             return page;
         });
-        repository.findPageByPostId(POST_ID, java.util.Set.of(), 1, 20);
+        repository.findPageByPostId(POST_ID, java.util.Set.of(), java.util.Set.of(), 1, 20);
         ArgumentCaptor<Wrapper<ReplyDO>> captor = ArgumentCaptor.forClass(Wrapper.class);
         verify(replyMapper).selectPage(any(IPage.class), captor.capture());
         return (LambdaQueryWrapper<ReplyDO>) captor.getValue();

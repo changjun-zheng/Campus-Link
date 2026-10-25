@@ -45,6 +45,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -75,6 +77,8 @@ class ForumQueryApplicationServiceTest {
     private com.campuslink.module.account.application.FollowApplicationService followApplicationService;
     @Mock
     private com.campuslink.module.account.application.UserBlockApplicationService userBlockApplicationService;
+    @Mock
+    private com.campuslink.module.forum.domain.gateway.ReportRepository reportRepository;
 
     private AppProperties appProperties;
     private ForumQueryApplicationService service;
@@ -84,13 +88,16 @@ class ForumQueryApplicationServiceTest {
         appProperties = new AppProperties();
         service = new ForumQueryApplicationService(boardRepository, postRepository, replyRepository,
                 likeRepository, favoriteRepository, accountApplicationService, userBlockApplicationService,
-                followApplicationService, new MarkdownRenderer(), appProperties);
+                followApplicationService, reportRepository, new MarkdownRenderer(), appProperties);
+        // 默认无待处理举报；具体用例需要非空集合时自行覆盖（lenient：匿名用例根本不查库）
+        lenient().when(reportRepository.findPendingTargetsByReporter(anyLong()))
+                .thenReturn(com.campuslink.module.forum.domain.model.ReportedTargets.EMPTY);
     }
 
     @Test
     @DisplayName("帖子列表：昵称一页一次批量查，版块名随项带出，查不到的昵称回落「已注销用户」")
     void listPostsResolvesBoardAndNicknamesInBatch() {
-        when(postRepository.findPage(null, PostSortOrder.LATEST, java.util.Set.of(), 1, 20))
+        when(postRepository.findPage(null, PostSortOrder.LATEST, java.util.Set.of(), java.util.Set.of(), 1, 20))
                 .thenReturn(new PageResult<>(List.of(post(1L, 100L), post(2L, 200L)), 2, 1, 20));
         when(boardRepository.findAllEnabled()).thenReturn(List.of(board(1L, "qna", "技术问答")));
         when(accountApplicationService.nicknamesOf(List.of(100L, 200L))).thenReturn(Map.of(100L, "张三"));
@@ -108,7 +115,7 @@ class ForumQueryApplicationServiceTest {
     @Test
     @DisplayName("列表点赞回显（CR-080）：登录时一页**一次**批量取已赞集合，并逐条落到 likedByMe")
     void listPostsMarksLikedByMeFromASingleBatchQuery() {
-        when(postRepository.findPage(null, PostSortOrder.LATEST, java.util.Set.of(), 1, 20))
+        when(postRepository.findPage(null, PostSortOrder.LATEST, java.util.Set.of(), java.util.Set.of(), 1, 20))
                 .thenReturn(new PageResult<>(List.of(post(1L, 101L), post(2L, 102L), post(3L, 103L)), 3, 1, 20));
         when(boardRepository.findAllEnabled()).thenReturn(List.of());
         when(accountApplicationService.nicknamesOf(List.of(101L, 102L, 103L)))
@@ -128,7 +135,7 @@ class ForumQueryApplicationServiceTest {
     @Test
     @DisplayName("列表点赞回显（CR-080）：匿名请求**一次仓储都不调**，likedByMe 恒 false（与详情同口径）")
     void anonymousListNeverTouchesLikeRepository() {
-        when(postRepository.findPage(null, PostSortOrder.LATEST, java.util.Set.of(), 1, 20))
+        when(postRepository.findPage(null, PostSortOrder.LATEST, java.util.Set.of(), java.util.Set.of(), 1, 20))
                 .thenReturn(new PageResult<>(List.of(post(1L, 101L)), 1, 1, 20));
         when(boardRepository.findAllEnabled()).thenReturn(List.of());
         when(accountApplicationService.nicknamesOf(List.of(101L))).thenReturn(Map.of(101L, "甲"));
@@ -142,7 +149,7 @@ class ForumQueryApplicationServiceTest {
     @Test
     @DisplayName("匿名帖列表：昵称恒为「匿名用户」且 anonymous=true（即使批量昵称里能取到真实名）")
     void anonymousPostIsMaskedInList() {
-        when(postRepository.findPage(null, PostSortOrder.LATEST, java.util.Set.of(), 1, 20))
+        when(postRepository.findPage(null, PostSortOrder.LATEST, java.util.Set.of(), java.util.Set.of(), 1, 20))
                 .thenReturn(new PageResult<>(List.of(anonymousPost(1L, 100L)), 1, 1, 20));
         when(boardRepository.findAllEnabled()).thenReturn(List.of(board(1L, "qna", "技术问答")));
         when(accountApplicationService.nicknamesOf(any())).thenReturn(Map.of(100L, "张三"));
@@ -176,7 +183,7 @@ class ForumQueryApplicationServiceTest {
     @Test
     @DisplayName("列表点赞回显（CR-080）：空页不去查已赞集合（无 id 可问，省一次往返）")
     void emptyListSkipsLikeLookup() {
-        when(postRepository.findPage(null, PostSortOrder.LATEST, java.util.Set.of(), 1, 20))
+        when(postRepository.findPage(null, PostSortOrder.LATEST, java.util.Set.of(), java.util.Set.of(), 1, 20))
                 .thenReturn(new PageResult<>(List.of(), 0, 1, 20));
         when(boardRepository.findAllEnabled()).thenReturn(List.of());
 
@@ -187,14 +194,14 @@ class ForumQueryApplicationServiceTest {
     @Test
     @DisplayName("分页归一：page<1 → 1、size>100 → 100，响应回显生效值")
     void pagingIsNormalized() {
-        when(postRepository.findPage(null, PostSortOrder.LATEST, java.util.Set.of(), 1, 100)).thenReturn(new PageResult<>(List.of(), 0, 1, 100));
+        when(postRepository.findPage(null, PostSortOrder.LATEST, java.util.Set.of(), java.util.Set.of(), 1, 100)).thenReturn(new PageResult<>(List.of(), 0, 1, 100));
         when(boardRepository.findAllEnabled()).thenReturn(List.of());
 
         PageResult<PostSummary> page = service.listPosts(null, "latest", 0, 500, null);
 
         assertThat(page.page()).isEqualTo(1);
         assertThat(page.size()).isEqualTo(100);
-        verify(postRepository).findPage(null, PostSortOrder.LATEST, java.util.Set.of(), 1, 100);
+        verify(postRepository).findPage(null, PostSortOrder.LATEST, java.util.Set.of(), java.util.Set.of(), 1, 100);
     }
 
     @Test
@@ -206,14 +213,14 @@ class ForumQueryApplicationServiceTest {
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
 
-        verify(postRepository, never()).findPage(any(), any(), any(), anyInt(), anyInt());
+        verify(postRepository, never()).findPage(any(), any(), any(), any(), anyInt(), anyInt());
     }
 
     @Test
     @DisplayName("摘要：去 Markdown 记号后截断到 120 字（服务端截断，前端不兜底）")
     void summaryIsStrippedAndTruncated() {
         String longMarkdown = "# 标题\n\n" + "正文".repeat(70);
-        when(postRepository.findPage(null, PostSortOrder.LATEST, java.util.Set.of(), 1, 20))
+        when(postRepository.findPage(null, PostSortOrder.LATEST, java.util.Set.of(), java.util.Set.of(), 1, 20))
                 .thenReturn(new PageResult<>(List.of(post(1L, 100L, longMarkdown)), 1, 1, 20));
         when(boardRepository.findAllEnabled()).thenReturn(List.of());
         when(accountApplicationService.nicknamesOf(any())).thenReturn(Map.of(100L, "张三"));
@@ -226,18 +233,18 @@ class ForumQueryApplicationServiceTest {
     @Test
     @DisplayName("sort：hot（含大写与前后空白）按热榜查；latest 与缺省走同一路径（回归保护）")
     void sortAcceptsHotAndLatest() {
-        when(postRepository.findPage(any(), any(), any(), anyInt(), anyInt()))
+        when(postRepository.findPage(any(), any(), any(), any(), anyInt(), anyInt()))
                 .thenReturn(new PageResult<>(List.of(), 0, 1, 20));
         when(boardRepository.findAllEnabled()).thenReturn(List.of());
 
         service.listPosts(null, "hot", 1, 20, null);
         service.listPosts(null, "HOT", 1, 20, null);
         service.listPosts(null, "  hot  ", 1, 20, null);
-        verify(postRepository, times(3)).findPage(null, PostSortOrder.HOT, java.util.Set.of(), 1, 20);
+        verify(postRepository, times(3)).findPage(null, PostSortOrder.HOT, java.util.Set.of(), java.util.Set.of(), 1, 20);
 
         service.listPosts(null, "latest", 1, 20, null);
         service.listPosts(null, "LATEST", 1, 20, null);
-        verify(postRepository, times(2)).findPage(null, PostSortOrder.LATEST, java.util.Set.of(), 1, 20);
+        verify(postRepository, times(2)).findPage(null, PostSortOrder.LATEST, java.util.Set.of(), java.util.Set.of(), 1, 20);
     }
 
     @Test
@@ -250,7 +257,7 @@ class ForumQueryApplicationServiceTest {
                             e -> assertThat(e.getCode()).isEqualTo(ResultCode.INVALID_PARAM));
         }
 
-        verify(postRepository, never()).findPage(any(), any(), any(), anyInt(), anyInt());
+        verify(postRepository, never()).findPage(any(), any(), any(), any(), anyInt(), anyInt());
     }
 
     @Test
@@ -312,7 +319,7 @@ class ForumQueryApplicationServiceTest {
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
 
-        verify(replyRepository, never()).findPageByPostId(any(), any(), anyInt(), anyInt());
+        verify(replyRepository, never()).findPageByPostId(any(), any(), any(), anyInt(), anyInt());
     }
 
     @Test
@@ -331,7 +338,7 @@ class ForumQueryApplicationServiceTest {
     @DisplayName("楼层列表：floorNo 原样透出、昵称一并解析（楼层 = 回复序号）")
     void repliesExposeFloorNoAndNicknames() {
         when(postRepository.findById(9L)).thenReturn(Optional.of(post(9L, 100L)));
-        when(replyRepository.findPageByPostId(9L, java.util.Set.of(), 1, 20))
+        when(replyRepository.findPageByPostId(9L, java.util.Set.of(), java.util.Set.of(), 1, 20))
                 .thenReturn(new PageResult<>(List.of(reply(11L, 100L, 1), reply(12L, 200L, 2)), 2, 1, 20));
         when(accountApplicationService.nicknamesOf(List.of(100L, 200L)))
                 .thenReturn(Map.of(100L, "张三", 200L, "李四"));
@@ -351,7 +358,7 @@ class ForumQueryApplicationServiceTest {
     @DisplayName("引用摘要：楼层就地带出被引楼层的楼层号、昵称与纯文本摘要；无引用楼层 quoted 恒 null")
     void repliesExposeQuotedBrief() {
         when(postRepository.findById(9L)).thenReturn(Optional.of(post(9L, 100L)));
-        when(replyRepository.findPageByPostId(9L, java.util.Set.of(), 1, 20)).thenReturn(new PageResult<>(
+        when(replyRepository.findPageByPostId(9L, java.util.Set.of(), java.util.Set.of(), 1, 20)).thenReturn(new PageResult<>(
                 List.of(reply(11L, 100L, 1), replyQuoted(12L, 200L, 2, 11L)), 2, 1, 20));
         when(replyRepository.findVisibleByIds(java.util.Set.of(11L))).thenReturn(List.of(
                 Reply.rehydrate(11L, 9L, 100L, 1, "# 标题\n\n" + "正文".repeat(80), "<p>…</p>",
@@ -372,7 +379,7 @@ class ForumQueryApplicationServiceTest {
     @DisplayName("引用摘要：被引楼层不可见（下架 / 已删）→ quoted=null 不渲染，且其作者不进昵称批次")
     void quotedInvisibleYieldsNullBriefAndSkipsItsAuthor() {
         when(postRepository.findById(9L)).thenReturn(Optional.of(post(9L, 100L)));
-        when(replyRepository.findPageByPostId(9L, java.util.Set.of(), 1, 20)).thenReturn(new PageResult<>(
+        when(replyRepository.findPageByPostId(9L, java.util.Set.of(), java.util.Set.of(), 1, 20)).thenReturn(new PageResult<>(
                 List.of(replyQuoted(12L, 200L, 2, 99L)), 1, 1, 20));
         when(replyRepository.findVisibleByIds(java.util.Set.of(99L))).thenReturn(List.of());
         when(accountApplicationService.nicknamesOf(List.of(200L))).thenReturn(Map.of(200L, "李四"));
@@ -403,7 +410,7 @@ class ForumQueryApplicationServiceTest {
     @Test
     @DisplayName("搜索：keyword 去首尾空白后传仓储，版块与昵称同列表口径解析（F-FORUM-008）")
     void searchResolvesBoardAndNicknamesLikeList() {
-        when(postRepository.search("Redis", 1L, null, java.util.Set.of(), 1, 20))
+        when(postRepository.search("Redis", 1L, null, java.util.Set.of(), java.util.Set.of(), 1, 20))
                 .thenReturn(new PageResult<>(List.of(post(1L, 100L), post(2L, 200L)), 2, 1, 20));
         when(boardRepository.findByCode("qna")).thenReturn(Optional.of(board(1L, "qna", "技术问答")));
         when(boardRepository.findAllEnabled()).thenReturn(List.of(board(1L, "qna", "技术问答")));
@@ -414,14 +421,14 @@ class ForumQueryApplicationServiceTest {
         assertThat(page.total()).isEqualTo(2);
         assertThat(page.items()).extracting(PostSummary::authorNickname).containsExactly("张三", "已注销用户");
         assertThat(page.items()).extracting(PostSummary::boardCode).containsExactly("qna", "qna");
-        verify(postRepository).search("Redis", 1L, null, java.util.Set.of(), 1, 20);
+        verify(postRepository).search("Redis", 1L, null, java.util.Set.of(), java.util.Set.of(), 1, 20);
     }
 
     @Test
     @DisplayName("搜索摘要（F-FORUM-009 / CR-136）：命中词在正文深处时围绕它取窗口，而不是只给首段")
     void searchSummaryCentersOnKeyword() {
         String deepContent = "前".repeat(120) + "命中词" + "后".repeat(120);
-        when(postRepository.search("命中词", null, null, java.util.Set.of(), 1, 20))
+        when(postRepository.search("命中词", null, null, java.util.Set.of(), java.util.Set.of(), 1, 20))
                 .thenReturn(new PageResult<>(List.of(post(1L, 100L, deepContent)), 1, 1, 20));
         when(boardRepository.findAllEnabled()).thenReturn(List.of(board(1L, "qna", "技术问答")));
         when(accountApplicationService.nicknamesOf(List.of(100L))).thenReturn(Map.of(100L, "张三"));
@@ -439,7 +446,7 @@ class ForumQueryApplicationServiceTest {
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.INVALID_PARAM));
 
-        verify(postRepository, never()).search(any(), any(), any(), any(), anyInt(), anyInt());
+        verify(postRepository, never()).search(any(), any(), any(), any(), any(), anyInt(), anyInt());
     }
 
     @Test
@@ -452,7 +459,7 @@ class ForumQueryApplicationServiceTest {
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.INVALID_PARAM));
 
-        verify(postRepository, never()).search(any(), any(), any(), any(), anyInt(), anyInt());
+        verify(postRepository, never()).search(any(), any(), any(), any(), any(), anyInt(), anyInt());
     }
 
     @Test
@@ -470,10 +477,10 @@ class ForumQueryApplicationServiceTest {
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.INVALID_PARAM));
 
-        when(postRepository.search("Redis", null, 30, java.util.Set.of(), 1, 20)).thenReturn(new PageResult<>(List.of(), 0, 1, 20));
+        when(postRepository.search("Redis", null, 30, java.util.Set.of(), java.util.Set.of(), 1, 20)).thenReturn(new PageResult<>(List.of(), 0, 1, 20));
         when(boardRepository.findAllEnabled()).thenReturn(List.of());
         service.searchPosts("Redis", null, 30, 1, 20, null);
-        verify(postRepository).search("Redis", null, 30, java.util.Set.of(), 1, 20);
+        verify(postRepository).search("Redis", null, 30, java.util.Set.of(), java.util.Set.of(), 1, 20);
     }
 
     @Test
@@ -485,7 +492,7 @@ class ForumQueryApplicationServiceTest {
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
 
-        verify(postRepository, never()).search(any(), any(), any(), any(), anyInt(), anyInt());
+        verify(postRepository, never()).search(any(), any(), any(), any(), any(), anyInt(), anyInt());
     }
 
     /**
@@ -610,6 +617,69 @@ class ForumQueryApplicationServiceTest {
         return Reply.rehydrate(id, 9L, authorId, floorNo, "内容", "<p>内容</p>", quotedReplyId, false, 0, CREATED_AT);
     }
 
+    // ── 举报内容对举报人不可见（F-SAFE-002 / CR-140） ──────────────────────────────────────────
+
+    @Test
+    @DisplayName("举报未闭环的帖子：详情对举报人回 3001，匿名访客与其他人不受影响")
+    void postDetailHidesReportedPostFromReporter() {
+        when(postRepository.findById(7L)).thenReturn(java.util.Optional.of(post(7L, 100L)));
+        when(reportRepository.findPendingTargetsByReporter(42L))
+                .thenReturn(new com.campuslink.module.forum.domain.model.ReportedTargets(
+                        java.util.Set.of(7L), java.util.Set.of()));
+        when(accountApplicationService.nicknamesOf(any())).thenReturn(java.util.Map.of(100L, "作者乙"));
+        when(boardRepository.findAllEnabled()).thenReturn(List.of(board(1L, "qna", "技术问答")));
+
+        assertThatThrownBy(() -> service.postDetail(7L, 42L))
+                .isInstanceOf(com.campuslink.module.forum.domain.exception.PostNotFoundException.class);
+        // 匿名访客没有举报身份，照常可读
+        assertThat(service.postDetail(7L, null).id()).isEqualTo(7L);
+        verify(reportRepository, never()).findPendingTargetsByReporter(org.mockito.ArgumentMatchers.isNull());
+    }
+
+    @Test
+    @DisplayName("列表：举报目标帖子 id 传给仓储做 SQL 侧剔除（total 同源），匿名不查举报集合")
+    void listPostsPassesReportedPostIds() {
+        when(reportRepository.findPendingTargetsByReporter(42L))
+                .thenReturn(new com.campuslink.module.forum.domain.model.ReportedTargets(
+                        java.util.Set.of(7L), java.util.Set.of()));
+        when(postRepository.findPage(null, PostSortOrder.LATEST, java.util.Set.of(), java.util.Set.of(7L), 1, 20))
+                .thenReturn(new PageResult<>(List.of(post(8L, 100L)), 1, 1, 20));
+        when(boardRepository.findAllEnabled()).thenReturn(List.of(board(1L, "qna", "技术问答")));
+        when(accountApplicationService.nicknamesOf(any())).thenReturn(java.util.Map.of(100L, "作者乙"));
+
+        PageResult<PostSummary> result = service.listPosts(null, "latest", 1, 20, 42L);
+
+        assertThat(result.items()).extracting(PostSummary::id).containsExactly(8L);
+        verify(postRepository).findPage(null, PostSortOrder.LATEST, java.util.Set.of(),
+                java.util.Set.of(7L), 1, 20);
+
+        when(postRepository.findPage(null, PostSortOrder.LATEST, java.util.Set.of(), java.util.Set.of(), 1, 20))
+                .thenReturn(new PageResult<>(List.of(), 0, 1, 20));
+        service.listPosts(null, "latest", 1, 20, null);
+        verify(reportRepository, never()).findPendingTargetsByReporter(org.mockito.ArgumentMatchers.isNull());
+    }
+
+    @Test
+    @DisplayName("楼层：举报目标楼层 id 传给仓储，且被引用时不渲染引用块")
+    void listRepliesPassesReportedReplyIdsAndHidesQuoted() {
+        when(postRepository.findById(9L)).thenReturn(java.util.Optional.of(post(9L, 100L)));
+        when(reportRepository.findPendingTargetsByReporter(42L))
+                .thenReturn(new com.campuslink.module.forum.domain.model.ReportedTargets(
+                        java.util.Set.of(), java.util.Set.of(11L)));
+        when(replyRepository.findPageByPostId(9L, java.util.Set.of(), java.util.Set.of(11L), 1, 20))
+                .thenReturn(new PageResult<>(List.of(replyQuoted(12L, 100L, 1, 11L)), 1, 1, 20));
+        when(replyRepository.findVisibleByIds(any())).thenReturn(List.of(reply(11L, 200L, 2)));
+        when(accountApplicationService.nicknamesOf(any())).thenReturn(java.util.Map.of(100L, "作者乙", 200L, "作者丙"));
+        when(likeRepository.findLikedTargetIds(anyLong(), any(), any()))
+                .thenReturn(java.util.Set.of());
+
+        List<ReplyItem> items = service.listReplies(9L, 1, 20, 42L).items();
+
+        assertThat(items).hasSize(1);
+        assertThat(items.get(0).quoted()).isNull();
+        verify(replyRepository).findPageByPostId(9L, java.util.Set.of(), java.util.Set.of(11L), 1, 20);
+    }
+
     // ── Similar-post recommendation (findSimilarPosts) ──────────────────────────────────────────
 
     @Test
@@ -620,7 +690,7 @@ class ForumQueryApplicationServiceTest {
         List<SimilarPostResult> result = service.findSimilarPosts("如何学习Java编程", 42L);
 
         assertThat(result).isEmpty();
-        verify(postRepository, never()).findSimilar(any(), any(), any(), anyInt());
+        verify(postRepository, never()).findSimilar(any(), any(), any(), any(), anyInt());
     }
 
     @Test
@@ -629,7 +699,7 @@ class ForumQueryApplicationServiceTest {
         List<SimilarPostResult> result = service.findSimilarPosts(null, 42L);
 
         assertThat(result).isEmpty();
-        verify(postRepository, never()).findSimilar(any(), any(), any(), anyInt());
+        verify(postRepository, never()).findSimilar(any(), any(), any(), any(), anyInt());
     }
 
     @Test
@@ -638,7 +708,7 @@ class ForumQueryApplicationServiceTest {
         List<SimilarPostResult> result = service.findSimilarPosts("Java", 42L);
 
         assertThat(result).isEmpty();
-        verify(postRepository, never()).findSimilar(any(), any(), any(), anyInt());
+        verify(postRepository, never()).findSimilar(any(), any(), any(), any(), anyInt());
     }
 
     @Test
@@ -649,7 +719,7 @@ class ForumQueryApplicationServiceTest {
         assertThatThrownBy(() -> service.findSimilarPosts(longTitle, 42L))
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.INVALID_PARAM));
-        verify(postRepository, never()).findSimilar(any(), any(), any(), anyInt());
+        verify(postRepository, never()).findSimilar(any(), any(), any(), any(), anyInt());
     }
 
     @Test
@@ -660,14 +730,14 @@ class ForumQueryApplicationServiceTest {
         List<SimilarPostResult> result = service.findSimilarPosts("如何学习Java编程", 42L);
 
         assertThat(result).isEmpty();
-        verify(postRepository, never()).findSimilar(any(), any(), any(), anyInt());
+        verify(postRepository, never()).findSimilar(any(), any(), any(), any(), anyInt());
     }
 
     @Test
     @DisplayName("相似帖子：正常情况下返回相似帖子列表，排除当前用户自己的帖子")
     void findSimilarPostsReturnsResultsExcludingOwnPosts() {
         when(boardRepository.findByCode("qna")).thenReturn(Optional.of(board(1L, "qna", "技术问答")));
-        when(postRepository.findSimilar("如何学习Java编程", 1L, 42L, 3))
+        when(postRepository.findSimilar("如何学习Java编程", 1L, 42L, java.util.Set.of(), 3))
                 .thenReturn(List.of(
                         new SimilarPostRow(10L, 1L, 7L, "Java入门", 2, false, CREATED_AT),
                         new SimilarPostRow(11L, 1L, 8L, "Java进阶", 1, true, CREATED_AT)));
@@ -681,6 +751,6 @@ class ForumQueryApplicationServiceTest {
         assertThat(result.get(1).id()).isEqualTo(11L);
         assertThat(result.get(1).accepted()).isTrue();
         // excludeAuthorId=42 passed to repository — own posts excluded at SQL level
-        verify(postRepository).findSimilar("如何学习Java编程", 1L, 42L, 3);
+        verify(postRepository).findSimilar("如何学习Java编程", 1L, 42L, java.util.Set.of(), 3);
     }
 }

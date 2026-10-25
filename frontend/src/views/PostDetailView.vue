@@ -359,17 +359,24 @@ function openReport(type: 'POST' | 'REPLY', id: number) {
 const reporting = ref(false)
 
 async function doReport() {
-  if (!reportTarget.value) return
+  const target = reportTarget.value
+  if (!target) return
   reporting.value = true
   try {
     await submitReport({
-      targetType: reportTarget.value.type,
-      targetId: reportTarget.value.id,
+      targetType: target.type,
+      targetId: target.id,
       reason: reportForm.reason,
       detail: reportForm.detail.trim() || undefined,
     })
     ElMessage.success('举报已提交，运营将尽快处理')
     reportDialogVisible.value = false
+    // 举报后内容对本人即时不可见（F-SAFE-002 / CR-140）：帖子重载进 3001 空态，楼层重载后该层消失
+    if (target.type === 'POST') {
+      await loadPost()
+    } else {
+      await loadReplies()
+    }
   } catch (e) {
     ElMessage.error(e instanceof Error ? e.message : '举报提交失败')
   } finally {

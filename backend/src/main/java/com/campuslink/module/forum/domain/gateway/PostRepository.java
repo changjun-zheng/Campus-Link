@@ -23,7 +23,7 @@ public interface PostRepository {
      * 不能在内存里剔除后再算页数。
      */
     PageResult<Post> findPage(Long boardId, PostSortOrder sort, Collection<Long> excludedAuthorIds,
-                              int page, int size);
+                              Collection<Long> excludedPostIds, int page, int size);
 
     /**
      * "我的帖子"分页（F-ACC-007b）：本人发帖时间倒序，{@code author_id = ? AND is_deleted = 0}，
@@ -66,7 +66,7 @@ public interface PostRepository {
      * 按相关度得分 DESC、created_at DESC 排序。{@code boardId} 为 null 表示全站；{@code days} 为 null 表示不限时间窗。
      */
     PageResult<Post> search(String keyword, Long boardId, Integer days, Collection<Long> excludedAuthorIds,
-                            int page, int size);
+                            Collection<Long> excludedPostIds, int page, int size);
 
     /**
      * 按 id 查**未删除**的帖子（{@code is_deleted=1} 视为不存在，属仓储读侧约定：软删是行级墓碑，
@@ -180,7 +180,7 @@ public interface PostRepository {
      * 时间序倒排（与 {@link #findPage} 的 LATEST 同序、id DESC 兜底）。空集合由实现短路，不发 {@code IN ()}。
      */
     PageResult<Post> findPageByAuthors(Collection<Long> authorIds, Collection<Long> excludedAuthorIds,
-                                       int page, int size);
+                                       Collection<Long> excludedPostIds, int page, int size);
 
     /**
      * Similar-post recommendation (publish-time assist): full-text search on title within the given board,
@@ -190,5 +190,6 @@ public interface PostRepository {
      * <p>返回窄载体 {@link SimilarPostRow}（不装配完整聚合）：推荐条目只需 id / title / replyCount / accepted / createdAt，
      * SELECT * 再丢弃是纯浪费（CR-077 Warning #7）。
      */
-    List<SimilarPostRow> findSimilar(String title, Long boardId, Long excludeAuthorId, int limit);
+    List<SimilarPostRow> findSimilar(String title, Long boardId, Long excludeAuthorId,
+                                     Collection<Long> excludedPostIds, int limit);
 }

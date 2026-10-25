@@ -35,6 +35,12 @@ public interface PostMapper extends BaseMapper<PostDO> {
                 </foreach>
                 )
               </if>
+              <if test="excludedPostIds != null and excludedPostIds.size() > 0">
+                AND id NOT IN
+                <foreach collection="excludedPostIds" item="excludedPostId" open="(" separator="," close=")">
+                  #{excludedPostId}
+                </foreach>
+              </if>
             ORDER BY relevance DESC, created_at DESC, id DESC
             </script>
             """)
@@ -42,7 +48,8 @@ public interface PostMapper extends BaseMapper<PostDO> {
                          @Param("keyword") String keyword,
                          @Param("boardId") Long boardId,
                          @Param("days") Integer days,
-                         @Param("excludedAuthorIds") java.util.Collection<Long> excludedAuthorIds);
+                         @Param("excludedAuthorIds") java.util.Collection<Long> excludedAuthorIds,
+                         @Param("excludedPostIds") java.util.Collection<Long> excludedPostIds);
 
     /**
      * Similar-post recommendation (publish-time assist): full-text search on title (ngram),
@@ -59,12 +66,19 @@ public interface PostMapper extends BaseMapper<PostDO> {
               AND board_id = #{boardId}
               AND author_id != #{excludeAuthorId}
               AND MATCH(title) AGAINST(#{keyword} IN NATURAL LANGUAGE MODE)
+              <if test="excludedPostIds != null and excludedPostIds.size() > 0">
+                AND id NOT IN
+                <foreach collection="excludedPostIds" item="excludedPostId" open="(" separator="," close=")">
+                  #{excludedPostId}
+                </foreach>
+              </if>
             ORDER BY relevance DESC, created_at DESC, id DESC
             LIMIT #{limit}
             """)
     List<PostDO> findSimilar(@Param("keyword") String keyword,
                              @Param("boardId") Long boardId,
                              @Param("excludeAuthorId") Long excludeAuthorId,
+                             @Param("excludedPostIds") java.util.Collection<Long> excludedPostIds,
                              @Param("limit") int limit);
 
     /**

@@ -80,7 +80,7 @@ class PostRepositoryImplTest {
         when(postMapper.selectPage(any(IPage.class), any(Wrapper.class)))
                 .thenReturn(pageOf(List.of(doRow()), 1));
 
-        PageResult<Post> result = repository.findPage(null, PostSortOrder.LATEST, java.util.Set.of(), 1, 20);
+        PageResult<Post> result = repository.findPage(null, PostSortOrder.LATEST, java.util.Set.of(), java.util.Set.of(), 1, 20);
 
         assertThat(result.total()).isEqualTo(1);
         assertThat(result.items()).hasSize(1);
@@ -101,7 +101,7 @@ class PostRepositoryImplTest {
         when(postMapper.selectPage(any(IPage.class), any(Wrapper.class)))
                 .thenReturn(pageOf(List.of(doRow()), 1));
 
-        repository.findPage(null, PostSortOrder.LATEST, java.util.Set.of(99L), 1, 20);
+        repository.findPage(null, PostSortOrder.LATEST, java.util.Set.of(99L), java.util.Set.of(), 1, 20);
 
         String sql = capturedPageQuery().getSqlSegment();
         assertThat(sql).contains("is_anonymous", "author_id", "NOT IN", "OR");
@@ -114,7 +114,7 @@ class PostRepositoryImplTest {
         when(postMapper.selectPage(any(IPage.class), any(Wrapper.class)))
                 .thenReturn(pageOf(List.of(), 0));
 
-        repository.findPage(BOARD_ID, PostSortOrder.HOT, java.util.Set.of(), 2, 10);
+        repository.findPage(BOARD_ID, PostSortOrder.HOT, java.util.Set.of(), java.util.Set.of(), 2, 10);
 
         LambdaQueryWrapper<PostDO> query = capturedPageQuery();
         String sql = query.getSqlSegment();
@@ -125,14 +125,14 @@ class PostRepositoryImplTest {
     @Test
     @DisplayName("搜索：关键词 / 版块 / 天数三参原样透传给 Mapper，出参转领域并按页回显")
     void searchPassesParamsThrough() {
-        when(postMapper.search(any(IPage.class), eq("事务"), eq(BOARD_ID), eq(30), any()))
+        when(postMapper.search(any(IPage.class), eq("事务"), eq(BOARD_ID), eq(30), any(), any()))
                 .thenReturn(pageOf(List.of(doRow()), 1));
 
-        PageResult<Post> result = repository.search("事务", BOARD_ID, 30, java.util.Set.of(), 1, 20);
+        PageResult<Post> result = repository.search("事务", BOARD_ID, 30, java.util.Set.of(), java.util.Set.of(), 1, 20);
 
         assertThat(result.items()).hasSize(1);
         assertThat(result.total()).isEqualTo(1);
-        verify(postMapper).search(any(IPage.class), eq("事务"), eq(BOARD_ID), eq(30), any());
+        verify(postMapper).search(any(IPage.class), eq("事务"), eq(BOARD_ID), eq(30), any(), any());
     }
 
     @Test
@@ -301,14 +301,14 @@ class PostRepositoryImplTest {
         PostDO row = doRow();
         row.setReplyCount(null);
         row.setIsAccepted(null);
-        when(postMapper.findSimilar("事务", BOARD_ID, AUTHOR_ID, 5)).thenReturn(List.of(row));
+        when(postMapper.findSimilar("事务", BOARD_ID, AUTHOR_ID, java.util.Set.of(), 5)).thenReturn(List.of(row));
 
-        List<SimilarPostRow> rows = repository.findSimilar("事务", BOARD_ID, AUTHOR_ID, 5);
+        List<SimilarPostRow> rows = repository.findSimilar("事务", BOARD_ID, AUTHOR_ID, java.util.Set.of(), 5);
 
         assertThat(rows).hasSize(1);
         assertThat(rows.getFirst().replyCount()).isZero();
         assertThat(rows.getFirst().accepted()).isFalse();
-        verify(postMapper).findSimilar("事务", BOARD_ID, AUTHOR_ID, 5);
+        verify(postMapper).findSimilar("事务", BOARD_ID, AUTHOR_ID, java.util.Set.of(), 5);
     }
 
     // ---------- helpers ----------

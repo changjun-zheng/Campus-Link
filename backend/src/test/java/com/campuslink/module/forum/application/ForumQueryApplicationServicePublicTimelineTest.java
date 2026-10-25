@@ -30,6 +30,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -69,6 +70,8 @@ class ForumQueryApplicationServicePublicTimelineTest {
 
     @Mock
     private com.campuslink.module.account.application.UserBlockApplicationService userBlockApplicationService;
+    @Mock
+    private com.campuslink.module.forum.domain.gateway.ReportRepository reportRepository;
 
     private ForumQueryApplicationService service;
 
@@ -76,7 +79,9 @@ class ForumQueryApplicationServicePublicTimelineTest {
     void setUp() {
         service = new ForumQueryApplicationService(boardRepository, postRepository, replyRepository,
                 likeRepository, favoriteRepository, accountApplicationService, userBlockApplicationService,
-                followApplicationService, new MarkdownRenderer(), new AppProperties());
+                followApplicationService, reportRepository, new MarkdownRenderer(), new AppProperties());
+        lenient().when(reportRepository.findPendingTargetsByReporter(anyLong()))
+                .thenReturn(com.campuslink.module.forum.domain.model.ReportedTargets.EMPTY);
     }
 
     @Test
