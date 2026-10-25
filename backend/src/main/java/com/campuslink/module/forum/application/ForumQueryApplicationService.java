@@ -64,6 +64,8 @@ public class ForumQueryApplicationService {
     private static final int SUMMARY_MAX_CHARS = 120;
     /** 作者已注销等取不到昵称时的回落文案（设计 §4.3） */
     private static final String NICKNAME_FALLBACK = "已注销用户";
+    /** 匿名帖的公开作者名（F-FORUM-010 / CR-139）：对任何读者（含作者本人）都使用此名，真实 id 只在作者视角回填 */
+    private static final String ANONYMOUS_NICKNAME = "匿名用户";
     /** 搜索关键词长度：下限对齐 ngram 分词（默认 ngram_token_size=2，单字分不出词），上限防超长串放大查询 */
     private static final int KEYWORD_MIN_CHARS = 2;
     private static final int KEYWORD_MAX_CHARS = 50;
@@ -140,13 +142,19 @@ public class ForumQueryApplicationService {
      */
     public PostDetail postDetail(Long postId, Long viewerId) {
         Post post = requireVisiblePost(postId);
-        // 拉黑后其帖子对本人按"不存在"处理（CR-129）：与已删除 / 已下架同一门槛，不另行暴露原因
-        if (viewerId != null && blockedAuthorIds(viewerId).contains(post.getAuthorId())) {
+        // 拉黑后其帖子对本人按"不存在"处理（CR-129）：与已删除 / 已下架同一门槛，不另行暴露原因。
+        // 匿名帖例外（CR-139 / D4）：若按真实作者过滤，"看不到某人的匿名帖"就成了身份侧信道
+        if (!post.isAnonymous() && viewerId != null && blockedAuthorIds(viewerId).contains(post.getAuthorId())) {
             throw new PostNotFoundException();
         }
         Board board = boardsById().get(post.getBoardId());
-        String nickname = accountApplicationService.nicknamesOf(List.of(post.getAuthorId()))
-                .getOrDefault(post.getAuthorId(), NICKNAME_FALLBACK);
+        String nickname = post.isAnonymous()
+                ? ANONYMOUS_NICKNAME
+                : accountApplicationService.nicknamesOf(List.of(post.getAuthorId()))
+                        .getOrDefault(post.getAuthorId(), NICKNAME_FALLBACK);
+        // 匿名帖的 authorId 只回填给作者本人：采纳 / 编辑 / 关注判定要用；其他读者（含匿名访客）拿不到
+        Long visibleAuthorId = post.isAnonymous() && !post.getAuthorId().equals(viewerId)
+                ? null : post.getAuthorId();
         boolean likedByMe = viewerId != null
                 && likeRepository.findLikedTargetIds(viewerId, LikeTargetType.POST, List.of(postId)).contains(postId);
         boolean favoritedByMe = viewerId != null
@@ -155,9 +163,9 @@ public class ForumQueryApplicationService {
                 board == null ? null : board.getCode(),
                 board == null ? null : board.getName(),
                 board == null ? null : board.getType().name(),
-                post.getTitle(), post.getContentHtml(), post.getAuthorId(), nickname,
+                post.getTitle(), post.getContentHtml(), visibleAuthorId, nickname,
                 post.getReplyCount(), post.getLikeCount(), post.getViewCount(), post.getTags(), post.isAccepted(),
-                likedByMe, favoritedByMe, post.getCreatedAt());
+                likedByMe, favoritedByMe, post.getCreatedAt(), post.isAnonymous());
     }
 
     /**
@@ -174,7 +182,7 @@ public class ForumQueryApplicationService {
         return new EditablePost(post.getId(),
                 board == null ? null : board.getCode(),
                 board == null ? null : board.getName(),
-                post.getTitle(), post.getContentMd(), post.getTags());
+                post.getTitle(), post.getContentMd(), post.getTags(), post.isAnonymous());
     }
 
     /**
@@ -236,9 +244,10 @@ public class ForumQueryApplicationService {
         int currentPage = normalizePage(page);
         int pageSize = normalizeSize(size);
         PageResult<Post> found = favoriteRepository.findFavoritePosts(userId, currentPage, pageSize);
-        // 收藏行不删，但被拉黑者的帖子从页内剔除——与"不可见帖剔除、total 为收藏行数"的既有取舍同源（CR-048）
+        // 收藏行不删，但被拉黑者的帖子从页内剔除——与"不可见帖剔除、total 为收藏行数"的既有取舍同源（CR-048）。
+        // 匿名帖例外（CR-139 / D4）：按真实作者剔除会泄露"这条匿名帖是谁发的"
         List<Post> visible = found.items().stream()
-                .filter(post -> !blockedAuthorIds(userId).contains(post.getAuthorId()))
+                .filter(post -> post.isAnonymous() || !blockedAuthorIds(userId).contains(post.getAuthorId()))
                 .toList();
         return new PageResult<>(toSummaries(visible, userId), found.total(), currentPage, pageSize);
     }
@@ -266,7 +275,7 @@ public class ForumQueryApplicationService {
                     Board board = boardsById.get(post.getBoardId());
                     return new MyPostSummary(post.getId(), board == null ? null : board.getCode(), post.getTitle(),
                             markdownRenderer.toPlainSummary(post.getContentMd(), SUMMARY_MAX_CHARS),
-                            post.getStatus().name(), post.getCreatedAt());
+                            post.getStatus().name(), post.getCreatedAt(), post.isAnonymous());
                 })
                 .toList();
         return new PageResult<>(items, found.total(), currentPage, pageSize);
@@ -541,11 +550,13 @@ public class ForumQueryApplicationService {
                             board == null ? null : board.getCode(),
                             board == null ? null : board.getName(),
                             post.getTitle(),
-                            nicknames.getOrDefault(post.getAuthorId(), NICKNAME_FALLBACK),
+                            post.isAnonymous() ? ANONYMOUS_NICKNAME
+                                    : nicknames.getOrDefault(post.getAuthorId(), NICKNAME_FALLBACK),
                             post.getReplyCount(), post.getLikeCount(), post.getViewCount(), post.getCoverUrl(),
                             post.getTags(),
                             summaryFactory.apply(post),
-                            post.getCreatedAt(), post.isAccepted(), likedIds.contains(post.getId()));
+                            post.getCreatedAt(), post.isAccepted(), likedIds.contains(post.getId()),
+                            post.isAnonymous());
                 })
                 .toList();
     }

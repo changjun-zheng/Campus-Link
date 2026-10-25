@@ -89,7 +89,8 @@ class PostApplicationServiceTest {
                     saved.getAcceptedReplyId(), null, null);
         });
 
-        PublishedPost result = service.publish(42L, new PublishPostCommand("qna", "  标题  ", "**加粗**", null));
+        PublishedPost result = service.publish(42L,
+                new PublishPostCommand("qna", "  标题  ", "**加粗**", null, false));
 
         assertThat(result.id()).isEqualTo(123L);
         ArgumentCaptor<Post> captor = ArgumentCaptor.forClass(Post.class);
@@ -101,6 +102,30 @@ class PostApplicationServiceTest {
         assertThat(published.getType()).isEqualTo(BoardType.QUESTION);
         assertThat(published.getAuthorId()).isEqualTo(42L);
         assertThat(published.isVisible()).isTrue();
+        assertThat(published.isAnonymous()).isFalse();
+    }
+
+    @Test
+    @DisplayName("匿名发布：anonymous=true 透传到聚合（公开展示开关，真实作者仍落 author_id）")
+    void anonymousFlagReachesAggregate() {
+        when(boardRepository.findByCode("qna"))
+                .thenReturn(Optional.of(board(1L, "qna", BoardType.QUESTION)));
+        when(moderationGateway.moderate(any()))
+                .thenReturn(com.campuslink.module.forum.domain.gateway.ModerationGateway.ModerationVerdict.ok());
+        when(postRepository.save(any())).thenAnswer(invocation -> {
+            Post saved = invocation.getArgument(0);
+            return Post.rehydrate(123L, saved.getBoardId(), saved.getAuthorId(), saved.isAnonymous(),
+                    saved.getType(), saved.getTitle(), saved.getContentMd(), saved.getContentHtml(), saved.getStatus(),
+                    saved.getReplyCount(), saved.getLikeCount(), saved.getViewCount(), saved.getCoverUrl(),
+                    saved.getTags(), saved.isAccepted(), saved.getAcceptedReplyId(), null, null);
+        });
+
+        service.publish(42L, new PublishPostCommand("qna", "匿名标题", "匿名正文", null, true));
+
+        ArgumentCaptor<Post> captor = ArgumentCaptor.forClass(Post.class);
+        verify(postRepository).save(captor.capture());
+        assertThat(captor.getValue().isAnonymous()).isTrue();
+        assertThat(captor.getValue().getAuthorId()).isEqualTo(42L);
     }
 
     @Test
@@ -113,7 +138,7 @@ class PostApplicationServiceTest {
                         .blocked("内容包含不允许的词汇"));
 
         assertThatThrownBy(() -> service.publish(42L,
-                new PublishPostCommand("qna", "违规标题", "正常正文", null)))
+                new PublishPostCommand("qna", "违规标题", "正常正文", null, false)))
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.MODERATION_BLOCKED));
 
@@ -134,7 +159,7 @@ class PostApplicationServiceTest {
                         .blocked("内容包含不允许的词汇"));
 
         assertThatThrownBy(() -> service.publish(42L,
-                new PublishPostCommand("qna", "正常标题", "正常正文", List.of("违禁词"))))
+                new PublishPostCommand("qna", "正常标题", "正常正文", List.of("违禁词"), false)))
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.MODERATION_BLOCKED));
 
@@ -146,7 +171,7 @@ class PostApplicationServiceTest {
     void unknownBoardIsNotFound() {
         when(boardRepository.findByCode("nope")).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.publish(42L, new PublishPostCommand("nope", "标题", "正文", null)))
+        assertThatThrownBy(() -> service.publish(42L, new PublishPostCommand("nope", "标题", "正文", null, false)))
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
 

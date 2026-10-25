@@ -76,14 +76,14 @@ class PostRepositoryImplCountVisibleByAuthorTest {
     }
 
     @Test
-    @DisplayName("谓词为 author_id + status + is_deleted 三条齐全，计数不带 ORDER BY（排序对 COUNT 无意义且会拖慢）")
+    @DisplayName("谓词为 author_id + status + is_deleted + is_anonymous=false，计数不带 ORDER BY（排序对 COUNT 无意义且会拖慢）")
     void countsOnlyPublishedAndUndeletedRowsOfThatAuthor() {
         when(postMapper.selectCount(any())).thenReturn(3L);
 
         assertThat(repository.countVisibleByAuthor(AUTHOR_ID)).isEqualTo(3L);
 
         LambdaQueryWrapper<PostDO> query = capturedCountQuery();
-        assertThat(query.getSqlSegment()).contains("author_id", "status", "is_deleted");
+        assertThat(query.getSqlSegment()).contains("author_id", "status", "is_deleted", "is_anonymous");
         assertThat(query.getSqlSegment()).doesNotContain("ORDER BY");
         assertThat(query.getParamNameValuePairs()).containsValue(AUTHOR_ID);
         assertThat(query.getParamNameValuePairs().values()).contains("PUBLISHED", false);
@@ -110,7 +110,7 @@ class PostRepositoryImplCountVisibleByAuthorTest {
     private static String visibilitySignature(LambdaQueryWrapper<PostDO> query) {
         String sql = query.getSqlSegment();
         Map<String, String> columns = new TreeMap<>();
-        for (String column : List.of("author_id", "status", "is_deleted")) {
+        for (String column : List.of("author_id", "status", "is_deleted", "is_anonymous")) {
             columns.put(column, sql.contains(column) ? "present" : "MISSING");
         }
         Set<String> values = new TreeSet<>(query.getParamNameValuePairs().values().stream()

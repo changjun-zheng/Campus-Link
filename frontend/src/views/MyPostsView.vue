@@ -88,6 +88,10 @@ loadPosts()
           class="border-b-[0.5px] border-divider px-5 py-3 last:border-b-0"
         >
           <div class="flex items-center gap-2">
+            <!-- 匿名标记（CR-139）：本人可见，详情 / 列表对外仍显示「匿名用户」 -->
+            <el-tag v-if="p.anonymous" type="info" effect="plain" size="small" class="flex-none">
+              匿名
+            </el-tag>
             <el-tag v-if="p.status === 'REMOVED'" type="danger" effect="light" size="small" class="flex-none">
               已下架
             </el-tag>

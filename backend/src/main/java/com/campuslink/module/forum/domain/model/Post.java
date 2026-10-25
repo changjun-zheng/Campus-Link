@@ -21,6 +21,8 @@ public class Post {
     private final Long id;
     private final Long boardId;
     private final Long authorId;
+    /** 匿名发帖（F-FORUM-010 / CR-139）：只影响公开展示，真实 authorId 始终保留 */
+    private final boolean anonymous;
     private final BoardType type;
     private final String title;
     private final String contentMd;
@@ -36,13 +38,14 @@ public class Post {
     private final Instant createdAt;
     private final Instant updatedAt;
 
-    private Post(Long id, Long boardId, Long authorId, BoardType type, String title,
+    private Post(Long id, Long boardId, Long authorId, boolean anonymous, BoardType type, String title,
                  String contentMd, String contentHtml, PostStatus status, int replyCount, int likeCount,
                  int viewCount, String coverUrl, List<String> tags, boolean accepted, Long acceptedReplyId,
                  Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.boardId = boardId;
         this.authorId = authorId;
+        this.anonymous = anonymous;
         this.type = type;
         this.title = title;
         this.contentMd = contentMd;
@@ -59,19 +62,31 @@ public class Post {
         this.updatedAt = updatedAt;
     }
 
-    /** 发布新帖：type 随版块，status 恒为 PUBLISHED，计数归零（id / 时间戳由数据库生成）；标题去除首尾空白；封面为发布时提取的首图（可为 null）；tags 为已规范化的标签名（可为空列表） */
-    public static Post publish(Long boardId, Long authorId, BoardType type, String title,
+    /** 发布新帖：type 随版块，status 恒为 PUBLISHED，计数归零（id / 时间戳由数据库生成）；标题去除首尾空白；封面为发布时提取的首图（可为 null）；tags 为已规范化的标签名（可为空列表）；anonymous 为公开展示开关（F-FORUM-010） */
+    public static Post publish(Long boardId, Long authorId, boolean anonymous, BoardType type, String title,
                                String contentMd, String contentHtml, String coverUrl, List<String> tags) {
-        return new Post(null, boardId, authorId, type, title.trim(), contentMd, contentHtml,
+        return new Post(null, boardId, authorId, anonymous, type, title.trim(), contentMd, contentHtml,
                 PostStatus.PUBLISHED, 0, 0, 0, coverUrl, List.copyOf(tags), false, null, null, null);
     }
 
     /** 仓储重建入口（infrastructure 适配器调用）；已删除的行由仓储读侧过滤，不会到达这里 */
+    public static Post rehydrate(Long id, Long boardId, Long authorId, boolean anonymous, BoardType type, String title,
+                                 String contentMd, String contentHtml, PostStatus status, int replyCount,
+                                 int likeCount, int viewCount, String coverUrl, List<String> tags, boolean accepted, Long acceptedReplyId,
+                                 Instant createdAt, Instant updatedAt) {
+        return new Post(id, boardId, authorId, anonymous, type, title, contentMd, contentHtml, status,
+                replyCount, likeCount, viewCount, coverUrl, tags, accepted, acceptedReplyId, createdAt, updatedAt);
+    }
+
+    /**
+     * 仓储重建的兼容重载：{@code anonymous=false}，等价于新增 {@code is_anonymous} 列之前的全部既有调用点。
+     * 既有单测夹具用它，逐个改写收益为零；新代码一律用带 anonymous 的签名。
+     */
     public static Post rehydrate(Long id, Long boardId, Long authorId, BoardType type, String title,
                                  String contentMd, String contentHtml, PostStatus status, int replyCount,
                                  int likeCount, int viewCount, String coverUrl, List<String> tags, boolean accepted, Long acceptedReplyId,
                                  Instant createdAt, Instant updatedAt) {
-        return new Post(id, boardId, authorId, type, title, contentMd, contentHtml, status,
+        return rehydrate(id, boardId, authorId, false, type, title, contentMd, contentHtml, status,
                 replyCount, likeCount, viewCount, coverUrl, tags, accepted, acceptedReplyId, createdAt, updatedAt);
     }
 
@@ -84,7 +99,7 @@ public class Post {
                                  String contentMd, String contentHtml, PostStatus status, int replyCount,
                                  int likeCount, boolean accepted, Long acceptedReplyId,
                                  Instant createdAt, Instant updatedAt) {
-        return rehydrate(id, boardId, authorId, type, title, contentMd, contentHtml, status,
+        return rehydrate(id, boardId, authorId, false, type, title, contentMd, contentHtml, status,
                 replyCount, likeCount, 0, null, List.of(), accepted, acceptedReplyId, createdAt, updatedAt);
     }
 
@@ -101,7 +116,7 @@ public class Post {
      * 标题在此 trim（与 {@link #publish} 同口径）；正文不做 trim，Markdown 的前导空行可能是有意的。
      */
     public Post revise(String title, String contentMd, String contentHtml, String coverUrl, List<String> tags) {
-        return new Post(id, boardId, authorId, type, title.trim(), contentMd, contentHtml, status,
+        return new Post(id, boardId, authorId, anonymous, type, title.trim(), contentMd, contentHtml, status,
                 replyCount, likeCount, viewCount, coverUrl, List.copyOf(tags), accepted, acceptedReplyId,
                 createdAt, updatedAt);
     }
@@ -117,7 +132,7 @@ public class Post {
         if (authorId != null && authorId == replyAuthorId) {
             throw new CannotAcceptOwnReplyException();
         }
-        return new Post(id, boardId, authorId, type, title, contentMd, contentHtml, status,
+        return new Post(id, boardId, authorId, anonymous, type, title, contentMd, contentHtml, status,
                 replyCount, likeCount, viewCount, coverUrl, tags, true, replyId, createdAt, updatedAt);
     }
 }

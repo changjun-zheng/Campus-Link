@@ -44,8 +44,9 @@ public class ReplyApplicationService {
         Post post = postRepository.findById(postId)
                 .filter(Post::isVisible)
                 .orElseThrow(PostNotFoundException::new);
-        // 拉黑阻断（CR-129）：作者拉黑了回帖者 → 回帖统一 403，不提示"你被拉黑"
-        if (userBlockApplicationService.isBlocked(post.getAuthorId(), authorId)) {
+        // 拉黑阻断（CR-129）：作者拉黑了回帖者 → 回帖统一 403，不提示"你被拉黑"。
+        // 匿名帖跳过（CR-139 / D4）：否则"能不能回"会反推作者身份
+        if (!post.isAnonymous() && userBlockApplicationService.isBlocked(post.getAuthorId(), authorId)) {
             throw new ApiException(ResultCode.FORBIDDEN);
         }
         // 引用校验（F-009 / CR-085）先于机审与楼层号分配：楼层号是计数产物，无效请求不应消耗；

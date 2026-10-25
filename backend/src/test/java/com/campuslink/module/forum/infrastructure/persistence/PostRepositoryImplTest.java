@@ -95,6 +95,19 @@ class PostRepositoryImplTest {
     }
 
     @Test
+    @DisplayName("列表拉黑过滤对匿名帖放行：WHERE 出现 (is_anonymous OR author_id NOT IN)（CR-139 / D4）")
+    @SuppressWarnings("unchecked")
+    void blockedFilterKeepsAnonymousPostsVisible() {
+        when(postMapper.selectPage(any(IPage.class), any(Wrapper.class)))
+                .thenReturn(pageOf(List.of(doRow()), 1));
+
+        repository.findPage(null, PostSortOrder.LATEST, java.util.Set.of(99L), 1, 20);
+
+        String sql = capturedPageQuery().getSqlSegment();
+        assertThat(sql).contains("is_anonymous", "author_id", "NOT IN", "OR");
+    }
+
+    @Test
     @DisplayName("列表（热门）：多一个 hot_score 排序；带版块时 board_id 进 WHERE")
     @SuppressWarnings("unchecked")
     void listsHotWithinBoard() {

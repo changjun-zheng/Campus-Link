@@ -20,6 +20,7 @@ public final class PostConverter {
         d.setId(post.getId());
         d.setBoardId(post.getBoardId());
         d.setAuthorId(post.getAuthorId());
+        d.setIsAnonymous(post.isAnonymous());
         d.setType(post.getType().name());
         d.setTitle(post.getTitle());
         d.setContentMd(post.getContentMd());
@@ -38,7 +39,8 @@ public final class PostConverter {
     }
 
     public static Post toDomain(PostDO d) {
-        return Post.rehydrate(d.getId(), d.getBoardId(), d.getAuthorId(), BoardType.valueOf(d.getType()),
+        return Post.rehydrate(d.getId(), d.getBoardId(), d.getAuthorId(), Boolean.TRUE.equals(d.getIsAnonymous()),
+                BoardType.valueOf(d.getType()),
                 d.getTitle(), d.getContentMd(), d.getContentHtml(), PostStatus.valueOf(d.getStatus()),
                 d.getReplyCount(), d.getLikeCount(),
                 d.getViewCount() == null ? 0 : d.getViewCount(), d.getCoverUrl(),

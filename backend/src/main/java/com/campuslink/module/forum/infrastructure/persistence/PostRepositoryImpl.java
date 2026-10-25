@@ -36,9 +36,12 @@ public class PostRepositoryImpl implements PostRepository {
         }
         query.eq(PostDO::getStatus, PostStatus.PUBLISHED.name())
                 .eq(PostDO::getIsDeleted, false);
-        // 拉黑过滤在 SQL 侧完成：total 与查询条件同源，翻页不会出现"少了但计数还在"（CR-129）
+        // 拉黑过滤在 SQL 侧完成：total 与查询条件同源，翻页不会出现"少了但计数还在"（CR-129）。
+        // 匿名帖例外（CR-139 / D4）：按真实作者过滤会让"看不到某人的匿名帖"变成身份侧信道，
+        // 故条件写成 (is_anonymous = 1 OR author_id NOT IN (...))
         if (excludedAuthorIds != null && !excludedAuthorIds.isEmpty()) {
-            query.notIn(PostDO::getAuthorId, excludedAuthorIds);
+            query.and(w -> w.eq(PostDO::getIsAnonymous, true)
+                    .or().notIn(PostDO::getAuthorId, excludedAuthorIds));
         }
         if (sort == PostSortOrder.HOT) {
             query.orderByDesc(PostDO::getHotScore);
@@ -69,6 +72,8 @@ public class PostRepositoryImpl implements PostRepository {
         if (authorIds == null || authorIds.isEmpty()) {
             return new PageResult<>(List.of(), 0, page, size);
         }
+        // 匿名帖不进他人主页时间线 / 关注 Feed（CR-139 / D3）：这两条链路的驱动条件就是 author_id，
+        // 列出来等于自曝；visibleQuery() 已统一排除
         LambdaQueryWrapper<PostDO> query = visibleQuery()
                 .in(PostDO::getAuthorId, authorIds);
         if (excludedAuthorIds != null && !excludedAuthorIds.isEmpty()) {
@@ -104,7 +109,9 @@ public class PostRepositoryImpl implements PostRepository {
     private static LambdaQueryWrapper<PostDO> visibleQuery() {
         return new LambdaQueryWrapper<PostDO>()
                 .eq(PostDO::getStatus, PostStatus.PUBLISHED.name())
-                .eq(PostDO::getIsDeleted, false);
+                .eq(PostDO::getIsDeleted, false)
+                // 匿名帖不计入作者维度的列表与公开统计（CR-139 / D3）
+                .eq(PostDO::getIsAnonymous, false);
     }
 
     @Override

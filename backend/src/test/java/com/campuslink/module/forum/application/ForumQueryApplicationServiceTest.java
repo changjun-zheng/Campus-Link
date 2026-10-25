@@ -140,6 +140,40 @@ class ForumQueryApplicationServiceTest {
     }
 
     @Test
+    @DisplayName("匿名帖列表：昵称恒为「匿名用户」且 anonymous=true（即使批量昵称里能取到真实名）")
+    void anonymousPostIsMaskedInList() {
+        when(postRepository.findPage(null, PostSortOrder.LATEST, java.util.Set.of(), 1, 20))
+                .thenReturn(new PageResult<>(List.of(anonymousPost(1L, 100L)), 1, 1, 20));
+        when(boardRepository.findAllEnabled()).thenReturn(List.of(board(1L, "qna", "技术问答")));
+        when(accountApplicationService.nicknamesOf(any())).thenReturn(Map.of(100L, "张三"));
+
+        PostSummary item = service.listPosts(null, "latest", 1, 20, null).items().getFirst();
+
+        assertThat(item.authorNickname()).isEqualTo("匿名用户");
+        assertThat(item.anonymous()).isTrue();
+    }
+
+    @Test
+    @DisplayName("收藏页遇到匿名帖：不因拉黑真实作者被剔除，昵称仍掩为「匿名用户」（CR-139 / D4）")
+    void favoritesKeepAnonymousPostDespiteBlock() {
+        when(favoriteRepository.findFavoritePosts(42L, 1, 20))
+                .thenReturn(new PageResult<>(List.of(anonymousPost(9L, 100L)), 1, 1, 20));
+        when(boardRepository.findAllEnabled()).thenReturn(List.of(board(1L, "qna", "技术问答")));
+        when(accountApplicationService.nicknamesOf(any())).thenReturn(Map.of(100L, "张三"));
+        when(likeRepository.findLikedTargetIds(42L,
+                com.campuslink.module.forum.domain.model.LikeTargetType.POST, List.of(9L)))
+                .thenReturn(java.util.Set.of());
+
+        PageResult<PostSummary> page = service.listMyFavorites(42L, 1, 20);
+
+        assertThat(page.items()).hasSize(1);
+        assertThat(page.items().getFirst().authorNickname()).isEqualTo("匿名用户");
+        assertThat(page.items().getFirst().anonymous()).isTrue();
+        // 匿名帖直接放行，连"谁被拉黑"都不查——从源头避免身份侧信道
+        verify(userBlockApplicationService, never()).blockedIdsOf(org.mockito.ArgumentMatchers.anyLong());
+    }
+
+    @Test
     @DisplayName("列表点赞回显（CR-080）：空页不去查已赞集合（无 id 可问，省一次往返）")
     void emptyListSkipsLikeLookup() {
         when(postRepository.findPage(null, PostSortOrder.LATEST, java.util.Set.of(), 1, 20))
@@ -232,6 +266,38 @@ class ForumQueryApplicationServiceTest {
         assertThat(detail.boardCode()).isEqualTo("qna");
         assertThat(detail.boardName()).isEqualTo("技术问答");
         assertThat(detail.authorNickname()).isEqualTo("张三");
+        assertThat(detail.authorId()).isEqualTo(100L);
+        assertThat(detail.anonymous()).isFalse();
+    }
+
+    @Test
+    @DisplayName("匿名帖详情：匿名访客拿不到 authorId、昵称恒「匿名用户」，一次昵称查询都不发")
+    void anonymousDetailHidesAuthorFromOthers() {
+        when(postRepository.findById(9L)).thenReturn(Optional.of(anonymousPost(9L, 100L)));
+        when(boardRepository.findAllEnabled()).thenReturn(List.of(board(1L, "qna", "技术问答")));
+
+        PostDetail detail = service.postDetail(9L, null);
+
+        assertThat(detail.authorId()).isNull();
+        assertThat(detail.authorNickname()).isEqualTo("匿名用户");
+        assertThat(detail.anonymous()).isTrue();
+        verify(accountApplicationService, never()).nicknamesOf(any());
+    }
+
+    @Test
+    @DisplayName("匿名帖详情：作者本人能拿到 authorId（采纳 / 编辑判定用），但昵称仍是「匿名用户」")
+    void anonymousDetailKeepsAuthorIdOnlyForAuthor() {
+        when(postRepository.findById(9L)).thenReturn(Optional.of(anonymousPost(9L, 100L)));
+        when(boardRepository.findAllEnabled()).thenReturn(List.of(board(1L, "qna", "技术问答")));
+        when(likeRepository.findLikedTargetIds(100L,
+                com.campuslink.module.forum.domain.model.LikeTargetType.POST, List.of(9L)))
+                .thenReturn(java.util.Set.of());
+        when(favoriteRepository.findFavoritedPostIds(100L, List.of(9L))).thenReturn(java.util.Set.of());
+
+        PostDetail detail = service.postDetail(9L, 100L);
+
+        assertThat(detail.authorId()).isEqualTo(100L);
+        assertThat(detail.authorNickname()).isEqualTo("匿名用户");
     }
 
     @Test
@@ -463,12 +529,13 @@ class ForumQueryApplicationServiceTest {
     void listMyPostsKeepsStatusAndSkipsNicknameLookup() {
         when(boardRepository.findAllEnabled()).thenReturn(List.of(board(1L, "qna", "技术问答")));
         when(postRepository.findPageByAuthor(42L, 1, 20)).thenReturn(new PageResult<>(
-                List.of(post(1L, 42L), post(2L, 42L, PostStatus.REMOVED)), 45, 1, 20));
+                List.of(post(1L, 42L), post(2L, 42L, PostStatus.REMOVED), anonymousPost(3L, 42L)), 45, 1, 20));
 
         PageResult<MyPostSummary> page = service.listMyPosts(42L, 1, 20);
 
         assertThat(page.total()).isEqualTo(45);
-        assertThat(page.items()).extracting(MyPostSummary::status).containsExactly("PUBLISHED", "REMOVED");
+        assertThat(page.items()).extracting(MyPostSummary::status).containsExactly("PUBLISHED", "REMOVED", "PUBLISHED");
+        assertThat(page.items()).extracting(MyPostSummary::anonymous).containsExactly(false, false, true);
         assertThat(page.items()).allSatisfy(item -> assertThat(item.boardCode()).isEqualTo("qna"));
         verify(accountApplicationService, never()).nicknamesOf(any());
     }
@@ -524,6 +591,11 @@ class ForumQueryApplicationServiceTest {
     private static Post post(Long id, Long authorId, PostStatus status) {
         return Post.rehydrate(id, 1L, authorId, BoardType.QUESTION, "标题", "正文", "<p>正文</p>",
                 status, 0, 0, false, null, CREATED_AT, CREATED_AT);
+    }
+
+    private static Post anonymousPost(Long id, Long authorId) {
+        return Post.rehydrate(id, 1L, authorId, true, BoardType.QUESTION, "标题", "正文", "<p>正文</p>",
+                PostStatus.PUBLISHED, 0, 0, 0, null, List.of(), false, null, CREATED_AT, CREATED_AT);
     }
 
     private static Board board(Long id, String code, String name) {

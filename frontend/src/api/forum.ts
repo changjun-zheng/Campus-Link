@@ -37,6 +37,8 @@ export interface PostSummaryVo {
   accepted: boolean
   /** 当前登录账号是否已赞（CR-080）：口径同详情——登录为真实状态、匿名恒 false */
   likedByMe: boolean
+  /** 匿名帖（F-FORUM-010 / CR-139）：true 时作者名恒为「匿名用户」，不给主页链接 */
+  anonymous: boolean
 }
 
 export interface PostDetailVo {
@@ -48,7 +50,8 @@ export interface PostDetailVo {
   title: string
   /** 服务端渲染并净化后的 HTML，前端直接 v-html（XSS 防线在 MarkdownRenderer） */
   contentHtml: string
-  authorId: number
+  /** 匿名帖对非作者恒为 null（CR-139）：前端据此隐藏主页链接 / 关注 / 私信入口 */
+  authorId: number | null
   authorNickname: string
   replyCount: number
   likeCount: number
@@ -62,6 +65,8 @@ export interface PostDetailVo {
   /** 当前登录用户是否已收藏（F-FORUM-005）；匿名请求恒 false */
   favoritedByMe: boolean
   createdAt: string
+  /** 匿名帖（F-FORUM-010 / CR-139） */
+  anonymous: boolean
 }
 
 export interface ReplyVo {
@@ -110,8 +115,14 @@ export const getPost = (id: number | string) => get<PostDetailVo>(`/posts/${id}`
 export const listReplies = (postId: number | string, page = 1, size = 20) =>
   get<PageVo<ReplyVo>>(`/posts/${postId}/replies?page=${page}&size=${size}`)
 
-export const publishPost = (payload: { boardCode: string; title: string; contentMd: string; tags?: string[] }) =>
-  post<{ id: number }>('/posts', payload)
+export const publishPost = (payload: {
+  boardCode: string
+  title: string
+  contentMd: string
+  tags?: string[]
+  /** 匿名发布（F-FORUM-010 / CR-139）：缺省 false，发布后不可更改 */
+  anonymous?: boolean
+}) => post<{ id: number }>('/posts', payload)
 
 /** 编辑原文（F-FORUM-007 / CR-128）：仅作者可取，含原始 Markdown 与标签；非作者 403 / 4002、不可见 404 / 3001 */
 export interface EditablePostVo {
@@ -121,6 +132,8 @@ export interface EditablePostVo {
   title: string
   contentMd: string
   tags: string[]
+  /** 匿名标记（CR-139）：发布后不可切换，编辑页只读展示 */
+  anonymous: boolean
 }
 
 export const getEditablePost = (id: number | string) => get<EditablePostVo>(`/posts/${id}/edit`)
@@ -178,6 +191,8 @@ export interface MyPostSummaryVo {
   /** PUBLISHED / REMOVED（自己删除的不会出现在这里） */
   status: string
   createdAt: string
+  /** 匿名标记（CR-139）：本人列表仍可见，仅展示层加标记 */
+  anonymous: boolean
 }
 
 /** 「我的回帖」条目（F-ACC-007c）：父帖定位三件套缺一即"不知道自己答在哪"。父帖不可见的楼层后端已整条过滤 */

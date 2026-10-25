@@ -29,10 +29,11 @@ public interface PostMapper extends BaseMapper<PostDO> {
               <if test="boardId != null">AND board_id = #{boardId}</if>
               <if test="days != null">AND created_at &gt;= DATE_SUB(NOW(), INTERVAL #{days} DAY)</if>
               <if test="excludedAuthorIds != null and excludedAuthorIds.size() > 0">
-                AND author_id NOT IN
+                AND (is_anonymous = 1 OR author_id NOT IN
                 <foreach collection="excludedAuthorIds" item="excludedId" open="(" separator="," close=")">
                   #{excludedId}
                 </foreach>
+                )
               </if>
             ORDER BY relevance DESC, created_at DESC, id DESC
             </script>
@@ -83,6 +84,7 @@ public interface PostMapper extends BaseMapper<PostDO> {
             WHERE author_id = #{authorId}
               AND status = 'PUBLISHED'
               AND is_deleted = 0
+              AND is_anonymous = 0
             """)
     long sumVisibleLikeCountByAuthor(@Param("authorId") Long authorId);
 }

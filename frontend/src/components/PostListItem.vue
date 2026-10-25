@@ -104,6 +104,8 @@ async function onLike() {
         <div class="flex items-center gap-1.5 text-caption text-ink-meta">
           <UserAvatar :name="post.authorNickname" :size="20" />
           <span class="text-ink-regular">{{ post.authorNickname }}</span>
+          <!-- 匿名帖（F-FORUM-010 / CR-139）：昵称已由服务端掩为「匿名用户」，这里只加一枚标记 -->
+          <el-tag v-if="post.anonymous" size="small" effect="plain" class="flex-none">匿名</el-tag>
           <span aria-hidden="true">·</span>
           <span>{{ formatRelativeTime(post.createdAt) }}</span>
         </div>

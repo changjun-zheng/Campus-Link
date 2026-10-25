@@ -17,15 +17,15 @@ public final class ForumResults {
     public record PostSummary(Long id, String boardCode, String boardName, String title, String authorNickname,
                               int replyCount, int likeCount, int viewCount, String coverUrl,
                               java.util.List<String> tags, String summary, Instant createdAt,
-                              boolean accepted, boolean likedByMe) {
+                              boolean accepted, boolean likedByMe, boolean anonymous) {
     }
 
     /** 详情（设计 §3.4）：contentHtml 是发布时渲染好的 HTML，前端直接渲染；authorId / boardType 供前端判定采纳按钮可见性（F-QA-001）；likedByMe / favoritedByMe 仅登录时填充、匿名恒 false（F-FORUM-005）；viewCount / tags 供阅读数与标签展示（CR-074 / CR-083） */
     public record PostDetail(Long id, String boardCode, String boardName, String boardType, String title,
-                             String contentHtml, long authorId, String authorNickname,
+                             String contentHtml, Long authorId, String authorNickname,
                              int replyCount, int likeCount, int viewCount, java.util.List<String> tags, boolean accepted,
                              boolean likedByMe, boolean favoritedByMe,
-                             Instant createdAt) {
+                             Instant createdAt, boolean anonymous) {
     }
 
     /** 楼层项（设计 §3.5）：authorId / accepted 供前端渲染采纳按钮与已采纳标识（F-QA-001）；likeCount / likedByMe 供楼层点赞回显（F-FORUM-005），likedByMe 仅登录时填充；quoted 为被引用楼层摘要（F-009 / CR-085），无引用或被引楼层不可见时为 null */
@@ -50,7 +50,7 @@ public final class ForumResults {
      * contentHtml）与标签，供编辑页预填。
      */
     public record EditablePost(Long id, String boardCode, String boardName, String title,
-                               String contentMd, java.util.List<String> tags) {
+                               String contentMd, java.util.List<String> tags, boolean anonymous) {
     }
 
     /**
@@ -61,7 +61,7 @@ public final class ForumResults {
      * （原因在 {@code audit_logs.detail}，属运营侧；给用户等于给申诉开无底洞）。
      */
     public record MyPostSummary(Long id, String boardCode, String title, String summary,
-                               String status, Instant createdAt) {
+                               String status, Instant createdAt, boolean anonymous) {
     }
 
     /**

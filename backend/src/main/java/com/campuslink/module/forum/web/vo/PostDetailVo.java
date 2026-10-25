@@ -10,15 +10,15 @@ import java.time.Instant;
  * likedByMe / favoritedByMe 仅登录请求时为真实状态、匿名恒 false（F-FORUM-005，详情端点保持公开）。
  */
 public record PostDetailVo(Long id, String boardCode, String boardName, String boardType, String title,
-                           String contentHtml, long authorId, String authorNickname,
+                           String contentHtml, Long authorId, String authorNickname,
                            int replyCount, int likeCount, int viewCount, java.util.List<String> tags, boolean accepted,
                            boolean likedByMe, boolean favoritedByMe,
-                           Instant createdAt) {
+                           Instant createdAt, boolean anonymous) {
 
     public static PostDetailVo from(PostDetail detail) {
         return new PostDetailVo(detail.id(), detail.boardCode(), detail.boardName(), detail.boardType(),
                 detail.title(), detail.contentHtml(), detail.authorId(), detail.authorNickname(),
                 detail.replyCount(), detail.likeCount(), detail.viewCount(), detail.tags(), detail.accepted(),
-                detail.likedByMe(), detail.favoritedByMe(), detail.createdAt());
+                detail.likedByMe(), detail.favoritedByMe(), detail.createdAt(), detail.anonymous());
     }
 }

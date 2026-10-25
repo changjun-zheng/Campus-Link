@@ -40,7 +40,10 @@ public class InteractionApplicationService {
     @Transactional
     public InteractionResult togglePostLike(long userId, long postId) {
         Post post = requireVisiblePost(postId);
-        assertNotBlockedBy(post.getAuthorId(), userId);
+        // 匿名帖跳过拉黑阻断（CR-139 / D4）：否则"能不能赞"会反推作者身份
+        if (!post.isAnonymous()) {
+            assertNotBlockedBy(post.getAuthorId(), userId);
+        }
         boolean active = likeRepository.toggle(userId, LikeTargetType.POST, postId);
         int count = postRepository.adjustLikeCount(postId, active ? 1 : -1);
         if (active) {
@@ -68,7 +71,10 @@ public class InteractionApplicationService {
     @Transactional
     public InteractionResult togglePostFavorite(long userId, long postId) {
         Post post = requireVisiblePost(postId);
-        assertNotBlockedBy(post.getAuthorId(), userId);
+        // 匿名帖跳过拉黑阻断（CR-139 / D4），理由同 togglePostLike
+        if (!post.isAnonymous()) {
+            assertNotBlockedBy(post.getAuthorId(), userId);
+        }
         boolean active = favoriteRepository.toggle(userId, postId);
         int count = postRepository.adjustFavoriteCount(postId, active ? 1 : -1);
         if (active) {

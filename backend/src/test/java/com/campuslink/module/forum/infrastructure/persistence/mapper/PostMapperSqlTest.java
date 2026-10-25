@@ -39,9 +39,24 @@ class PostMapperSqlTest {
                 .contains("status = 'PUBLISHED' AND is_deleted = 0")
                 .contains("AND board_id = #{boardId}")
                 .contains("DATE_SUB(NOW(), INTERVAL #{days} DAY)")
-                .contains("author_id NOT IN")
+                // 匿名帖不受拉黑过滤（CR-139 / D4）：否则"看不到某人的匿名帖"就是身份侧信道
+                .contains("(is_anonymous = 1 OR author_id NOT IN")
                 .contains("#{excludedId}")
                 .doesNotContain("${");
+    }
+
+    @Test
+    @DisplayName("作者获赞总数 SQL：匿名帖的赞不计入公开资料（CR-139 / D3）")
+    void authorLikeSumExcludesAnonymousPosts() throws NoSuchMethodException {
+        String sql = String.join("", PostMapper.class.getMethod("sumVisibleLikeCountByAuthor", Long.class)
+                        .getAnnotation(Select.class).value())
+                .replaceAll("\\s+", " ");
+
+        assertThat(sql)
+                .contains("author_id = #{authorId}")
+                .contains("status = 'PUBLISHED'")
+                .contains("is_deleted = 0")
+                .contains("is_anonymous = 0");
     }
 
     private static String selectSql(String name) throws NoSuchMethodException {

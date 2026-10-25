@@ -2,13 +2,14 @@
 
 | 文档信息 | 内容 |
 |---------|------|
-| 版本 | v1.4 |
+| 版本 | v1.5 |
 | 状态 | 已归档（设计门行动项 **A3-5** 交付物，[CR-035](../变更日志/变更台账.md)） |
 | 维护人 | 技术负责人（发起人兼任） |
 | 最后更新 | 2026-10-25 |
 
 > **变更记录**
 >
+> - **v1.5（2026-10-25）**——同步 `V9__post_anonymous.sql`（[CR-139](../变更日志/变更台账.md#cr-139) 匿名发帖）：`posts` 新增 `is_anonymous TINYINT(1) NOT NULL DEFAULT 0`。§2 `POSTS` 实体补该列、§3 `posts` 职责补一句；**表数仍 18 张、索引不变、不改任何结构**，事实源扩为 V1~V9。
 > - **v1.4（2026-10-25）**——同步 `V8__teams.sql`（[CR-137](../变更日志/变更台账.md#cr-137) 组队广场）：新建 `teams` / `team_members` 两表。§2 / §3 表数 **16 → 18 张**、§4 索引清单补 `idx_teams_status` / `idx_teams_owner` / `team_members` 联合主键与两条关系索引、§5 补两表量级；**本文不引入任何结构变更**，事实源扩为 V1~V8。
 > - **v1.3（2026-10-24）**——同步 `V7__post_content_fulltext.sql`（[CR-136](../变更日志/变更台账.md#cr-136) 正文全文检索）：`posts` 新增 `ft_posts_content (content_md) WITH PARSER ngram`。§4 索引清单 +1 行、§5 扩容触发点改写；**表数仍 16 张、不改任何表结构**。
 > - **v1.2（2026-10-24）**——同步 `V6__direct_messages.sql`（[CR-135](../变更日志/变更台账.md#cr-135) 私信）：新建 `conversations` / `messages` 两表。§2 / §3 表数 **14 → 16 张**、§4 索引清单补 `uk_conversations_pair` / 两个会话侧索引 / 两个消息侧索引、§5 补两表量级；**本文不引入任何结构变更**，事实源扩为 V1~V6。
@@ -18,7 +19,7 @@
 ## 1. 目的、事实源与边界
 
 - **目的**：为设计门行动项 A3-5 提供两件东西——① 现有数据模型的**实体关系可视化**（文字定义在[技术方案 §4](技术方案.md)，本图为可视化对照）；② 按 PRD 容量基线的**数据量级与索引水位预估**，作为测试阶段造数规模与发布阶段容量验收的参考。
-- **事实源**：`backend/src/main/resources/db/migration/` 下的**全部迁移**（V1 基线 12 张表 + `V2__seed_boards.sql` 仅种入 6 个版块数据、无结构 + `V3__my_content_indexes.sql` 两个作者维度索引 + `V4__post_views_and_follows.sql` 给 `posts` 加两列并新建 `follows` + `V5__user_blocks.sql` 新建 `user_blocks` + `V6__direct_messages.sql` 新建 `conversations` / `messages` + `V7__post_content_fulltext.sql` 给 `posts` 加正文 FULLTEXT 索引 + `V8__teams.sql` 新建 `teams` / `team_members`；**已执行迁移不可改**）。**表结构、字段、索引以迁移文件为准**——本文与其冲突时，以迁移文件为准并须修正本文。
+- **事实源**：`backend/src/main/resources/db/migration/` 下的**全部迁移**（V1 基线 12 张表 + `V2__seed_boards.sql` 仅种入 6 个版块数据、无结构 + `V3__my_content_indexes.sql` 两个作者维度索引 + `V4__post_views_and_follows.sql` 给 `posts` 加两列并新建 `follows` + `V5__user_blocks.sql` 新建 `user_blocks` + `V6__direct_messages.sql` 新建 `conversations` / `messages` + `V7__post_content_fulltext.sql` 给 `posts` 加正文 FULLTEXT 索引 + `V8__teams.sql` 新建 `teams` / `team_members` + `V9__post_anonymous.sql` 给 `posts` 加 `is_anonymous`；**已执行迁移不可改**）。**表结构、字段、索引以迁移文件为准**——本文与其冲突时，以迁移文件为准并须修正本文。
 - **边界**：本文**不引入任何表结构 / 索引变更**；量级数字均为工程估算（见 §5 口径），**非性能承诺**——性能承诺以 PRD §4 的 P90 / P95 指标为准，由测试阶段实测验收。
 - **维护约定**：后续新增 `V<n>__*.sql` 结构变更时，**该 CR 必须同步更新本文**（§2 图、§3 表清单、§4 索引清单、§5 水位），否则视为该 CR 的文档同步遗漏。
 
@@ -55,6 +56,7 @@ erDiagram
         bigint id PK
         bigint board_id FK
         bigint author_id FK
+        tinyint is_anonymous "匿名发帖，仅公开展示开关（V9 / CR-139）"
         varchar_100 title
         mediumtext content_md "Markdown 原文"
         mediumtext content_html "服务端渲染落库（ADR-005）"
@@ -202,7 +204,7 @@ erDiagram
 | `users` | 账号 | 邮箱 / 手机 / 学号 AES-GCM 存 `*_enc`，等值查询走 `*_hash`（HMAC），三者各带唯一键 | 注册驱动，试点期 ≤ 1 万，线性且缓慢 |
 | `student_roster` | 学籍名册（核验比对源） | 学号**只存 HMAC 哈希**、不落明文；姓名明文仅用于容错比对 | 名册导入驱动（B1/B2 到位后批量），基本不增长 |
 | `boards` | 版块（MVP 固定 6 个） | — | 常量级 |
-| `posts` | 帖子（`content_html` 发布时服务端渲染落库，请求期零渲染；`view_count` 阅读数去重计数、`cover_url` 正文首图封面，均为 V4 冗余列，读时零成本） | 无敏感字段（正文为 UGC，交内容机审） | **主增长表**，线性，试点期 ≤ 10 万 |
+| `posts` | 帖子（`content_html` 发布时服务端渲染落库，请求期零渲染；`view_count` 阅读数去重计数、`cover_url` 正文首图封面，均为 V4 冗余列，读时零成本；`is_anonymous` 为 V9 公开展示开关，真实 `author_id` 仍保留供通知 / 审计 / 管理使用） | 无敏感字段（正文为 UGC，交内容机审） | **主增长表**，线性，试点期 ≤ 10 万 |
 | `tags` / `post_tags` | 标签与关联 | — | 随帖子缓慢线性 |
 | `replies` | 楼层回复（`floor_no` 帖内自增，发帖服务内分配保证连续） | 无 | 主增长表，试点期 ≤ 40 万（估算见 §5） |
 | `likes` | 点赞去重（PK 即唯一约束） | — | 事件驱动，量最大但行极窄 |
@@ -217,7 +219,7 @@ erDiagram
 | `teams` | 组队招募（V8）——方向固定枚举、人数 2~20（含发起人）、状态 `RECRUITING/FULL/CLOSED`；联系方式只对发起人与已加入成员下发 | **`contact_enc`（AES-GCM）**，列表 / 匿名 / 待审批者不返回明文 | 事件驱动，估 < 1 万 |
 | `team_members` | 组队成员与申请（V8）——联合主键即"同一人对同一组队只有一条关系"；发起人 / 申请 / 成员三种状态同表 | 无 | 随组队与申请线性，估 < 5 万 |
 
-## 4. 索引清单（照录 V1~V8，新增结构时随 CR 更新）
+## 4. 索引清单（照录 V1~V9，新增结构时随 CR 更新）
 
 | 表 | 索引 | 类型 | 支撑的查询路径 |
 |----|------|------|---------------|

@@ -81,7 +81,7 @@ public class PostApplicationService {
             moderateOrThrow(tag);
         }
         // 封面（CR-074 外链方案）：发布时从正文提取首张 https 图一次落库，读时零成本；无图即 null
-        Post post = Post.publish(board.getId(), authorId, board.getType(), command.title(),
+        Post post = Post.publish(board.getId(), authorId, command.anonymous(), board.getType(), command.title(),
                 command.contentMd(), markdownRenderer.render(command.contentMd()),
                 CoverImages.firstHttpsImage(command.contentMd()), tags);
         Post saved = postRepository.save(post);

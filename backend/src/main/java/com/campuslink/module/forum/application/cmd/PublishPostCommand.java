@@ -12,5 +12,7 @@ public record PublishPostCommand(
         @NotBlank(message = "标题不能为空") @Size(max = 100, message = "标题最长 100 字") String title,
         @NotBlank(message = "正文不能为空")
         @Size(max = ContentLimits.MAX_CHARS, message = ContentLimits.MAX_CHARS_MESSAGE) String contentMd,
-        @Size(max = 5, message = "标签最多 5 个") List<@Size(max = 32, message = "单个标签最长 32 字") String> tags) {
+        @Size(max = 5, message = "标签最多 5 个") List<@Size(max = 32, message = "单个标签最长 32 字") String> tags,
+        // 匿名发布（F-FORUM-010）：缺省 false；发布后不可切换
+        boolean anonymous) {
 }

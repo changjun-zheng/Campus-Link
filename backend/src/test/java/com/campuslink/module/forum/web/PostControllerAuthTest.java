@@ -40,7 +40,7 @@ import static org.mockito.Mockito.when;
  */
 class PostControllerAuthTest {
 
-    private static final PublishPostCommand COMMAND = new PublishPostCommand("qna", "标题", "正文", null);
+    private static final PublishPostCommand COMMAND = new PublishPostCommand("qna", "标题", "正文", null, false);
 
     private final ForumQueryApplicationService forumQueryService = mock(ForumQueryApplicationService.class);
     private final PostApplicationService postApplicationService = mock(PostApplicationService.class);

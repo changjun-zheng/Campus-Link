@@ -17,6 +17,7 @@ public class PostDO {
 
     private Long boardId;
     private Long authorId;
+    private Boolean isAnonymous;
     private String type;
     private String title;
     private String contentMd;

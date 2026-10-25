@@ -6197,6 +6197,9 @@
             },
             "maxItems": 5,
             "minItems": 0
+          },
+          "anonymous": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -6987,6 +6990,9 @@
           },
           "likedByMe": {
             "type": "boolean"
+          },
+          "anonymous": {
+            "type": "boolean"
           }
         }
       },
@@ -7533,6 +7539,9 @@
           "createdAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "anonymous": {
+            "type": "boolean"
           }
         }
       },
@@ -7578,6 +7587,9 @@
             "items": {
               "type": "string"
             }
+          },
+          "anonymous": {
+            "type": "boolean"
           }
         }
       },
@@ -7672,6 +7684,9 @@
           "createdAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "anonymous": {
+            "type": "boolean"
           }
         }
       },

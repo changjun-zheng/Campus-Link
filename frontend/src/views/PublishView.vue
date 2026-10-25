@@ -26,6 +26,8 @@ const router = useRouter()
 const editingId = computed(() => (route.params.id ? Number(route.params.id) : null))
 const editing = computed(() => editingId.value !== null)
 const editingBoardName = ref('')
+/** 编辑页的匿名状态（CR-139）：发布后不可切换，只读展示 */
+const editingAnonymous = ref(false)
 
 const narrow = useNarrowScreen()
 const { saveDraft, loadDraft, clearDraft } = useDraft()
@@ -37,6 +39,8 @@ const form = reactive({
   title: '',
   contentMd: '',
   tags: [] as string[],
+  /** 匿名发布（F-FORUM-010 / CR-139）：仅发新帖时可勾选，发布后不可更改 */
+  anonymous: false,
 })
 
 /** 常用标签建议（CR-083）：el-select 可搜索可自建，上限 5 个由 multiple-limit 兜底 */
@@ -232,6 +236,7 @@ onMounted(async () => {
       form.title = editable.title
       form.contentMd = editable.contentMd
       form.tags = editable.tags
+      editingAnonymous.value = editable.anonymous
       return
     }
     const fromQuery = String(route.query.board || '')
@@ -298,6 +303,7 @@ async function submit() {
       title: form.title.trim(),
       contentMd: form.contentMd,
       tags: form.tags,
+      anonymous: form.anonymous,
     })
     clearDraft(form.boardCode)
     draftRestored.value = false
@@ -364,6 +370,17 @@ async function submit() {
       >
         <el-option v-for="t in TAG_SUGGESTIONS" :key="t" :label="t" :value="t" />
       </el-select>
+
+      <!-- 匿名发布（F-FORUM-010 / CR-139）：发布后不可更改。编辑页只读展示当前身份 -->
+      <el-checkbox v-if="!editing" v-model="form.anonymous" class="mb-4">
+        <span class="text-body text-ink">匿名发布</span>
+        <span class="ml-1 text-caption text-ink-meta">列表与详情只显示「匿名用户」，发布后不可更改</span>
+      </el-checkbox>
+      <p v-else class="mb-4 text-note text-ink-meta">
+        发布身份：
+        <span class="font-medium text-ink">{{ editingAnonymous ? '匿名发布' : '实名发布' }}</span>
+        <span class="ml-1 text-caption">（发布后不可更改）</span>
+      </p>
     </div>
 
     <!-- 相似帖子推荐（F-FORUM-009；编辑模式不查——改的是已有帖，不是找重复提问） -->

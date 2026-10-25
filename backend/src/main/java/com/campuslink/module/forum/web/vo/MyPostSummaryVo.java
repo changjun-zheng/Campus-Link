@@ -13,10 +13,10 @@ import java.time.Instant;
  * {@code status=REMOVED} 的条目由前端渲染"已下架"标记且**不可点**（点进详情是 404 / 3001）。
  */
 public record MyPostSummaryVo(Long id, String boardCode, String title, String summary,
-                             String status, Instant createdAt) {
+                             String status, Instant createdAt, boolean anonymous) {
 
     public static MyPostSummaryVo from(MyPostSummary item) {
         return new MyPostSummaryVo(item.id(), item.boardCode(), item.title(), item.summary(),
-                item.status(), item.createdAt());
+                item.status(), item.createdAt(), item.anonymous());
     }
 }
