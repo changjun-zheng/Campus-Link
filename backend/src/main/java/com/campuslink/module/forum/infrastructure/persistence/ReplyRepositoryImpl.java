@@ -68,6 +68,12 @@ public class ReplyRepositoryImpl implements ReplyRepository {
     }
 
     @Override
+    public long countVisibleByAuthor(Long authorId) {
+        // WHERE 与 findPublicPageByAuthor 同源：资料卡「回帖 N」与主页回帖时间线 total 必须一致
+        return replyMapper.countVisibleByAuthor(authorId);
+    }
+
+    @Override
     public long sumVisibleLikeCountByAuthor(Long authorId) {
         return replyMapper.sumVisibleLikeCountByAuthor(authorId);
     }

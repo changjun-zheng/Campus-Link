@@ -344,6 +344,30 @@ watch(userId, () => void loadAll(), { immediate: true })
         <div class="min-w-0 flex-1">
           <div class="flex flex-wrap items-center gap-2">
             <h2 class="min-w-0 truncate text-title-lg font-medium text-ink">{{ profile.nickname }}</h2>
+            <!-- 等级徽章（F-GAME-001 / CR-138）：只在本页展示，帖子列表 / 组队页不加（会引入每页 N+1 聚合）。
+                 点开是计分口径说明，不给用户编辑入口（阈值与权重改口径须另开 CR） -->
+            <el-popover placement="bottom-start" trigger="click" :width="236">
+              <template #reference>
+                <button
+                  type="button"
+                  class="inline-flex cursor-pointer items-center gap-1 rounded-full border-0 bg-primary-soft px-2 py-0.5 text-caption text-primary"
+                  :aria-label="`等级 Lv${profile.level} ${profile.levelName}，查看声望口径`"
+                >
+                  <SvgIcon name="trophy" :size="12" />
+                  <span class="font-medium">Lv{{ profile.level }} {{ profile.levelName }}</span>
+                </button>
+              </template>
+              <p class="text-note font-medium text-ink">声望怎么算</p>
+              <ul class="mt-1.5 space-y-0.5 text-caption leading-body text-ink-meta">
+                <li>被采纳 × 10</li>
+                <li>获赞 × 2</li>
+                <li>发帖 × 1</li>
+                <li>回帖 × 1</li>
+              </ul>
+              <p class="mt-2 border-t-[0.5px] border-divider pt-2 text-caption leading-body text-ink-meta">
+                只统计当前可见的内容；内容被下架或取消采纳后，声望会随之下降。
+              </p>
+            </el-popover>
             <!-- 本人：给编辑与收藏入口而不是关注按钮（后端 2009 禁止关注自己）。
                  「我的收藏」随 CR-104 / D-3 补在这里——PRD 那句「本人主页额外可见我的收藏」走
                  "链到既有 /favorites 页"而不是在本页再嵌一份列表：收藏项的可见性口径与本页相反
@@ -385,10 +409,40 @@ watch(userId, () => void loadAll(), { immediate: true })
           <p v-if="metaText" class="mt-1 text-note text-ink-meta">{{ metaText }}</p>
           <p v-if="profile.bio" class="mt-2 text-body leading-body text-ink-regular">{{ profile.bio }}</p>
 
+          <!-- 声望与升级进度（CR-138）：声望是「当前可见贡献」的读数，被下架 / 取消采纳会下降，
+               故进度条只表示"距下一档还差多少"，不承诺只升不降。满级不渲染差值（nextLevelAt=null） -->
+          <div class="mt-2 flex flex-wrap items-center gap-2 text-note text-ink-meta">
+            <span class="tabular-nums">
+              <span class="font-medium text-ink">{{ profile.reputation }}</span>
+              声望
+            </span>
+            <template v-if="profile.nextLevelAt !== null">
+              <div
+                class="h-1 w-24 overflow-hidden rounded-full bg-line"
+                role="progressbar"
+                aria-label="距下一等级的进度"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                :aria-valuenow="profile.levelProgress"
+              >
+                <div class="h-full rounded-full bg-primary" :style="{ width: `${profile.levelProgress}%` }" />
+              </div>
+              <span class="text-caption tabular-nums">
+                距 Lv{{ profile.level + 1 }} 还差 {{ profile.nextLevelAt - profile.reputation }}
+              </span>
+            </template>
+            <span v-else class="text-caption">已达最高等级</span>
+          </div>
+
           <div class="mt-3 flex flex-wrap items-center gap-4 text-note text-ink-meta">
             <span>
               <span class="text-title-sm font-medium text-ink tabular-nums">{{ profile.postCount }}</span>
               帖子
+            </span>
+            <!-- 回帖数（CR-138）：与下方回帖时间线的 total 同源，故两处数字必须一致 -->
+            <span>
+              <span class="text-title-sm font-medium text-ink tabular-nums">{{ profile.replyCount }}</span>
+              回帖
             </span>
             <span>
               <span class="text-title-sm font-medium text-ink tabular-nums">{{ profile.likeCount }}</span>

@@ -348,13 +348,15 @@ public class ForumQueryApplicationService {
     }
 
     /**
-     * 作者三个对外计数（他人主页资料卡，CR-104）：**一次**取齐，不让 account 侧为三个数字来回调三次——
-     * 三次调用等于允许「帖子 12 / 获赞 30 / 被采纳 3」来自三个不同时刻，同一张卡上的数会对不上。
+     * 作者四个对外计数（他人主页资料卡，CR-104 / CR-138）：**一次**取齐，不让 account 侧为四个数字来回调四次——
+     * 四次调用等于允许「帖子 12 / 获赞 30 / 被采纳 3 / 回帖 7」来自四个不同时刻，同一张卡上的数会对不上，
+     * 声望也会由一个拼接出来的快照算出。
      *
      * <p>
-     * 三个口径全部限定「可见内容」，逐条与 {@code AuthorStats} 的 javadoc 对应；
+     * 四个口径全部限定「可见内容」，逐条与 {@code AuthorStats} 的 javadoc 对应；
      * {@code likeCount} 是 D-1 发起人定下的「帖子获赞 + 楼层获赞之和」，两次 SUM 相加，
-     * 其中楼层侧要 JOIN 父帖（下架帖的楼层赞不计入）。
+     * 其中楼层侧要 JOIN 父帖（下架帖的楼层赞不计入）；{@code replyCount}（CR-138）的 WHERE
+     * 与公开回帖时间线逐字相同。
      *
      * <p>
      * 与 {@link #countVisiblePostsByAuthor} 一样**不做作者存在性校验**：唯一调用方
@@ -367,7 +369,8 @@ public class ForumQueryApplicationService {
                 postRepository.countVisibleByAuthor(authorId),
                 postRepository.sumVisibleLikeCountByAuthor(authorId)
                         + replyRepository.sumVisibleLikeCountByAuthor(authorId),
-                replyRepository.countAcceptedVisibleByAuthor(authorId));
+                replyRepository.countAcceptedVisibleByAuthor(authorId),
+                replyRepository.countVisibleByAuthor(authorId));
     }
 
     /**

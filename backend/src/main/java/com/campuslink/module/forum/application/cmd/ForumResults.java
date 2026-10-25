@@ -83,13 +83,15 @@ public final class ForumResults {
     }
 
     /**
-     * 作者三个对外计数（CR-104）：**一次**跨上下文调用取齐，而不是让 account 侧为三个数字来回调三次
-     * （每个数字一次调用会把"同一张资料卡上的三个数不该来自三个时刻"变成隐患）。
+     * 作者四个对外计数（CR-104 / CR-138）：**一次**跨上下文调用取齐，而不是让 account 侧为四个数字来回调四次
+     * （每个数字一次调用会把"同一张资料卡上的数字不该来自四个时刻"变成隐患）。
      *
-     * <p>三个口径全部限定"可见内容"：{@code postCount} 与主页下方那份帖子列表同源；
-     * {@code likeCount} 是 D-1 的「帖子 + 楼层获赞之和」；{@code acceptedCount} 是 D-2 的回答侧被采纳数。
+     * <p>四个口径全部限定"可见内容"：{@code postCount} 与主页下方那份帖子列表同源；
+     * {@code likeCount} 是 D-1 的「帖子 + 楼层获赞之和」；{@code acceptedCount} 是 D-2 的回答侧被采纳数；
+     * {@code replyCount}（CR-138）与主页下方那份回帖时间线的 total 同源。
+     * 声望由 account 侧用这四个数加权（{@code ReputationRules}），故四个数必须来自同一次调用。
      */
-    public record AuthorStats(long postCount, long likeCount, long acceptedCount) {
+    public record AuthorStats(long postCount, long likeCount, long acceptedCount, long replyCount) {
     }
 
     /** 回帖结果：floorNo 为本次分配的楼层号（设计 §3.6，口径见 sprint-2-design §4.1） */

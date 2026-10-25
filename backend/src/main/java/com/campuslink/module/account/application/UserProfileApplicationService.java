@@ -5,6 +5,8 @@ import com.campuslink.common.result.ResultCode;
 import com.campuslink.module.account.domain.gateway.FollowRepository;
 import com.campuslink.module.account.domain.gateway.RateLimitGateway;
 import com.campuslink.module.account.domain.model.Account;
+import com.campuslink.module.account.domain.model.CommunityLevel;
+import com.campuslink.module.account.domain.model.ReputationRules;
 import com.campuslink.module.forum.application.ForumQueryApplicationService;
 import com.campuslink.module.forum.application.cmd.ForumResults.AuthorStats;
 import lombok.RequiredArgsConstructor;
@@ -24,12 +26,15 @@ import java.time.Instant;
  * 这不构成 Bean 环：forum 依赖的是 {@link AccountApplicationService} 与 {@link FollowApplicationService}，
  * 两者都不依赖本类。跨上下文只碰对方 application 包（ADR-012 / 守护测试 G4）。
  *
- * <p>三个计数的来源与口径：
+ * <p>计数的来源与口径：
  * <ul>
- *   <li>{@code postCount} —— forum 侧 {@code countVisibleByAuthor}，与主页下方那份帖子列表的 WHERE 同源；</li>
+ *   <li>{@code postCount} / {@code replyCount} —— forum 侧计数，分别与主页下方帖子 / 回帖时间线的 WHERE 同源；</li>
+ *   <li>{@code likeCount} / {@code acceptedCount} —— forum 侧同一次 {@code authorStats}，口径见 CR-104；</li>
  *   <li>{@code followerCount} / {@code followingCount} —— 本上下文 {@code follows} 表的两个计数，
  *       与 {@link FollowApplicationService#state} 用的是同一对仓储方法，故两处数字不会对不上。</li>
  * </ul>
+ * 声望与等级（CR-138）由前四个计数在**读时**算出（{@link ReputationRules} / {@link CommunityLevel}）：
+ * 不落库、无快照，故内容下架后声望会如实下降（D6）。
  * 与 {@code FollowApplicationService#state} 的差别在于本用例**没有 viewer**：它是公开端点，匿名也能读，
  * 因此不产出 {@code following}（"我有没有关注他"），前端登录时另调 {@code follow-state} 拿那一位。
  */
@@ -63,9 +68,14 @@ public class UserProfileApplicationService {
         }
         Account account = accountApplicationService.publicAccountOf(userId);
         AuthorStats stats = forumQueryService.authorStats(userId);
+        long reputation = ReputationRules.reputation(stats.acceptedCount(), stats.likeCount(),
+                stats.postCount(), stats.replyCount());
+        CommunityLevel level = CommunityLevel.of(reputation);
         return new PublicProfile(account.getId(), account.getNickname(), account.getMajor(), account.getBio(),
                 account.getCreatedAt(),
-                stats.postCount(), stats.likeCount(), stats.acceptedCount(),
+                stats.postCount(), stats.replyCount(), stats.likeCount(), stats.acceptedCount(),
+                reputation, level.level(), level.displayName(), level.nextThreshold(),
+                level.progressPercent(reputation),
                 followRepository.countByFollowee(userId),
                 followRepository.countByFollower(userId));
     }
@@ -73,14 +83,19 @@ public class UserProfileApplicationService {
     /**
      * 公开资料出参（application 层载体，web 层再映射成 {@code UserProfileVo}）。
      *
-     * <p>计数用 {@code long}：四个来源（forum 的三个聚合与 {@code follows} 的两个计数）返回的都是 long，
+     * <p>计数用 {@code long}：全部来源（forum 的四个聚合与 {@code follows} 的两个计数）返回的都是 long，
      * 在应用层就窄化等于把"饱和还是抛异常"这个展示层决定提前塞进用例出参；收窄发生在 VO 那一步。
      *
-     * <p>{@code likeCount} / {@code acceptedCount}（CR-104）来自 forum 侧**同一次** {@code authorStats} 调用，
-     * 与 {@code postCount} 因此来自同一时刻——资料卡上三个数互相矛盾这条路被堵在取数处。
+     * <p>四个计数（{@code postCount} / {@code replyCount} / {@code likeCount} / {@code acceptedCount}）
+     * 来自 forum 侧**同一次** {@code authorStats} 调用，因此来自同一时刻——同一张资料卡上数字互相矛盾、
+     * 或声望由拼接快照算出的路被堵在取数处（CR-104 / CR-138）。
+     *
+     * <p>{@code nextLevelAt} 为 {@code Long} 且满级时为 {@code null}：「没有下一级」与「下一级门槛是 0」
+     * 是两种事实，前端据此不渲染进度条文案。{@code levelProgress} 为 0~100 的整数百分比。
      */
     public record PublicProfile(Long id, String nickname, String major, String bio, Instant createdAt,
-                                long postCount, long likeCount, long acceptedCount,
+                                long postCount, long replyCount, long likeCount, long acceptedCount,
+                                long reputation, int level, String levelName, Long nextLevelAt, int levelProgress,
                                 long followerCount, long followingCount) {
     }
 }

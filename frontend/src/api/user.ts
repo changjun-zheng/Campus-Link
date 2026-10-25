@@ -19,10 +19,22 @@ export interface UserProfileVo {
   /** 加入时间，ISO-8601 UTC */
   createdAt: string
   postCount: number
+  /** 可见回帖数（CR-138）：与主页回帖时间线的 total 同源 */
+  replyCount: number
   /** 获赞数（CR-104 / D-1）：其**可见帖子与可见楼层**收到的赞之和 */
   likeCount: number
   /** 被采纳数（CR-104 / D-2）：其回答被采纳为最佳答案的次数 */
   acceptedCount: number
+  /** 声望（CR-138）：被采纳 ×10 + 获赞 ×2 + 发帖 ×1 + 回帖 ×1，只统计可见内容 */
+  reputation: number
+  /** 社区等级档位 1~6（CR-138） */
+  level: number
+  /** 档位名称：初入 / 学徒 / 常客 / 贡献者 / 资深成员 / 社区之星 */
+  levelName: string
+  /** 下一档的声望门槛；**满级为 null**（不渲染升级进度文案） */
+  nextLevelAt: number | null
+  /** 当前档位内的进度百分比 0~100 */
+  levelProgress: number
   followerCount: number
   followingCount: number
 }

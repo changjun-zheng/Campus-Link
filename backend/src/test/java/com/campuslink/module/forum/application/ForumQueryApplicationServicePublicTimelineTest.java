@@ -38,7 +38,7 @@ import static org.mockito.Mockito.when;
  * 他人主页的两项新能力（CR-104）：作者计数聚合 {@code authorStats} 与公开楼层时间线
  * {@code listPublicRepliesByAuthor}。
  *
- * <p><b>本类守的是接线，SQL 里的可见性列语义不在这里守</b>——三条聚合与那条分页查询的 WHERE 是
+ * <p><b>本类守的是接线，SQL 里的可见性列语义不在这里守</b>——四条聚合与那条分页查询的 WHERE 是
  * {@code @Select} 字面量，Mockito 看不见；那一部分的证据落在真机取证（实施方案 §5：下架帖的楼层
  * 既不进时间线、也不进获赞与被采纳数），本类负责的是"接错一根线立刻变红"。
  *
@@ -86,21 +86,24 @@ class ForumQueryApplicationServicePublicTimelineTest {
         when(postRepository.sumVisibleLikeCountByAuthor(AUTHOR_ID)).thenReturn(80L);
         when(replyRepository.sumVisibleLikeCountByAuthor(AUTHOR_ID)).thenReturn(25L);
         when(replyRepository.countAcceptedVisibleByAuthor(AUTHOR_ID)).thenReturn(3L);
+        when(replyRepository.countVisibleByAuthor(AUTHOR_ID)).thenReturn(7L);
 
         AuthorStats stats = service.authorStats(AUTHOR_ID);
 
         assertThat(stats.postCount()).isEqualTo(12L);
         assertThat(stats.likeCount()).isEqualTo(105L);
         assertThat(stats.acceptedCount()).isEqualTo(3L);
+        assertThat(stats.replyCount()).isEqualTo(7L);
     }
 
     @Test
-    @DisplayName("三个数取自同一次调用：分页与两个 SUM 各只问一次，资料卡上的数字不许来自三个时刻")
+    @DisplayName("四个数取自同一次调用：分页与两个 SUM 各只问一次，资料卡上的数字不许来自四个时刻")
     void authorStatsIsASingleRoundTrip() {
         when(postRepository.countVisibleByAuthor(AUTHOR_ID)).thenReturn(0L);
         when(postRepository.sumVisibleLikeCountByAuthor(AUTHOR_ID)).thenReturn(0L);
         when(replyRepository.sumVisibleLikeCountByAuthor(AUTHOR_ID)).thenReturn(0L);
         when(replyRepository.countAcceptedVisibleByAuthor(AUTHOR_ID)).thenReturn(0L);
+        when(replyRepository.countVisibleByAuthor(AUTHOR_ID)).thenReturn(0L);
 
         service.authorStats(AUTHOR_ID);
 
@@ -108,21 +111,24 @@ class ForumQueryApplicationServicePublicTimelineTest {
         verify(postRepository).sumVisibleLikeCountByAuthor(AUTHOR_ID);
         verify(replyRepository).sumVisibleLikeCountByAuthor(AUTHOR_ID);
         verify(replyRepository).countAcceptedVisibleByAuthor(AUTHOR_ID);
+        verify(replyRepository).countVisibleByAuthor(AUTHOR_ID);
     }
 
     @Test
-    @DisplayName("无内容时三个计数如实回 0（不回落 null、也不省略字段——前端「获赞 0」与「取不到」是两种状态）")
+    @DisplayName("无内容时四个计数如实回 0（不回落 null、也不省略字段——前端「获赞 0」与「取不到」是两种状态）")
     void emptyAuthorReportsZeros() {
         when(postRepository.countVisibleByAuthor(AUTHOR_ID)).thenReturn(0L);
         when(postRepository.sumVisibleLikeCountByAuthor(AUTHOR_ID)).thenReturn(0L);
         when(replyRepository.sumVisibleLikeCountByAuthor(AUTHOR_ID)).thenReturn(0L);
         when(replyRepository.countAcceptedVisibleByAuthor(AUTHOR_ID)).thenReturn(0L);
+        when(replyRepository.countVisibleByAuthor(AUTHOR_ID)).thenReturn(0L);
 
         AuthorStats stats = service.authorStats(AUTHOR_ID);
 
         assertThat(stats.postCount()).isZero();
         assertThat(stats.likeCount()).isZero();
         assertThat(stats.acceptedCount()).isZero();
+        assertThat(stats.replyCount()).isZero();
     }
 
     @Test
@@ -132,6 +138,7 @@ class ForumQueryApplicationServicePublicTimelineTest {
         when(postRepository.sumVisibleLikeCountByAuthor(AUTHOR_ID)).thenReturn(2L);
         when(replyRepository.sumVisibleLikeCountByAuthor(AUTHOR_ID)).thenReturn(4L);
         when(replyRepository.countAcceptedVisibleByAuthor(AUTHOR_ID)).thenReturn(1L);
+        when(replyRepository.countVisibleByAuthor(AUTHOR_ID)).thenReturn(1L);
 
         service.authorStats(AUTHOR_ID);
 

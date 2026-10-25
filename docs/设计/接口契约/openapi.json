@@ -6785,11 +6785,34 @@
             "type": "integer",
             "format": "int32"
           },
+          "replyCount": {
+            "type": "integer",
+            "format": "int32"
+          },
           "likeCount": {
             "type": "integer",
             "format": "int32"
           },
           "acceptedCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "reputation": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "level": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "levelName": {
+            "type": "string"
+          },
+          "nextLevelAt": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "levelProgress": {
             "type": "integer",
             "format": "int32"
           },

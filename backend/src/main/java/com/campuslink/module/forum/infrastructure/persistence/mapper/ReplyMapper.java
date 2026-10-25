@@ -78,6 +78,22 @@ public interface ReplyMapper extends BaseMapper<ReplyDO> {
     long sumVisibleLikeCountByAuthor(@Param("authorId") Long authorId);
 
     /**
+     * 作者可见楼层数（他人主页资料卡的「回帖 N」与声望计分，CR-138）：条件与
+     * {@link #findPublicPageByAuthor} 的 WHERE 逐字相同，故资料卡计数与回帖时间线 total 同源。
+     */
+    @Select("""
+            SELECT COUNT(*)
+            FROM replies r
+            JOIN posts p ON p.id = r.post_id
+            WHERE r.author_id = #{authorId}
+              AND r.is_deleted = 0
+              AND r.status = 'PUBLISHED'
+              AND p.is_deleted = 0
+              AND p.status = 'PUBLISHED'
+            """)
+    long countVisibleByAuthor(@Param("authorId") Long authorId);
+
+    /**
      * 作者被采纳为最佳答案的可见楼层数（被采纳数 D-2 回答侧，CR-104）。
      *
      * <p>{@code is_accepted} 由 {@code updateAcceptedFlags} 单点维护（换采纳时旧位清零），与详情页

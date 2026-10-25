@@ -49,6 +49,15 @@ public interface ReplyRepository {
     long sumVisibleLikeCountByAuthor(Long authorId);
 
     /**
+     * 作者**可见楼层**数（他人主页资料卡的「回帖 N」与声望计分，CR-138）：{@code COUNT(*)}，
+     * WHERE 与 {@link #findPublicPageByAuthor} 逐字相同（楼层与父帖双可见），
+     * 故资料卡上的「回帖 N」与主页下方回帖时间线的 total 同源、不会互相矛盾。
+     *
+     * <p>只算可见楼层：被下架 / 父帖不可见的楼层不计入，与获赞、被采纳两数同一纪律（D6）。
+     */
+    long countVisibleByAuthor(Long authorId);
+
+    /**
      * 作者**被采纳为最佳答案**的楼层数（被采纳数，D-2 取回答侧，CR-104）：
      * {@code COUNT(*)} WHERE {@code r.is_accepted=1} 且楼层与父帖均可见（同上同源条件）。
      *
