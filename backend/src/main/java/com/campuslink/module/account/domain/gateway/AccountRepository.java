@@ -74,4 +74,12 @@ public interface AccountRepository {
      * {@code DEACTIVATED} 同样计入总数（注销账号仍是一条账号记录），由调用方单列。
      */
     Map<AccountStatus, Long> countByStatus();
+
+    /**
+     * 按昵称关键字（LIKE）查账号 id（F-ADMIN-002 / CR-141）：后台内容搜索的"按用户"筛选。
+     *
+     * <p>最多返回 {@code limit} 条——昵称搜索只用于把作者缩小到可接受集合，
+     * 超出上限由应用层按"本轮不筛作者"还是"无匹配"自行决定（本端口不做业务判断）。
+     */
+    List<Long> findIdsByNicknameLike(String keyword, int limit);
 }

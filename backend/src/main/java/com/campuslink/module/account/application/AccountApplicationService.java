@@ -32,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -194,6 +195,20 @@ public class AccountApplicationService {
         }
         return accountRepository.findByIds(ids).stream()
                 .collect(Collectors.toMap(Account::getId, Account::getNickname));
+    }
+
+    /**
+     * 按昵称关键字解析账号 id（F-ADMIN-002 / CR-141）：forum 后台内容搜索的"按用户"筛选唯一入口。
+     *
+     * <p>跨上下文方向合法（ADR-012：只调对方 application）；上限 50 条——后台搜索只需缩小作者集合，
+     * 不承担"列出全部同名账号"的职责，超出部分由下一次更精确的关键词收敛。
+     */
+    public List<Long> accountIdsByNickname(String keyword) {
+        String kw = keyword == null ? "" : keyword.trim();
+        if (kw.isEmpty()) {
+            return List.of();
+        }
+        return accountRepository.findIdsByNicknameLike(kw, 50);
     }
 
     /**

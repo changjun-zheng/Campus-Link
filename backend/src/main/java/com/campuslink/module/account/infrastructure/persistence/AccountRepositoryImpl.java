@@ -164,6 +164,20 @@ public class AccountRepositoryImpl implements AccountRepository {
     }
 
     @Override
+    public List<Long> findIdsByNicknameLike(String keyword, int limit) {
+        if (keyword == null || keyword.isBlank() || limit <= 0) {
+            return List.of();
+        }
+        // 只取 id 列；LIMIT 由调用方给定上限（常量，不接受外部拼接）
+        return userMapper.selectList(new LambdaQueryWrapper<UserDO>()
+                        .select(UserDO::getId)
+                        .like(UserDO::getNickname, keyword)
+                        .last("LIMIT " + limit)).stream()
+                .map(UserDO::getId)
+                .toList();
+    }
+
+    @Override
     public Map<AccountStatus, Long> countByStatus() {
         return userMapper.countByStatus().stream()
                 .collect(Collectors.toMap(row -> AccountStatus.valueOf(row.getStatus()),

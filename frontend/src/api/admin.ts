@@ -152,3 +152,52 @@ export const getReviewQueue = (
   query.set('size', String(params.size ?? 20))
   return get<ReviewQueueVo>(`/admin/review-queue?${query.toString()}`)
 }
+
+/**
+ * 后台内容搜索（F-ADMIN-002 / CR-141，仅 SUPERADMIN）。
+ *
+ * `keyword` 搜标题 / 正文（2~50 字）；`userId` 与 `authorKeyword` 二选一（userId 优先）；
+ * `days` 只接受 7 / 30 / 90。只列未删内容、已下架仍列出；`summary` 为服务端纯文本前 200 字。
+ * 处置不在本组：复用 `moderatePost` / `moderateReply`。
+ */
+export interface AdminContentItemVo {
+  id: number
+  kind: 'post' | 'reply'
+  title: string
+  summary: string
+  boardName: string
+  authorId: number
+  authorNickname: string
+  status: 'PUBLISHED' | 'REMOVED'
+  createdAt: string
+}
+
+export interface AdminContentSearchVo {
+  kind: 'post' | 'reply'
+  items: AdminContentItemVo[]
+  total: number
+  page: number
+  size: number
+}
+
+export const searchAdminContents = (
+  params: {
+    type?: 'post' | 'reply'
+    keyword?: string
+    userId?: number
+    authorKeyword?: string
+    days?: 7 | 30 | 90
+    page?: number
+    size?: number
+  } = {},
+) => {
+  const query = new URLSearchParams()
+  query.set('type', params.type ?? 'post')
+  if (params.keyword) query.set('keyword', params.keyword)
+  if (params.userId) query.set('userId', String(params.userId))
+  if (params.authorKeyword) query.set('authorKeyword', params.authorKeyword)
+  if (params.days) query.set('days', String(params.days))
+  query.set('page', String(params.page ?? 1))
+  query.set('size', String(params.size ?? 20))
+  return get<AdminContentSearchVo>(`/admin/contents?${query.toString()}`)
+}

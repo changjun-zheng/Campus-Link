@@ -17,7 +17,9 @@ import {
   listReports,
   moderatePost,
   moderateReply,
+  searchAdminContents,
   setUserStatus,
+  type AdminContentItemVo,
   type AdminDashboardVo,
   type AdminReportVo,
   type AdminTagVo,
@@ -103,10 +105,89 @@ async function confirmClose() {
   }
 }
 
-/* ─── 处置台：按 id 直达（搜索接口属 P1，MVP 用 id 精确操作） ─── */
+/* ─── 处置台：搜索（F-ADMIN-002 / CR-141）+ 按 id 直达 ─── */
+const contentType = ref<'post' | 'reply'>('post')
+const contentKeyword = ref('')
+const contentUserId = ref('')
+const contentAuthorKeyword = ref('')
+const contentDays = ref<'' | '7' | '30' | '90'>('')
+const contents = ref<AdminContentItemVo[]>([])
+const contentTotal = ref(0)
+const contentPage = ref(1)
+const contentSize = 20
+const contentsLoading = ref(false)
+const contentsError = ref('')
+const moderating = ref(false)
+
+async function loadContents() {
+  contentsLoading.value = true
+  contentsError.value = ''
+  try {
+    const res = await searchAdminContents({
+      type: contentType.value,
+      keyword: contentKeyword.value.trim() || undefined,
+      userId: Number(contentUserId.value) > 0 ? Number(contentUserId.value) : undefined,
+      authorKeyword: contentAuthorKeyword.value.trim() || undefined,
+      days: contentDays.value ? (Number(contentDays.value) as 7 | 30 | 90) : undefined,
+      page: contentPage.value,
+      size: contentSize,
+    })
+    contents.value = res.items
+    contentTotal.value = res.total
+    contentType.value = res.kind
+  } catch (e) {
+    contents.value = []
+    contentTotal.value = 0
+    contentsError.value = e instanceof Error ? e.message : '内容搜索失败'
+  } finally {
+    contentsLoading.value = false
+  }
+}
+
+function resetContentSearch() {
+  contentKeyword.value = ''
+  contentUserId.value = ''
+  contentAuthorKeyword.value = ''
+  contentDays.value = ''
+  contentPage.value = 1
+  loadContents()
+}
+
+function onContentPageChange(next: number) {
+  contentPage.value = next
+  loadContents()
+}
+
+async function moderateContent(item: AdminContentItemVo, next: 'REMOVED' | 'PUBLISHED') {
+  if (next === 'REMOVED') {
+    try {
+      await ElMessageBox.confirm(
+        `下架后「${item.title}」将从前台隐藏，可在本表随时恢复。`,
+        '确认下架',
+        { type: 'warning', confirmButtonText: '下架', cancelButtonText: '取消' },
+      )
+    } catch {
+      return
+    }
+  }
+  moderating.value = true
+  try {
+    if (item.kind === 'post') {
+      await moderatePost(item.id, next, '处置台搜索')
+    } else {
+      await moderateReply(item.id, next, '处置台搜索')
+    }
+    ElMessage.success(next === 'REMOVED' ? '已下架' : '已恢复')
+    await loadContents()
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '处置失败')
+  } finally {
+    moderating.value = false
+  }
+}
+
 const targetType = ref<'POST' | 'REPLY'>('POST')
 const targetIdInput = ref('')
-const moderating = ref(false)
 
 async function doModerate(next: 'REMOVED' | 'PUBLISHED') {
   const id = Number(targetIdInput.value)
@@ -329,6 +410,7 @@ watch([reportStatus, reportPage], () => loadReports())
 watch(tab, () => {
   if (tab.value === 'reports' && !reports.value.length) loadReports()
   if (tab.value === 'dashboard' && !dashboard.value) loadDashboard()
+  if (tab.value === 'moderation' && !contents.value.length) loadContents()
   if (tab.value === 'tags' && !tags.value.length) loadTags()
   if (tab.value === 'review' && !reviewItems.value.length) loadReviewQueue()
 })
@@ -621,10 +703,103 @@ function goLogin() {
       </template>
     </el-card>
 
-    <!-- ─── 内容处置台 ─── -->
+    <!-- ─── 内容处置台：搜索（F-ADMIN-002 / CR-141）+ 按 id 直达 ─── -->
     <el-card v-show="tab === 'moderation'" shadow="never">
       <template #header><span class="font-medium">内容处置台</span></template>
 
+      <div class="px-5">
+        <el-form inline class="gap-y-2">
+          <el-form-item label="类型">
+            <el-radio-group v-model="contentType" @change="contentPage = 1; loadContents()">
+              <el-radio-button value="post">帖子</el-radio-button>
+              <el-radio-button value="reply">楼层</el-radio-button>
+            </el-radio-group>
+          </el-form-item>
+          <el-form-item label="关键词">
+            <el-input
+              v-model="contentKeyword"
+              placeholder="标题 / 正文，2~50 字"
+              clearable
+              class="w-[220px]"
+              @keyup.enter="contentPage = 1; loadContents()"
+            />
+          </el-form-item>
+          <el-form-item label="用户 id">
+            <el-input v-model="contentUserId" placeholder="可选" clearable class="w-[120px]" />
+          </el-form-item>
+          <el-form-item label="昵称">
+            <el-input
+              v-model="contentAuthorKeyword"
+              placeholder="可选，优先用户 id"
+              clearable
+              class="w-[150px]"
+            />
+          </el-form-item>
+          <el-form-item label="时间">
+            <el-select v-model="contentDays" placeholder="全部" clearable class="w-[110px]">
+              <el-option label="近 7 天" value="7" />
+              <el-option label="近 30 天" value="30" />
+              <el-option label="近 90 天" value="90" />
+            </el-select>
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" :loading="contentsLoading" @click="contentPage = 1; loadContents()">搜索</el-button>
+            <el-button @click="resetContentSearch">重置</el-button>
+          </el-form-item>
+        </el-form>
+
+        <el-alert v-if="contentsError" type="error" :closable="false" :title="contentsError" class="mb-3" />
+        <el-table v-loading="contentsLoading" :data="contents" size="small" class="mb-3">
+          <el-table-column prop="kind" label="类型" width="70">
+            <template #default="{ row }">{{ row.kind === 'post' ? '帖子' : '楼层' }}</template>
+          </el-table-column>
+          <el-table-column prop="title" label="标题" min-width="160" show-overflow-tooltip />
+          <el-table-column prop="summary" label="摘要" min-width="240" show-overflow-tooltip />
+          <el-table-column prop="boardName" label="版块" width="110" />
+          <el-table-column label="作者" width="120">
+            <template #default="{ row }">{{ row.authorNickname }}</template>
+          </el-table-column>
+          <el-table-column label="状态" width="90">
+            <template #default="{ row }">
+              <el-tag :type="row.status === 'PUBLISHED' ? 'success' : 'info'" size="small">
+                {{ row.status === 'PUBLISHED' ? '正常' : '已下架' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="时间" width="110">
+            <template #default="{ row }">{{ formatRelativeTime(row.createdAt) }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="100" fixed="right">
+            <template #default="{ row }">
+              <el-button
+                v-if="row.status === 'PUBLISHED'"
+                type="danger"
+                link
+                :loading="moderating"
+                @click="moderateContent(row, 'REMOVED')"
+              >下架</el-button>
+              <el-button
+                v-else
+                type="success"
+                link
+                :loading="moderating"
+                @click="moderateContent(row, 'PUBLISHED')"
+              >恢复</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+        <div class="mb-4 flex justify-end">
+          <el-pagination
+            layout="total, prev, pager, next"
+            :total="contentTotal"
+            :page-size="contentSize"
+            :current-page="contentPage"
+            @current-change="onContentPageChange"
+          />
+        </div>
+      </div>
+
+      <el-divider>按 id 直达</el-divider>
       <el-form label-width="90px" class="max-w-[560px]">
         <el-form-item label="目标类型">
           <el-radio-group v-model="targetType">
