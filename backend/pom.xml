@@ -26,7 +26,32 @@
     <jsoup.version>1.23.2</jsoup.version>
     <!-- 架构守护测试（A3-9，CR-028）：只引 core 包 + plain JUnit，不引 junit5 引擎，避免与 Surefire 的引擎发现耦合 -->
     <archunit.version>1.3.0</archunit.version>
+    <!-- 依赖漏洞修复（CR-148，OSV 扫描 2026-10-28）：
+         Boot 4.1.1 托管 tomcat 11.0.24（3×CRITICAL：DIGEST/FORM 认证绕过）与 tools.jackson 3.1.5
+         （5×HIGH：JSON 解析 DoS/ReDoS）；两者都由 spring-boot-starter-parent 的**属性**托管，
+         这里覆盖即为官方支持的升级方式，不新增任何依赖。-->
+    <tomcat.version>11.0.25</tomcat.version>
+    <jackson-bom.version>3.1.7</jackson-bom.version>
+    <!-- Jackson 2 不在 Boot 4 的 BOM 里（它托管的是 tools.jackson 3.x）：2.21.5 由 jjwt-jackson 0.13.0 带进来，
+         注入点因此是 dependencyManagement 而不是属性。补丁版 2.21.7 修掉 5×HIGH + 2×MODERATE。 -->
+    <jackson2.version>2.21.7</jackson2.version>
   </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <!-- jjwt-jackson 传递进来的 Jackson 2（仅 JWT 序列化链使用）：锁到补丁版 -->
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+        <version>${jackson2.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-core</artifactId>
+        <version>${jackson2.version}</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <dependencies>
     <!-- Spring Boot 4.0 起 web starter 更名为 webmvc（模块化拆分） -->

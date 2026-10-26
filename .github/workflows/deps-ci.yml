@@ -1,0 +1,54 @@
+name: deps-ci
+
+# 依赖漏洞扫描（CR-148 / CR-149）：Maven 运行时依赖 + npm 全量包 → OSV 公共库。
+# 为什么单独一个 workflow：
+#   - 它需要 JDK（解析 Maven 依赖）+ Python（查询 OSV），与 backend/frontend 两个 CI 的触发条件都不同；
+#   - 除了依赖变更，**还需要按周跑**（新公告与代码无关，只在 push 时扫会漏掉）；
+#   - 失败策略：默认**只在出现 CRITICAL 时红**（`--fail-on critical`）。HIGH/MODERATE 会列出但不阻塞——
+#     新公告天天有，若一出现 HIGH 就让所有构建变红，"保护"会变成阻塞；需要收紧时改这一处即可。
+on:
+  schedule:
+    # 每周一 01:00 UTC（北京时间 09:00）
+    - cron: '0 1 * * 1'
+  push:
+    branches: [main]
+    paths:
+      - 'backend/pom.xml'
+      - 'frontend/package-lock.json'
+      - 'backend/scripts/scan_deps_osv.py'
+      - '.github/workflows/deps-ci.yml'
+  pull_request:
+    paths:
+      - 'backend/pom.xml'
+      - 'frontend/package-lock.json'
+      - 'backend/scripts/scan_deps_osv.py'
+  workflow_dispatch:
+
+jobs:
+  osv:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      # 脚本自己会跑 dependency:list；CI 里单独留一步便于日志分段与失败定位
+      - name: Resolve backend runtime dependencies
+        run: |
+          cd backend
+          mvn -q dependency:list -DincludeScope=runtime -DoutputFile=target/deps-for-scan.txt
+      - name: Scan with OSV (fail on CRITICAL)
+        run: python backend/scripts/scan_deps_osv.py --skip-maven --fail-on critical --json deps-report.json
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deps-osv-report
+          path: deps-report.json
+          if-no-files-found: ignore

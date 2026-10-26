@@ -92,3 +92,19 @@ python backend/scripts/check_docs_consistency.py --json # 机器可读
 
 **为什么需要**：状态文档落后代码两轮过不止一次（F-003 把已交付的功能写成缺口、界面规范把 `/admin` 写成占位页、
 README 的登记版本落后文件头），后果是**决策输入错**。**未挂 CI**（CI 属红线，待发起人批），改完文档请手动跑一次。
+
+## 依赖漏洞扫描（CR-148）
+
+`scan_deps_osv.py` —— 纯 stdlib；Maven 运行时依赖（`dependency:list` 解析后的版本）+ `frontend/package-lock.json` 全量包 → OSV 公共库。
+
+```bash
+python backend/scripts/scan_deps_osv.py                    # 报告；有 CRITICAL 时 exit 1
+python backend/scripts/scan_deps_osv.py --fail-on high     # 收紧阈值
+python backend/scripts/scan_deps_osv.py --skip-maven       # 用已有 backend/target/deps-for-scan.txt
+python backend/scripts/scan_deps_osv.py --json out.json    # 机器可读
+```
+
+- **为什么不用 `npm audit`**：本机 registry 是 `registry.npmmirror.com`，该镜像未实现 `/-/npm/v1/security/*`；
+- **为什么不用 OWASP Dependency-Check**：需下载并维护 NVD 全量数据，CI 成本高；
+- **失败策略**：默认只在 **CRITICAL** 时红，HIGH/MODERATE 列出但不阻塞；
+- **CI**：`.github/workflows/deps-ci.yml`（每周一 + pom / lock / 脚本变更触发）。
