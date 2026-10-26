@@ -35,6 +35,9 @@
     <!-- Jackson 2 不在 Boot 4 的 BOM 里（它托管的是 tools.jackson 3.x）：2.21.5 由 jjwt-jackson 0.13.0 带进来，
          注入点因此是 dependencyManagement 而不是属性。补丁版 2.21.7 修掉 5×HIGH + 2×MODERATE。 -->
     <jackson2.version>2.21.7</jackson2.version>
+    <!-- 风格门禁（问题清单 E-003 最后一块，CR-151）：插件 3.6.0 显式配 10.x 规则引擎，
+         不追 14.x（插件兼容面未验证）；规则集见 config/checkstyle/checkstyle.xml -->
+    <checkstyle.version>10.26.1</checkstyle.version>
   </properties>
 
   <dependencyManagement>
@@ -267,6 +270,37 @@
         <executions>
           <execution>
             <id>spotbugs-check</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- 风格门禁（问题清单 E-003 最后一块，CR-151）：Checkstyle 绑 verify，
+           使既有 `mvn verify`（及 CI 的 `mvn -B verify`）自动获得检查，无需改 CI 文件。
+           规则集刻意最小化，理由见 config/checkstyle/checkstyle.xml 顶部注释。 -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <version>3.6.0</version>
+        <configuration>
+          <configLocation>${project.basedir}/config/checkstyle/checkstyle.xml</configLocation>
+          <includeTestSourceDirectory>false</includeTestSourceDirectory>
+          <failOnViolation>true</failOnViolation>
+          <violationSeverity>warning</violationSeverity>
+          <consoleOutput>true</consoleOutput>
+        </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>com.puppycrawl.tools</groupId>
+            <artifactId>checkstyle</artifactId>
+            <version>${checkstyle.version}</version>
+          </dependency>
+        </dependencies>
+        <executions>
+          <execution>
+            <id>checkstyle-check</id>
             <phase>verify</phase>
             <goals>
               <goal>check</goal>

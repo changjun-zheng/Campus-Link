@@ -14,7 +14,6 @@ import com.campuslink.module.forum.application.PostViewCounter;
 import com.campuslink.module.forum.application.cmd.AcceptReplyCommand;
 import com.campuslink.module.forum.application.cmd.ForumResults.InteractionResult;
 import com.campuslink.module.forum.application.cmd.ForumResults.MyPostSummary;
-import com.campuslink.module.forum.application.cmd.ForumResults.PostDetail;
 import com.campuslink.module.forum.application.cmd.ForumResults.PostSummary;
 import com.campuslink.module.forum.application.cmd.ForumResults.PublishedPost;
 import com.campuslink.module.forum.application.cmd.ForumResults.SimilarPostResult;
