@@ -6927,6 +6927,9 @@
             "type": "string",
             "format": "date-time"
           },
+          "grade": {
+            "type": "string"
+          },
           "postCount": {
             "type": "integer",
             "format": "int32"

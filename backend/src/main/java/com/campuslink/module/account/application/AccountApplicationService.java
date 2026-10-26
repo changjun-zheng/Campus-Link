@@ -20,6 +20,7 @@ import com.campuslink.module.account.domain.gateway.VerificationTicketStore;
 import com.campuslink.module.account.domain.model.Account;
 import com.campuslink.module.account.domain.model.AccountRole;
 import com.campuslink.module.account.domain.model.AccountStatus;
+import com.campuslink.module.account.domain.model.CohortYear;
 import com.campuslink.module.account.domain.model.Contact;
 import com.campuslink.module.account.domain.model.StudentId;
 import com.campuslink.module.account.domain.service.StudentVerificationService;
@@ -101,8 +102,14 @@ public class AccountApplicationService {
 
         Account account;
         try {
+            // 入学年级快照（CR-145 届徽章）：建号前读一次名册行（此刻尚未占用，行必为 available），
+            // 归一后随账号落库。查不到（并发占用 / bypass）不快照为 null，不影响注册成败——
+            // 年级是展示资料，不是注册前置；随后 occupy 失败仍会整体回滚
+            String cohortYear = rosterGateway.findAvailableByHash(codec.hash(studentId))
+                    .map(record -> CohortYear.normalize(record.grade()))
+                    .orElse(null);
             account = accountRepository.save(Account.registered(
-                    contact.email(), contact.phone(), StudentId.of(studentId), command.nickname()));
+                    contact.email(), contact.phone(), StudentId.of(studentId), command.nickname(), cohortYear));
         } catch (AccountConflictException e) {
             // 邮箱 / 手机号冲突可明确提示（二者均非名册信息）；学号冲突必须与其它核验失败**同提示**，
             // 否则可据提示差异枚举出"哪些学号在名册中且已被占用"（PRD F-ACC-004 防名册枚举）

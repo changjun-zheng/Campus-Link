@@ -43,8 +43,56 @@ const form = reactive({
   anonymous: false,
 })
 
-/** 常用标签建议（CR-083）：el-select 可搜索可自建，上限 5 个由 multiple-limit 兜底 */
-const TAG_SUGGESTIONS = ['Java', 'Spring Boot', 'Redis', 'MySQL', '前端', 'Vue', '算法', '考研', 'ACM', '实习', '面经']
+/**
+ * 常用标签建议（CR-083 / CR-144）：el-select 可搜索可自建，上限 5 个由 multiple-limit 兜底。
+ * 与 backend/scripts/data/D002__seed_tags.py 的种子集同源（两处各维护一份是刻意代价——
+ * 标签是运营数据、建议是 UI 常量，联动的唯一约定是本注释）。
+ */
+const TAG_SUGGESTIONS = [
+  // 课程名
+  '数据结构', '操作系统', '计算机网络', '数据库原理', 'Java 程序设计',
+  'Web 开发', '软件工程', '计算机组成原理', '编译原理', '人工智能',
+  '离散数学', '线性代数',
+  // 技术栈
+  'Java', 'Spring Boot', 'MySQL', 'Redis', 'Vue', 'Python', 'C',
+  'C++', 'JavaScript', 'TypeScript', 'Linux', 'Git', 'Docker',
+  // 竞赛
+  '蓝桥杯', '软件杯', 'ACM', '互联网+', '挑战杯', '数学建模',
+  // 求职与通用
+  '实习', '校招', '面经', '考研', '课程设计', '期末复习',
+  '学习笔记', '前端', '算法', '大一', '大二', '大三', '大四',
+]
+
+/**
+ * 面经结构化模板（CR-143 / CR-075 建议 N5）：面经版块发帖引导，正文为空时一键填入骨架。
+ * 只做 Markdown 预填不做结构化表单——「引导填写」即达成建议目标，将来若做结构化解析
+ * （CR-038 面经追问解禁时）按固定小节标题提取即可。
+ */
+const INTERVIEW_TEMPLATE = `## 基本信息
+
+- 公司：
+- 岗位：
+- 轮次：一面 / 二面 / 三面 / HR 面
+- 时间与形式：如 2026-10 · 线上
+
+## 面试问题
+
+1.
+2.
+
+## 心得与建议
+
+`
+
+const showTemplateHint = computed(
+  () => !editing.value && form.boardCode === 'interview' && !form.contentMd.trim(),
+)
+
+function applyInterviewTemplate() {
+  if (!showTemplateHint.value) return
+  form.contentMd = INTERVIEW_TEMPLATE
+  contentEl.value?.focus()
+}
 
 /* ─── 草稿箱状态 ─── */
 const draftRestored = ref(false)
@@ -354,9 +402,17 @@ async function submit() {
       <input
         v-model="form.title"
         maxlength="100"
-        placeholder="输入标题（1~100 字）"
+        :placeholder="form.boardCode === 'interview' ? '如：XX 公司 Java 后端一面面经' : '输入标题（1~100 字）'"
         class="block w-full border-0 bg-transparent py-6 text-[26px] leading-snug font-medium text-ink outline-none placeholder:text-ink-meta max-md:text-[22px]"
       />
+
+      <!-- 面经模板入口（CR-143）：仅面经版块 + 正文为空时出现，填入后自动隐藏 -->
+      <div v-if="showTemplateHint" class="flex flex-wrap items-center gap-1.5 pb-4 text-note text-ink-meta">
+        <span>第一次写面经？按固定小节组织更易读——</span>
+        <button type="button" class="font-medium text-primary hover:underline" @click="applyInterviewTemplate">
+          填入面经模板（公司 / 岗位 / 轮次 / 面试问题）
+        </button>
+      </div>
       <!-- 标签（CR-083）：可搜索可自建，最多 5 个 -->
       <el-select
         v-model="form.tags"

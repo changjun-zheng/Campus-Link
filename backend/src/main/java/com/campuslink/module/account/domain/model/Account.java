@@ -70,7 +70,17 @@ public class Account {
 
     /** 工厂方法重载（CR-093 / F-011）：手机号渠道——email 与 phone **恰好其一**由调用方保证，聚合只拦双空 */
     public static Account registered(EmailAddress email, PhoneNumber phone, StudentId studentId, String nickname) {
-        return new Account(null, email, phone, studentId, nickname.trim(), null, null, null, null, null,
+        return registered(email, phone, studentId, nickname, null);
+    }
+
+    /**
+     * 工厂方法重载（CR-145 届徽章）：注册时快照名册入学年级（{@code CohortYear.normalize} 归一后的
+     * 4 位年份，可空——名册无年级 / bypass / 提取不出时为 null）。年级是名册快照**只读**资料，
+     * 无编辑入口；注销匿名化会连它一起清空（CR-127 的 13 列之一）。
+     */
+    public static Account registered(EmailAddress email, PhoneNumber phone, StudentId studentId, String nickname,
+            String grade) {
+        return new Account(null, email, phone, studentId, nickname.trim(), null, null, null, grade, null,
                 AccountRole.USER, AccountStatus.ACTIVE, true, false, null, null, null);
     }
 

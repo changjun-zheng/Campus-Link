@@ -72,7 +72,7 @@ public class UserProfileApplicationService {
                 stats.postCount(), stats.replyCount());
         CommunityLevel level = CommunityLevel.of(reputation);
         return new PublicProfile(account.getId(), account.getNickname(), account.getMajor(), account.getBio(),
-                account.getCreatedAt(),
+                account.getCreatedAt(), account.getGrade(),
                 stats.postCount(), stats.replyCount(), stats.likeCount(), stats.acceptedCount(),
                 reputation, level.level(), level.displayName(), level.nextThreshold(),
                 level.progressPercent(reputation),
@@ -92,8 +92,12 @@ public class UserProfileApplicationService {
      *
      * <p>{@code nextLevelAt} 为 {@code Long} 且满级时为 {@code null}：「没有下一级」与「下一级门槛是 0」
      * 是两种事实，前端据此不渲染进度条文案。{@code levelProgress} 为 0~100 的整数百分比。
+     *
+     * <p>{@code grade} 为注册时快照的名册入学年级（CR-145 届徽章，{@code CohortYear.normalize} 归一后的
+     * 4 位年份）：null 表示无名册年级（bypass / 名册无值 / 已匿名化），前端不渲染徽章。
      */
     public record PublicProfile(Long id, String nickname, String major, String bio, Instant createdAt,
+                                String grade,
                                 long postCount, long replyCount, long likeCount, long acceptedCount,
                                 long reputation, int level, String levelName, Long nextLevelAt, int levelProgress,
                                 long followerCount, long followingCount) {

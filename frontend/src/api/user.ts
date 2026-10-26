@@ -18,6 +18,8 @@ export interface UserProfileVo {
   bio: string | null
   /** 加入时间，ISO-8601 UTC */
   createdAt: string
+  /** 入学年级（CR-145 届徽章）：注册时快照名册 grade 归一后的 4 位年份；null 不渲染徽章 */
+  grade: string | null
   postCount: number
   /** 可见回帖数（CR-138）：与主页回帖时间线的 total 同源 */
   replyCount: number

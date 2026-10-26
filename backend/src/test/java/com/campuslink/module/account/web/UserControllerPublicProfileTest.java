@@ -62,10 +62,10 @@ class UserControllerPublicProfileTest {
     }
 
     @Test
-    @DisplayName("正常返回：展示四列 + 六个计数 + 等级组逐位落到 VO（long 计数饱和收窄成 int）")
+    @DisplayName("正常返回：展示列（含入学年级）+ 六个计数 + 等级组逐位落到 VO（long 计数饱和收窄成 int）")
     void mapsProfileAndCountsOntoVo() {
         when(userProfileApplicationService.publicProfileOf(eq(USER_ID), anyString())).thenReturn(new PublicProfile(
-                USER_ID, "张三同学", "软件工程", "在写代码", CREATED_AT,
+                USER_ID, "张三同学", "软件工程", "在写代码", CREATED_AT, "2024",
                 12L, 7L, 30L, 3L, 109L, 2, "学徒", 200L, 39, 34L, 5L));
 
         UserProfileVo vo = controller.profile(USER_ID, new MockHttpServletRequest()).data();
@@ -75,6 +75,7 @@ class UserControllerPublicProfileTest {
         assertThat(vo.major()).isEqualTo("软件工程");
         assertThat(vo.bio()).isEqualTo("在写代码");
         assertThat(vo.createdAt()).isEqualTo(CREATED_AT);
+        assertThat(vo.grade()).isEqualTo("2024");
         assertThat(vo.postCount()).isEqualTo(12);
         assertThat(vo.replyCount()).isEqualTo(7);
         assertThat(vo.likeCount()).isEqualTo(30);
@@ -114,7 +115,7 @@ class UserControllerPublicProfileTest {
     @DisplayName("IP 接线：无 X-Forwarded-For 取 remoteAddr，有则取首段——传给 application 的是 IP 不是 userId")
     void passesClientIpExtractedFromRequest() {
         when(userProfileApplicationService.publicProfileOf(eq(USER_ID), anyString())).thenReturn(new PublicProfile(
-                USER_ID, "张三同学", "软件工程", "在写代码", CREATED_AT,
+                USER_ID, "张三同学", "软件工程", "在写代码", CREATED_AT, null,
                 0L, 0L, 0L, 0L, 0L, 1, "初入", 50L, 0, 0L, 0L));
 
         MockHttpServletRequest direct = new MockHttpServletRequest();
@@ -134,11 +135,13 @@ class UserControllerPublicProfileTest {
         List<String> fields = Arrays.stream(UserProfileVo.class.getRecordComponents())
                 .map(RecordComponent::getName).toList();
 
-        assertThat(fields).containsExactly("id", "nickname", "major", "bio", "createdAt",
+        // grade 是注册时快照的名册入学年级（CR-145），公开展示列；仍不含 school / avatarUrl（无写入也无展示位）
+        assertThat(fields).containsExactly("id", "nickname", "major", "bio", "createdAt", "grade",
                 "postCount", "replyCount", "likeCount", "acceptedCount",
                 "reputation", "level", "levelName", "nextLevelAt", "levelProgress",
                 "followerCount", "followingCount");
         assertThat(fields).doesNotContain("email", "emailHash", "emailEnc", "phone", "studentId", "studentIdHash",
-                "role", "status", "verified", "anonymized", "deleteAt", "accountType", "following");
+                "role", "status", "verified", "anonymized", "deleteAt", "accountType", "following",
+                "school", "avatarUrl");
     }
 }

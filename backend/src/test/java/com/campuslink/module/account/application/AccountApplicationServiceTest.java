@@ -21,6 +21,7 @@ import com.campuslink.module.account.domain.model.AccountRole;
 import com.campuslink.module.account.domain.model.AccountStatus;
 import com.campuslink.module.account.domain.model.EmailAddress;
 import com.campuslink.module.account.domain.model.StudentId;
+import com.campuslink.module.account.domain.model.StudentRecord;
 import com.campuslink.module.account.domain.service.StudentVerificationService;
 import com.campuslink.module.forum.application.ModerationApplicationService;
 import org.junit.jupiter.api.BeforeEach;
@@ -214,6 +215,7 @@ class AccountApplicationServiceTest {
         stubThroughTicket();
         when(accountRepository.existsByEmailHash(anyString())).thenReturn(false);
         when(accountRepository.save(any(Account.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(rosterGateway.findAvailableByHash(anyString())).thenReturn(Optional.empty());
         when(rosterGateway.occupy(anyString(), any())).thenReturn(false);
 
         assertThatThrownBy(() -> service.register(
@@ -226,11 +228,31 @@ class AccountApplicationServiceTest {
     }
 
     @Test
+    @DisplayName("注册：入学年级快照（CR-145 届徽章）——名册 grade 归一后随账号落库；查不到名册行为 null 不影响注册")
+    void registerSnapshotsCohortYearFromRoster() {
+        stubThroughTicket();
+        when(accountRepository.existsByEmailHash(anyString())).thenReturn(false);
+        when(accountRepository.save(any(Account.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(rosterGateway.findAvailableByHash(anyString()))
+                .thenReturn(Optional.of(new StudentRecord(1L, "hash", "张三", "模拟2024级", null, null, null)));
+        when(rosterGateway.occupy(anyString(), any())).thenReturn(true);
+        when(tokenIssuer.issue(any(), anyString())).thenReturn("jwt-token");
+        when(tokenIssuer.ttlSeconds()).thenReturn(604800L);
+
+        service.register(new RegisterCommand("ticket-1", EMAIL, "123456", "张三"));
+
+        ArgumentCaptor<Account> captor = ArgumentCaptor.forClass(Account.class);
+        verify(accountRepository).save(captor.capture());
+        assertThat(captor.getValue().getGrade()).isEqualTo("2024");
+    }
+
+    @Test
     @DisplayName("注册成功：消费验证码、发布注册事件、返回令牌（事件带昵称，供审计消费方使用）")
     void registerSuccessConsumesCaptchaAndPublishesEvent() {
         stubThroughTicket();
         when(accountRepository.existsByEmailHash(anyString())).thenReturn(false);
         when(accountRepository.save(any(Account.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(rosterGateway.findAvailableByHash(anyString())).thenReturn(Optional.empty());
         when(rosterGateway.occupy(anyString(), any())).thenReturn(true);
         when(tokenIssuer.issue(any(), anyString())).thenReturn("jwt-token");
         when(tokenIssuer.ttlSeconds()).thenReturn(604800L);

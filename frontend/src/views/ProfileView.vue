@@ -344,6 +344,12 @@ watch(userId, () => void loadAll(), { immediate: true })
         <div class="min-w-0 flex-1">
           <div class="flex flex-wrap items-center gap-2">
             <h2 class="min-w-0 truncate text-title-lg font-medium text-ink">{{ profile.nickname }}</h2>
+            <!-- 入学年级徽章（CR-145 届徽章）：注册时快照名册、只读；null（bypass 注册 / 名册无值 /
+                 已匿名化）不渲染。文案「{N} 级」＝入学年份语义，不做毕业年换算（方案 §7 D1） -->
+            <span
+              v-if="profile.grade"
+              class="inline-flex items-center rounded-full bg-bg-hover px-2 py-0.5 text-caption font-medium text-ink-regular"
+            >{{ profile.grade }} 级</span>
             <!-- 等级徽章（F-GAME-001 / CR-138）：只在本页展示，帖子列表 / 组队页不加（会引入每页 N+1 聚合）。
                  点开是计分口径说明，不给用户编辑入口（阈值与权重改口径须另开 CR） -->
             <el-popover placement="bottom-start" trigger="click" :width="236">

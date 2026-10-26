@@ -27,8 +27,10 @@ import java.time.Instant;
  * （「没有下一级」不是 0），{@code levelProgress} 为档内 0~100 的整数百分比。
  * 声望只统计可见内容，故内容被下架 / 取消采纳会使其下降——不记录历史最高（D6）。
  *
- * <p>同理 {@code avatarUrl} / {@code school} / {@code grade} 也不在这里：注册链路从不写入、
- * 学籍名册的 {@code grade} 是「级」而产品口径已定为只展示「届」（CR-036 草案 R-6），下发一个前端不该用的列没有意义。
+ * <p>{@code grade}（CR-145 届徽章）：注册时快照的名册**入学年级**（{@code CohortYear.normalize}
+ * 归一后的 4 位年份，如 "2024"），只读、无编辑入口；null 表示无名册年级（bypass 注册 /
+ * 名册无值 / 已匿名化），前端不渲染徽章。文案用「{grade} 级」、不做毕业年换算（方案 §7 D1）。
+ * 同理 {@code avatarUrl} / {@code school} 仍不在这里：注册链路从不写入、也没有展示位。
  *
  * <p>计数字段是 {@code int}：契约上是整数计数、前端 TS 侧统一 {@code number}，与 {@code PostSummaryVo} 的
  * {@code replyCount} / {@code likeCount} 同形。来源在库里都是 SQL 聚合（{@code COUNT} / {@code SUM} → long），
@@ -36,13 +38,15 @@ import java.time.Instant;
  */
 @Schema(description = "用户公开资料（他人主页资料卡）")
 public record UserProfileVo(Long id, String nickname, String major, String bio, Instant createdAt,
+                            String grade,
                             int postCount, int replyCount, int likeCount, int acceptedCount,
                             int reputation, int level, String levelName, Long nextLevelAt, int levelProgress,
                             int followerCount, int followingCount) {
 
     public static UserProfileVo from(PublicProfile profile) {
         return new UserProfileVo(profile.id(), profile.nickname(), profile.major(), profile.bio(),
-                profile.createdAt(), narrow(profile.postCount()), narrow(profile.replyCount()),
+                profile.createdAt(), profile.grade(),
+                narrow(profile.postCount()), narrow(profile.replyCount()),
                 narrow(profile.likeCount()), narrow(profile.acceptedCount()),
                 narrow(profile.reputation()), profile.level(), profile.levelName(), profile.nextLevelAt(),
                 profile.levelProgress(), narrow(profile.followerCount()), narrow(profile.followingCount()));
