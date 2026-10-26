@@ -54,24 +54,29 @@ class ForumPublicReadTest {
     }
 
     @Test
-    @DisplayName("帖子列表与详情：匿名可读（含 sort=hot——新参数没有把公开读端点变成受保护端点）")
+    @DisplayName("帖子列表与详情：匿名可读（含 sort=hot 与 filter=unanswered——新参数没有把公开读端点变成受保护端点）")
     void postsAreReadableAnonymously() {
-        when(forumQueryService.listPosts(null, "latest", 1, 20, null)).thenReturn(new PageResult<>(
+        when(forumQueryService.listPosts(null, "latest", null, 1, 20, null)).thenReturn(new PageResult<>(
                 List.of(new PostSummary(1L, "qna", "技术问答", "标题", "张三", 0, 0, 0, null, null, "摘要", CREATED_AT, false, false, false)),
                 1, 1, 20));
-        when(forumQueryService.listPosts(null, "hot", 1, 20, null)).thenReturn(new PageResult<>(
+        when(forumQueryService.listPosts(null, "hot", null, 1, 20, null)).thenReturn(new PageResult<>(
                 List.of(new PostSummary(1L, "qna", "技术问答", "标题", "张三", 0, 0, 0, null, null, "摘要", CREATED_AT, false, false, false)),
+                1, 1, 20));
+        when(forumQueryService.listPosts(null, "latest", "unanswered", 1, 20, null)).thenReturn(new PageResult<>(
+                List.of(new PostSummary(2L, "qna", "技术问答", "待解答的题", "张三", 0, 0, 0, null, null, "摘要", CREATED_AT, false, false, false)),
                 1, 1, 20));
         when(forumQueryService.postDetail(1L, null)).thenReturn(new PostDetail(1L, "qna", "技术问答", "QUESTION",
                 "标题", "<p>正文</p>", 42L, "张三", 0, 0, 0, null, false, false, false, CREATED_AT, false));
 
-        var list = postController.list(null, "latest", 1, 20, null);
-        var hotList = postController.list(null, "hot", 1, 20, null);
+        var list = postController.list(null, "latest", null, 1, 20, null);
+        var hotList = postController.list(null, "hot", null, 1, 20, null);
+        var unansweredList = postController.list(null, "latest", "unanswered", 1, 20, null);
         var detail = postController.detail(1L, null, null);
 
         assertThat(list.data().list()).hasSize(1);
         assertThat(list.data().total()).isEqualTo(1);
         assertThat(hotList.data().list()).hasSize(1);
+        assertThat(unansweredList.data().list()).extracting("title").containsExactly("待解答的题");
         assertThat(detail.data().contentHtml()).isEqualTo("<p>正文</p>");
         assertThat(detail.data().likedByMe()).isFalse();
         assertThat(detail.data().favoritedByMe()).isFalse();

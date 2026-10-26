@@ -1989,7 +1989,7 @@
         "tags": [
           "post"
         ],
-        "summary": "帖子列表（公开）：boardCode 缺省为全站；sort=latest（缺省，created_at DESC）或 hot（hot_score DESC，热榜），非法值 400；登录请求每条附带 likedByMe（匿名恒 false）",
+        "summary": "帖子列表（公开）：boardCode 缺省为全站；sort=latest（缺省，created_at DESC）或 hot（hot_score DESC，热榜），非法值 400；filter=unanswered 只回问答版块且未采纳的帖（「等你来答」），非法值 400；登录请求每条附带 likedByMe（匿名恒 false）",
         "operationId": "list",
         "parameters": [
           {
@@ -2007,6 +2007,14 @@
             "schema": {
               "type": "string",
               "default": "latest"
+            }
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
             }
           },
           {

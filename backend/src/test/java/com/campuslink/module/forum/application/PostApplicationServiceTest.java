@@ -129,6 +129,38 @@ class PostApplicationServiceTest {
     }
 
     @Test
+    @DisplayName("发帖入参：JSON 不带 anonymous 字段可正常反序列化（契约：非 required；CR-142 验收发现并修复）")
+    void publishCommandToleratesMissingAnonymous() {
+        tools.jackson.databind.ObjectMapper mapper = new tools.jackson.databind.ObjectMapper();
+        PublishPostCommand command = mapper.readValue(
+                "{\"boardCode\":\"qna\",\"title\":\"标题\",\"contentMd\":\"正文\"}", PublishPostCommand.class);
+
+        assertThat(command.anonymous()).isNull();
+    }
+
+    @Test
+    @DisplayName("发帖入参：anonymous 缺省（null）落库为非匿名——与契约「可不传、缺省 false」一致")
+    void nullAnonymousPublishesAsNonAnonymous() {
+        when(boardRepository.findByCode("qna"))
+                .thenReturn(Optional.of(board(1L, "qna", BoardType.QUESTION)));
+        when(moderationGateway.moderate(any()))
+                .thenReturn(com.campuslink.module.forum.domain.gateway.ModerationGateway.ModerationVerdict.ok());
+        when(postRepository.save(any())).thenAnswer(invocation -> {
+            Post saved = invocation.getArgument(0);
+            return Post.rehydrate(123L, saved.getBoardId(), saved.getAuthorId(), saved.isAnonymous(),
+                    saved.getType(), saved.getTitle(), saved.getContentMd(), saved.getContentHtml(), saved.getStatus(),
+                    saved.getReplyCount(), saved.getLikeCount(), saved.getViewCount(), saved.getCoverUrl(),
+                    saved.getTags(), saved.isAccepted(), saved.getAcceptedReplyId(), null, null);
+        });
+
+        service.publish(42L, new PublishPostCommand("qna", "标题", "正文", null, null));
+
+        ArgumentCaptor<Post> captor = ArgumentCaptor.forClass(Post.class);
+        verify(postRepository).save(captor.capture());
+        assertThat(captor.getValue().isAnonymous()).isFalse();
+    }
+
+    @Test
     @DisplayName("标题命中机审 → 5001，且不落库、正文机审不再触达")
     void moderatedTitleBlocksBeforeContent() {
         when(boardRepository.findByCode("qna"))

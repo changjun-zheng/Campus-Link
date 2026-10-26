@@ -32,6 +32,7 @@ import com.campuslink.module.forum.domain.model.Board;
 import com.campuslink.module.forum.domain.model.LikeTargetType;
 import com.campuslink.module.forum.domain.model.MyReplyRow;
 import com.campuslink.module.forum.domain.model.Post;
+import com.campuslink.module.forum.domain.model.PostListFilter;
 import com.campuslink.module.forum.domain.model.PostSortOrder;
 import com.campuslink.module.forum.domain.model.PublicReplyRow;
 import com.campuslink.module.forum.domain.model.Reply;
@@ -97,19 +98,23 @@ public class ForumQueryApplicationService {
 
     /**
      * 帖子列表：boardCode 缺省为全站；sort 缺省 {@code latest}（= 引入热榜之前完全一致的行为），
-     * {@code hot} 走 hot_score 倒序（F-FORUM-003）；不存在的版块按资源不存在处理（设计 §3.2）。
+     * {@code hot} 走 hot_score 倒序（F-FORUM-003）；filter 缺省不筛，{@code unanswered}
+     * 只回问答帖且未采纳（CR-142「等你来答」）；不存在的版块按资源不存在处理（设计 §3.2）。
      *
      * <p>
-     * sort 非法值 / 空串 → 1001，**不静默归一到 latest**——与同端点族 {@code days} 只受理 7/30/90 的口径一致：
-     * 静默降级会让调用方以为拿到了热榜、实际拿到的是最新序，这种错法查不出来。
+     * sort / filter 非法值 / 空串 → 1001，**不静默归一**——与同端点族 {@code days} 只受理 7/30/90 的口径一致：
+     * 静默降级会让调用方以为拿到了热榜或待解答列表、实际拿到的是最新序全量，这种错法查不出来。
      */
-    public PageResult<PostSummary> listPosts(String boardCode, String sort, int page, int size, Long viewerId) {
+    public PageResult<PostSummary> listPosts(String boardCode, String sort, String filter, int page, int size,
+            Long viewerId) {
         PostSortOrder sortOrder = PostSortOrder.fromCode(sort)
+                .orElseThrow(() -> new ApiException(ResultCode.INVALID_PARAM));
+        PostListFilter listFilter = PostListFilter.fromCode(filter)
                 .orElseThrow(() -> new ApiException(ResultCode.INVALID_PARAM));
         int currentPage = normalizePage(page);
         int pageSize = normalizeSize(size);
         Long boardId = boardIdOf(boardCode);
-        PageResult<Post> found = postRepository.findPage(boardId, sortOrder, blockedAuthorIds(viewerId),
+        PageResult<Post> found = postRepository.findPage(boardId, sortOrder, listFilter, blockedAuthorIds(viewerId),
                 reportedTargetsOf(viewerId).postIds(), currentPage, pageSize);
         return new PageResult<>(toSummaries(found.items(), viewerId), found.total(), currentPage, pageSize);
     }

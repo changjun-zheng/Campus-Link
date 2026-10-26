@@ -23,6 +23,7 @@ import com.campuslink.module.forum.domain.model.Board;
 import com.campuslink.module.forum.domain.model.BoardType;
 import com.campuslink.module.forum.domain.model.MyReplyRow;
 import com.campuslink.module.forum.domain.model.Post;
+import com.campuslink.module.forum.domain.model.PostListFilter;
 import com.campuslink.module.forum.domain.model.PostSortOrder;
 import com.campuslink.module.forum.domain.model.PostStatus;
 import com.campuslink.module.forum.domain.model.Reply;
@@ -97,12 +98,12 @@ class ForumQueryApplicationServiceTest {
     @Test
     @DisplayName("帖子列表：昵称一页一次批量查，版块名随项带出，查不到的昵称回落「已注销用户」")
     void listPostsResolvesBoardAndNicknamesInBatch() {
-        when(postRepository.findPage(null, PostSortOrder.LATEST, java.util.Set.of(), java.util.Set.of(), 1, 20))
+        when(postRepository.findPage(null, PostSortOrder.LATEST, PostListFilter.NONE, java.util.Set.of(), java.util.Set.of(), 1, 20))
                 .thenReturn(new PageResult<>(List.of(post(1L, 100L), post(2L, 200L)), 2, 1, 20));
         when(boardRepository.findAllEnabled()).thenReturn(List.of(board(1L, "qna", "技术问答")));
         when(accountApplicationService.nicknamesOf(List.of(100L, 200L))).thenReturn(Map.of(100L, "张三"));
 
-        PageResult<PostSummary> page = service.listPosts(null, "latest", 1, 20, null);
+        PageResult<PostSummary> page = service.listPosts(null, "latest", null, 1, 20, null);
 
         assertThat(page.total()).isEqualTo(2);
         assertThat(page.items()).extracting(PostSummary::authorNickname)
@@ -115,7 +116,7 @@ class ForumQueryApplicationServiceTest {
     @Test
     @DisplayName("列表点赞回显（CR-080）：登录时一页**一次**批量取已赞集合，并逐条落到 likedByMe")
     void listPostsMarksLikedByMeFromASingleBatchQuery() {
-        when(postRepository.findPage(null, PostSortOrder.LATEST, java.util.Set.of(), java.util.Set.of(), 1, 20))
+        when(postRepository.findPage(null, PostSortOrder.LATEST, PostListFilter.NONE, java.util.Set.of(), java.util.Set.of(), 1, 20))
                 .thenReturn(new PageResult<>(List.of(post(1L, 101L), post(2L, 102L), post(3L, 103L)), 3, 1, 20));
         when(boardRepository.findAllEnabled()).thenReturn(List.of());
         when(accountApplicationService.nicknamesOf(List.of(101L, 102L, 103L)))
@@ -124,7 +125,7 @@ class ForumQueryApplicationServiceTest {
                 com.campuslink.module.forum.domain.model.LikeTargetType.POST, List.of(1L, 2L, 3L)))
                 .thenReturn(java.util.Set.of(2L));
 
-        PageResult<PostSummary> page = service.listPosts(null, "latest", 1, 20, 42L);
+        PageResult<PostSummary> page = service.listPosts(null, "latest", null, 1, 20, 42L);
 
         assertThat(page.items()).extracting(PostSummary::likedByMe).containsExactly(false, true, false);
         // 断言"只发生一次、且问的是整页 id"——逐条查（N+1）会在这里红
@@ -135,12 +136,12 @@ class ForumQueryApplicationServiceTest {
     @Test
     @DisplayName("列表点赞回显（CR-080）：匿名请求**一次仓储都不调**，likedByMe 恒 false（与详情同口径）")
     void anonymousListNeverTouchesLikeRepository() {
-        when(postRepository.findPage(null, PostSortOrder.LATEST, java.util.Set.of(), java.util.Set.of(), 1, 20))
+        when(postRepository.findPage(null, PostSortOrder.LATEST, PostListFilter.NONE, java.util.Set.of(), java.util.Set.of(), 1, 20))
                 .thenReturn(new PageResult<>(List.of(post(1L, 101L)), 1, 1, 20));
         when(boardRepository.findAllEnabled()).thenReturn(List.of());
         when(accountApplicationService.nicknamesOf(List.of(101L))).thenReturn(Map.of(101L, "甲"));
 
-        PageResult<PostSummary> page = service.listPosts(null, "latest", 1, 20, null);
+        PageResult<PostSummary> page = service.listPosts(null, "latest", null, 1, 20, null);
 
         assertThat(page.items()).extracting(PostSummary::likedByMe).containsExactly(false);
         org.mockito.Mockito.verifyNoInteractions(likeRepository);
@@ -149,12 +150,12 @@ class ForumQueryApplicationServiceTest {
     @Test
     @DisplayName("匿名帖列表：昵称恒为「匿名用户」且 anonymous=true（即使批量昵称里能取到真实名）")
     void anonymousPostIsMaskedInList() {
-        when(postRepository.findPage(null, PostSortOrder.LATEST, java.util.Set.of(), java.util.Set.of(), 1, 20))
+        when(postRepository.findPage(null, PostSortOrder.LATEST, PostListFilter.NONE, java.util.Set.of(), java.util.Set.of(), 1, 20))
                 .thenReturn(new PageResult<>(List.of(anonymousPost(1L, 100L)), 1, 1, 20));
         when(boardRepository.findAllEnabled()).thenReturn(List.of(board(1L, "qna", "技术问答")));
         when(accountApplicationService.nicknamesOf(any())).thenReturn(Map.of(100L, "张三"));
 
-        PostSummary item = service.listPosts(null, "latest", 1, 20, null).items().getFirst();
+        PostSummary item = service.listPosts(null, "latest", null, 1, 20, null).items().getFirst();
 
         assertThat(item.authorNickname()).isEqualTo("匿名用户");
         assertThat(item.anonymous()).isTrue();
@@ -183,25 +184,25 @@ class ForumQueryApplicationServiceTest {
     @Test
     @DisplayName("列表点赞回显（CR-080）：空页不去查已赞集合（无 id 可问，省一次往返）")
     void emptyListSkipsLikeLookup() {
-        when(postRepository.findPage(null, PostSortOrder.LATEST, java.util.Set.of(), java.util.Set.of(), 1, 20))
+        when(postRepository.findPage(null, PostSortOrder.LATEST, PostListFilter.NONE, java.util.Set.of(), java.util.Set.of(), 1, 20))
                 .thenReturn(new PageResult<>(List.of(), 0, 1, 20));
         when(boardRepository.findAllEnabled()).thenReturn(List.of());
 
-        assertThat(service.listPosts(null, "latest", 1, 20, 42L).items()).isEmpty();
+        assertThat(service.listPosts(null, "latest", null, 1, 20, 42L).items()).isEmpty();
         org.mockito.Mockito.verifyNoInteractions(likeRepository);
     }
 
     @Test
     @DisplayName("分页归一：page<1 → 1、size>100 → 100，响应回显生效值")
     void pagingIsNormalized() {
-        when(postRepository.findPage(null, PostSortOrder.LATEST, java.util.Set.of(), java.util.Set.of(), 1, 100)).thenReturn(new PageResult<>(List.of(), 0, 1, 100));
+        when(postRepository.findPage(null, PostSortOrder.LATEST, PostListFilter.NONE, java.util.Set.of(), java.util.Set.of(), 1, 100)).thenReturn(new PageResult<>(List.of(), 0, 1, 100));
         when(boardRepository.findAllEnabled()).thenReturn(List.of());
 
-        PageResult<PostSummary> page = service.listPosts(null, "latest", 0, 500, null);
+        PageResult<PostSummary> page = service.listPosts(null, "latest", null, 0, 500, null);
 
         assertThat(page.page()).isEqualTo(1);
         assertThat(page.size()).isEqualTo(100);
-        verify(postRepository).findPage(null, PostSortOrder.LATEST, java.util.Set.of(), java.util.Set.of(), 1, 100);
+        verify(postRepository).findPage(null, PostSortOrder.LATEST, PostListFilter.NONE, java.util.Set.of(), java.util.Set.of(), 1, 100);
     }
 
     @Test
@@ -209,23 +210,23 @@ class ForumQueryApplicationServiceTest {
     void unknownBoardCodeIsNotFound() {
         when(boardRepository.findByCode("nope")).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.listPosts("nope", "latest", 1, 20, null))
+        assertThatThrownBy(() -> service.listPosts("nope", "latest", null, 1, 20, null))
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
 
-        verify(postRepository, never()).findPage(any(), any(), any(), any(), anyInt(), anyInt());
+        verify(postRepository, never()).findPage(any(), any(), any(), any(), any(), anyInt(), anyInt());
     }
 
     @Test
     @DisplayName("摘要：去 Markdown 记号后截断到 120 字（服务端截断，前端不兜底）")
     void summaryIsStrippedAndTruncated() {
         String longMarkdown = "# 标题\n\n" + "正文".repeat(70);
-        when(postRepository.findPage(null, PostSortOrder.LATEST, java.util.Set.of(), java.util.Set.of(), 1, 20))
+        when(postRepository.findPage(null, PostSortOrder.LATEST, PostListFilter.NONE, java.util.Set.of(), java.util.Set.of(), 1, 20))
                 .thenReturn(new PageResult<>(List.of(post(1L, 100L, longMarkdown)), 1, 1, 20));
         when(boardRepository.findAllEnabled()).thenReturn(List.of());
         when(accountApplicationService.nicknamesOf(any())).thenReturn(Map.of(100L, "张三"));
 
-        String summary = service.listPosts(null, "latest", 1, 20, null).items().get(0).summary();
+        String summary = service.listPosts(null, "latest", null, 1, 20, null).items().get(0).summary();
 
         assertThat(summary).doesNotContain("#").hasSize(120);
     }
@@ -233,31 +234,55 @@ class ForumQueryApplicationServiceTest {
     @Test
     @DisplayName("sort：hot（含大写与前后空白）按热榜查；latest 与缺省走同一路径（回归保护）")
     void sortAcceptsHotAndLatest() {
-        when(postRepository.findPage(any(), any(), any(), any(), anyInt(), anyInt()))
+        when(postRepository.findPage(any(), any(), any(), any(), any(), anyInt(), anyInt()))
                 .thenReturn(new PageResult<>(List.of(), 0, 1, 20));
         when(boardRepository.findAllEnabled()).thenReturn(List.of());
 
-        service.listPosts(null, "hot", 1, 20, null);
-        service.listPosts(null, "HOT", 1, 20, null);
-        service.listPosts(null, "  hot  ", 1, 20, null);
-        verify(postRepository, times(3)).findPage(null, PostSortOrder.HOT, java.util.Set.of(), java.util.Set.of(), 1, 20);
+        service.listPosts(null, "hot", null, 1, 20, null);
+        service.listPosts(null, "HOT", null, 1, 20, null);
+        service.listPosts(null, "  hot  ", null, 1, 20, null);
+        verify(postRepository, times(3)).findPage(null, PostSortOrder.HOT, PostListFilter.NONE, java.util.Set.of(), java.util.Set.of(), 1, 20);
 
-        service.listPosts(null, "latest", 1, 20, null);
-        service.listPosts(null, "LATEST", 1, 20, null);
-        verify(postRepository, times(2)).findPage(null, PostSortOrder.LATEST, java.util.Set.of(), java.util.Set.of(), 1, 20);
+        service.listPosts(null, "latest", null, 1, 20, null);
+        service.listPosts(null, "LATEST", null, 1, 20, null);
+        verify(postRepository, times(2)).findPage(null, PostSortOrder.LATEST, PostListFilter.NONE, java.util.Set.of(), java.util.Set.of(), 1, 20);
     }
 
     @Test
     @DisplayName("sort：非法值 / 空串 / null → 1001，且不查仓储（不静默归一到最新序）")
     void sortRejectsUnknownValue() {
         for (String bad : Arrays.asList("foo", "new", "", "   ", null)) {
-            assertThatThrownBy(() -> service.listPosts(null, bad, 1, 20, null))
+            assertThatThrownBy(() -> service.listPosts(null, bad, null, 1, 20, null))
                     .as("sort=%s 应被拒绝", bad)
                     .isInstanceOfSatisfying(ApiException.class,
                             e -> assertThat(e.getCode()).isEqualTo(ResultCode.INVALID_PARAM));
         }
 
-        verify(postRepository, never()).findPage(any(), any(), any(), any(), anyInt(), anyInt());
+        verify(postRepository, never()).findPage(any(), any(), any(), any(), any(), anyInt(), anyInt());
+    }
+
+    @Test
+    @DisplayName("filter：unanswered（含大写）透传待解答筛选、缺省不筛；非法值 / 空串 → 1001 且不查仓储（CR-142）")
+    void filterAcceptsUnansweredOnly() {
+        when(postRepository.findPage(any(), any(), any(), any(), any(), anyInt(), anyInt()))
+                .thenReturn(new PageResult<>(List.of(), 0, 1, 20));
+        when(boardRepository.findAllEnabled()).thenReturn(List.of());
+
+        service.listPosts(null, "latest", "unanswered", 1, 20, null);
+        service.listPosts(null, "latest", "UNANSWERED", 1, 20, null);
+        verify(postRepository, times(2)).findPage(null, PostSortOrder.LATEST, PostListFilter.UNANSWERED,
+                java.util.Set.of(), java.util.Set.of(), 1, 20);
+
+        service.listPosts(null, "latest", null, 1, 20, null);
+        verify(postRepository).findPage(null, PostSortOrder.LATEST, PostListFilter.NONE,
+                java.util.Set.of(), java.util.Set.of(), 1, 20);
+
+        for (String bad : Arrays.asList("solved", "foo", "", "   ")) {
+            assertThatThrownBy(() -> service.listPosts(null, "latest", bad, 1, 20, null))
+                    .as("filter=%s 应被拒绝", bad)
+                    .isInstanceOfSatisfying(ApiException.class,
+                            e -> assertThat(e.getCode()).isEqualTo(ResultCode.INVALID_PARAM));
+        }
     }
 
     @Test
@@ -642,20 +667,20 @@ class ForumQueryApplicationServiceTest {
         when(reportRepository.findPendingTargetsByReporter(42L))
                 .thenReturn(new com.campuslink.module.forum.domain.model.ReportedTargets(
                         java.util.Set.of(7L), java.util.Set.of()));
-        when(postRepository.findPage(null, PostSortOrder.LATEST, java.util.Set.of(), java.util.Set.of(7L), 1, 20))
+        when(postRepository.findPage(null, PostSortOrder.LATEST, PostListFilter.NONE, java.util.Set.of(), java.util.Set.of(7L), 1, 20))
                 .thenReturn(new PageResult<>(List.of(post(8L, 100L)), 1, 1, 20));
         when(boardRepository.findAllEnabled()).thenReturn(List.of(board(1L, "qna", "技术问答")));
         when(accountApplicationService.nicknamesOf(any())).thenReturn(java.util.Map.of(100L, "作者乙"));
 
-        PageResult<PostSummary> result = service.listPosts(null, "latest", 1, 20, 42L);
+        PageResult<PostSummary> result = service.listPosts(null, "latest", null, 1, 20, 42L);
 
         assertThat(result.items()).extracting(PostSummary::id).containsExactly(8L);
-        verify(postRepository).findPage(null, PostSortOrder.LATEST, java.util.Set.of(),
+        verify(postRepository).findPage(null, PostSortOrder.LATEST, PostListFilter.NONE, java.util.Set.of(),
                 java.util.Set.of(7L), 1, 20);
 
-        when(postRepository.findPage(null, PostSortOrder.LATEST, java.util.Set.of(), java.util.Set.of(), 1, 20))
+        when(postRepository.findPage(null, PostSortOrder.LATEST, PostListFilter.NONE, java.util.Set.of(), java.util.Set.of(), 1, 20))
                 .thenReturn(new PageResult<>(List.of(), 0, 1, 20));
-        service.listPosts(null, "latest", 1, 20, null);
+        service.listPosts(null, "latest", null, 1, 20, null);
         verify(reportRepository, never()).findPendingTargetsByReporter(org.mockito.ArgumentMatchers.isNull());
     }
 

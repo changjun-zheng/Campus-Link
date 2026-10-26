@@ -13,6 +13,9 @@ public record PublishPostCommand(
         @NotBlank(message = "正文不能为空")
         @Size(max = ContentLimits.MAX_CHARS, message = ContentLimits.MAX_CHARS_MESSAGE) String contentMd,
         @Size(max = 5, message = "标签最多 5 个") List<@Size(max = 32, message = "单个标签最长 32 字") String> tags,
-        // 匿名发布（F-FORUM-010）：缺省 false；发布后不可切换
-        boolean anonymous) {
+        // 匿名发布（F-FORUM-010）：缺省 false；发布后不可切换。用包装类型而非原始 boolean——
+        // Jackson 3（Boot 4 / tools.jackson）对缺失的原始类型字段按 null 映射并直接抛
+        // Cannot map null into type boolean，而契约里 anonymous 不在 required（可以不传）；
+        // 包装类型缺省为 null，消费点以 Boolean.TRUE.equals 判定，缺省即非匿名
+        Boolean anonymous) {
 }

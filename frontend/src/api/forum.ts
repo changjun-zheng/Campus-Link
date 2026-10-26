@@ -101,11 +101,26 @@ export const listBoards = () => get<BoardVo[]>('/boards')
 /** 全站列表排序（F-FORUM-003）：latest = created_at DESC（缺省）；hot = hot_score DESC（热榜，CR-058） */
 export type PostSort = 'latest' | 'hot'
 
-/** boardCode 缺省即全站最新；分页 page 从 1 起、size 上限 100（设计 §3.2）；非法 sort 后端 400 / 1001 */
-export const listPosts = (page = 1, size = 20, boardCode?: string, sort: PostSort = 'latest') => {
+/** 列表内容筛选（CR-142「等你来答」）：unanswered = 问答帖且未采纳；缺省不筛。非法值后端 400 / 1001 */
+export type PostFilter = 'unanswered'
+
+/**
+ * boardCode 缺省即全站最新；分页 page 从 1 起、size 上限 100（设计 §3.2）；
+ * 非法 sort / filter 后端 400 / 1001（不静默归一）
+ */
+export const listPosts = (
+  page = 1,
+  size = 20,
+  boardCode?: string,
+  sort: PostSort = 'latest',
+  filter?: PostFilter,
+) => {
   const query = new URLSearchParams({ page: String(page), size: String(size), sort })
   if (boardCode) {
     query.set('boardCode', boardCode)
+  }
+  if (filter) {
+    query.set('filter', filter)
   }
   return get<PageVo<PostSummaryVo>>(`/posts?${query.toString()}`)
 }

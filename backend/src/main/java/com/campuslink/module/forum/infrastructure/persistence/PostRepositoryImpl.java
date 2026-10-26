@@ -6,8 +6,10 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.campuslink.module.forum.domain.gateway.PageResult;
 import com.campuslink.module.forum.domain.gateway.PostRepository;
+import com.campuslink.module.forum.domain.model.BoardType;
 import com.campuslink.module.forum.domain.model.HotScoreInput;
 import com.campuslink.module.forum.domain.model.Post;
+import com.campuslink.module.forum.domain.model.PostListFilter;
 import com.campuslink.module.forum.domain.model.PostSortOrder;
 import com.campuslink.module.forum.domain.model.PostStatus;
 import com.campuslink.module.forum.domain.model.SimilarPostRow;
@@ -28,7 +30,8 @@ public class PostRepositoryImpl implements PostRepository {
     private final PostMapper postMapper;
 
     @Override
-    public PageResult<Post> findPage(Long boardId, PostSortOrder sort, Collection<Long> excludedAuthorIds,
+    public PageResult<Post> findPage(Long boardId, PostSortOrder sort, PostListFilter filter,
+                                     Collection<Long> excludedAuthorIds,
                                      Collection<Long> excludedPostIds, int page, int size) {
         LambdaQueryWrapper<PostDO> query = new LambdaQueryWrapper<>();
         if (boardId != null) {
@@ -36,6 +39,13 @@ public class PostRepositoryImpl implements PostRepository {
         }
         query.eq(PostDO::getStatus, PostStatus.PUBLISHED.name())
                 .eq(PostDO::getIsDeleted, false);
+        // 「等你来答」（CR-142）：待解答 = 问答帖且未采纳。两个条件都在 SQL 侧完成，
+        // total 与查询同源；限定 type=QUESTION 是语义要求——讨论帖 is_accepted 恒 0，
+        // 不限定类型会把全部讨论帖误判成"待解答"
+        if (filter == PostListFilter.UNANSWERED) {
+            query.eq(PostDO::getType, BoardType.QUESTION.name())
+                    .eq(PostDO::getIsAccepted, false);
+        }
         // 拉黑过滤在 SQL 侧完成：total 与查询条件同源，翻页不会出现"少了但计数还在"（CR-129）。
         // 匿名帖例外（CR-139 / D4）：按真实作者过滤会让"看不到某人的匿名帖"变成身份侧信道，
         // 故条件写成 (is_anonymous = 1 OR author_id NOT IN (...))

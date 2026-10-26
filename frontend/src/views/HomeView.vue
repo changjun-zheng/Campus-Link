@@ -153,10 +153,23 @@ async function loadLatest() {
   }
 }
 
+/** 右栏「等你来答」Top5（CR-142，N1）：问答帖且未采纳，最新在前；0 回答高亮提示最需要帮助 */
+const unansweredTop5 = ref<PostSummaryVo[]>([])
+
+async function loadUnanswered() {
+  try {
+    const res = await listPosts(1, 5, undefined, 'latest', 'unanswered')
+    unansweredTop5.value = res.list
+  } catch {
+    unansweredTop5.value = []
+  }
+}
+
 onMounted(() => {
   void loadFirst()
   loadHotTop()
   loadLatest()
+  loadUnanswered()
 })
 
 const myEntries = [
@@ -326,6 +339,39 @@ const myEntries = [
           </li>
         </ol>
         <p v-else class="text-note text-ink-meta">热榜计算中，稍后再来看</p>
+      </el-card>
+
+      <!-- 等你来答（CR-142，N1）：问答帖且未采纳，把「提问 → 回答 → 采纳」循环的供给侧亮出来 -->
+      <el-card shadow="never" class="mt-4" :body-style="{ padding: '16px' }">
+        <template #header>
+          <div class="flex items-center justify-between">
+            <span class="font-medium">等你来答</span>
+            <RouterLink
+              to="/board/qna?filter=unanswered"
+              class="text-caption text-link hover:underline"
+            >更多</RouterLink>
+          </div>
+        </template>
+        <ol v-if="unansweredTop5.length">
+          <li
+            v-for="(p, i) in unansweredTop5"
+            :key="p.id"
+            class="-mx-2 flex items-start gap-2 rounded-md border-b-[0.5px] border-divider px-2 py-2 transition-colors duration-fast ease-standard last:border-b-0 hover:bg-bg-hover"
+          >
+            <span class="inline-flex h-5 w-5 flex-none items-center justify-center rounded-sm text-caption tabular-nums text-ink-meta">
+              {{ i + 1 }}
+            </span>
+            <RouterLink :to="`/post/${p.id}`" class="min-w-0 flex-1 truncate text-note text-ink-regular hover:text-link">
+              {{ p.title }}
+            </RouterLink>
+            <!-- 0 回答用主色：最需要帮助的排进视觉焦点；已有回答未采纳是次优先 -->
+            <span
+              class="flex-none text-caption tabular-nums"
+              :class="p.replyCount === 0 ? 'font-medium text-primary' : 'text-ink-meta'"
+            >{{ p.replyCount }} 回答</span>
+          </li>
+        </ol>
+        <p v-else class="text-note text-ink-meta">暂时没有待解答的问题</p>
       </el-card>
 
       <!-- 最新发布挂件（CR-091，参考 CSDN 右栏滚动接力）：随页面滚动，与热榜形成"滚动后换内容"的节奏 -->

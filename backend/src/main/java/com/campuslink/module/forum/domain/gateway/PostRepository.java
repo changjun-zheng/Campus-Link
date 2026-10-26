@@ -2,6 +2,7 @@ package com.campuslink.module.forum.domain.gateway;
 
 import com.campuslink.module.forum.domain.model.HotScoreInput;
 import com.campuslink.module.forum.domain.model.Post;
+import com.campuslink.module.forum.domain.model.PostListFilter;
 import com.campuslink.module.forum.domain.model.PostSortOrder;
 import com.campuslink.module.forum.domain.model.PostStatus;
 import com.campuslink.module.forum.domain.model.SimilarPostRow;
@@ -17,12 +18,15 @@ public interface PostRepository {
     /**
      * 可见帖子分页：{@code boardId} 为 null 表示全站；固定 {@code status='PUBLISHED' AND is_deleted=0}，
      * 排序由 {@code sort} 决定（{@link PostSortOrder#LATEST} = created_at DESC，即引入热榜之前的行为；
-     * {@link PostSortOrder#HOT} = hot_score DESC），两者都以 id DESC 兜底，避免同值时翻页错位。
+     * {@link PostSortOrder#HOT} = hot_score DESC），两者都以 id DESC 兜底，避免同值时翻页错位；
+     * 内容筛选由 {@code filter} 决定（{@link PostListFilter#UNANSWERED} = 问答帖且未采纳，
+     * CR-142「等你来答」），与版块 / 排序正交组合。
      *
      * <p>与 {@link #findById} 不同，这里在 SQL 侧一并过滤 status——列表的 total 必须与查询条件同源，
      * 不能在内存里剔除后再算页数。
      */
-    PageResult<Post> findPage(Long boardId, PostSortOrder sort, Collection<Long> excludedAuthorIds,
+    PageResult<Post> findPage(Long boardId, PostSortOrder sort, PostListFilter filter,
+                              Collection<Long> excludedAuthorIds,
                               Collection<Long> excludedPostIds, int page, int size);
 
     /**
