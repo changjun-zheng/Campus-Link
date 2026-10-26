@@ -72,15 +72,15 @@ function onSearchSubmit() {
     >
       <!-- 窄屏折成两行（设计稿 page-09）：第一行 logo + 图标，第二行版块胶囊带；
            行高由 tokens.css 的窄屏媒体查询把 --el-header-height 放开为 auto -->
-      <div class="mx-auto flex h-full max-w-page flex-wrap items-center gap-x-5 gap-y-1 max-md:py-2">
+      <div class="mx-auto flex h-full max-w-page flex-wrap items-center gap-x-5 gap-y-1 max-md:py-2 xl:flex-nowrap">
         <!-- 品牌字样用主色：WCAG 对 logo / 品牌名的文字不计对比度要求 -->
         <RouterLink to="/" class="order-1 flex shrink-0 items-center gap-2 text-title font-medium text-primary">
           <img src="/logo.svg" alt="" class="h-[22px] w-auto" height="22" />
           <img src="/wordmark.png" alt="Campus-Link" class="h-[20px] w-auto" height="20" />
         </RouterLink>
-        <div class="order-2 ml-auto flex shrink-0 items-center gap-4 md:order-3 md:ml-0">
+        <div class="order-2 ml-auto flex shrink-0 items-center gap-4 md:order-3 md:ml-0 xl:min-w-0 xl:shrink">
           <div
-            class="hidden w-[320px] transition-[width] duration-fast ease-standard md:block md:ml-auto md:mr-auto md:focus-within:w-[380px]"
+            class="hidden w-[320px] min-w-0 transition-[width] duration-fast ease-standard md:block md:ml-auto md:mr-auto md:focus-within:w-[380px] xl:min-w-[200px]"
           >
             <el-input
               v-model="searchKeyword"
@@ -142,22 +142,23 @@ function onSearchSubmit() {
             <el-button type="primary" size="small">登录 / 注册</el-button>
           </RouterLink>
         </div>
-        <!-- 窄屏整行铺满并出血到页头边缘：-mx-4 / +2rem 对应 tokens.css 窄屏下的 --el-header-padding: 0 16px -->
+        <!-- 窄屏整行铺满并出血到页头边缘：-mx-4 / +2rem 对应 tokens.css 窄屏下的 --el-header-padding: 0 16px
+             ≥1280 改为按内容定宽（xl:flex-none）：导航不再被右侧搜索框挤压，空间不足时由搜索框收缩（xl:min-w-[200px]） -->
         <nav
-          class="order-3 -mx-4 flex w-[calc(100%+2rem)] gap-2 overflow-x-auto bg-page px-4 py-2 [scrollbar-width:none] md:order-2 md:mx-0 md:w-auto md:flex-1 md:gap-1 md:bg-transparent md:px-0 md:py-0 [&::-webkit-scrollbar]:hidden"
+          class="order-3 -mx-4 flex w-[calc(100%+2rem)] gap-2 overflow-x-auto bg-page px-4 py-2 [scrollbar-width:none] md:order-2 md:mx-0 md:w-auto md:flex-1 md:gap-0.5 md:bg-transparent md:px-0 md:py-0 xl:flex-none [&::-webkit-scrollbar]:hidden"
         >
           <RouterLink
             v-for="b in BOARDS"
             :key="b.code"
             :to="`/board/${b.code}`"
-            class="whitespace-nowrap rounded-full border-[0.5px] border-line bg-card px-3 py-1 text-body text-ink transition-colors hover:bg-primary-soft hover:text-link md:rounded-md md:border-0 md:bg-transparent md:px-3 md:py-1.5 [&.router-link-active]:bg-primary-soft [&.router-link-active]:font-medium [&.router-link-active]:text-link"
+            class="whitespace-nowrap rounded-full border-[0.5px] border-line bg-card px-3 py-1 text-body text-ink transition-colors hover:bg-primary-soft hover:text-link md:rounded-md md:border-0 md:bg-transparent md:px-2.5 md:py-1.5 [&.router-link-active]:bg-primary-soft [&.router-link-active]:font-medium [&.router-link-active]:text-link"
           >
             {{ b.name }}
           </RouterLink>
           <!-- 组队广场（F-TEAM-001 / CR-137）：与 6 个版块并列，保持同一胶囊样式 -->
           <RouterLink
             to="/teams"
-            class="whitespace-nowrap rounded-full border-[0.5px] border-line bg-card px-3 py-1 text-body text-ink transition-colors hover:bg-primary-soft hover:text-link md:rounded-md md:border-0 md:bg-transparent md:px-3 md:py-1.5 [&.router-link-active]:bg-primary-soft [&.router-link-active]:font-medium [&.router-link-active]:text-link"
+            class="whitespace-nowrap rounded-full border-[0.5px] border-line bg-card px-3 py-1 text-body text-ink transition-colors hover:bg-primary-soft hover:text-link md:rounded-md md:border-0 md:bg-transparent md:px-2.5 md:py-1.5 [&.router-link-active]:bg-primary-soft [&.router-link-active]:font-medium [&.router-link-active]:text-link"
           >
             组队
           </RouterLink>
