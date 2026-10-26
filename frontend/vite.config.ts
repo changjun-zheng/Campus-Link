@@ -24,4 +24,15 @@ export default defineConfig({
       },
     },
   },
+  // 生产产物预览也代理 /api（CR-154）：此前 preview 无代理，首屏性能只能测到空壳，
+  // 或退回 dev server（含 HMR / 未压缩模块，数字不代表线上）。
+  preview: {
+    port: 4173,
+    proxy: {
+      '/api': {
+        target: process.env.VITE_API_TARGET || 'http://localhost:8088',
+        changeOrigin: true,
+      },
+    },
+  },
 })

@@ -1,0 +1,369 @@
+{
+  "base": "http://localhost:4173",
+  "runs": 10,
+  "cacheDisabled": true,
+  "startedAt": "2026-10-26T04:26:46.134Z",
+  "pages": {
+    "home": {
+      "path": "/",
+      "count": 10,
+      "lcpP50": 104,
+      "lcpP90": 120,
+      "lcpMax": 176,
+      "fcpP90": 68,
+      "samples": [
+        {
+          "lcp": 176,
+          "fcp": 68,
+          "dcl": 57.69999998807907,
+          "load": 84.5,
+          "resources": 25,
+          "path": "/"
+        },
+        {
+          "lcp": 116,
+          "fcp": 76,
+          "dcl": 63.900000005960464,
+          "load": 90.09999999403954,
+          "resources": 24,
+          "path": "/"
+        },
+        {
+          "lcp": 100,
+          "fcp": 60,
+          "dcl": 48.19999998807907,
+          "load": 72,
+          "resources": 24,
+          "path": "/"
+        },
+        {
+          "lcp": 96,
+          "fcp": 52,
+          "dcl": 41.10000002384186,
+          "load": 63,
+          "resources": 24,
+          "path": "/"
+        },
+        {
+          "lcp": 120,
+          "fcp": 52,
+          "dcl": 44.80000001192093,
+          "load": 97.80000001192093,
+          "resources": 24,
+          "path": "/"
+        },
+        {
+          "lcp": 104,
+          "fcp": 52,
+          "dcl": 47.099999994039536,
+          "load": 70.80000001192093,
+          "resources": 24,
+          "path": "/"
+        },
+        {
+          "lcp": 104,
+          "fcp": 64,
+          "dcl": 48.5,
+          "load": 72.09999999403954,
+          "resources": 24,
+          "path": "/"
+        },
+        {
+          "lcp": 104,
+          "fcp": 60,
+          "dcl": 48.19999998807907,
+          "load": 72.39999997615814,
+          "resources": 24,
+          "path": "/"
+        },
+        {
+          "lcp": 104,
+          "fcp": 56,
+          "dcl": 46.5,
+          "load": 73.40000000596046,
+          "resources": 24,
+          "path": "/"
+        },
+        {
+          "lcp": 104,
+          "fcp": 52,
+          "dcl": 45.89999997615814,
+          "load": 68,
+          "resources": 24,
+          "path": "/"
+        }
+      ]
+    },
+    "board": {
+      "path": "/board/qna",
+      "count": 10,
+      "lcpP50": 344,
+      "lcpP90": 504,
+      "lcpMax": 520,
+      "fcpP90": 56,
+      "samples": [
+        {
+          "lcp": 344,
+          "fcp": 52,
+          "dcl": 42.30000001192093,
+          "load": 95.30000001192093,
+          "resources": 30,
+          "path": "/board/qna"
+        },
+        {
+          "lcp": 476,
+          "fcp": 60,
+          "dcl": 54,
+          "load": 77.80000001192093,
+          "resources": 30,
+          "path": "/board/qna"
+        },
+        {
+          "lcp": 444,
+          "fcp": 52,
+          "dcl": 41.30000001192093,
+          "load": 68.5,
+          "resources": 30,
+          "path": "/board/qna"
+        },
+        {
+          "lcp": 260,
+          "fcp": 52,
+          "dcl": 44.79999998211861,
+          "load": 68.89999997615814,
+          "resources": 30,
+          "path": "/board/qna"
+        },
+        {
+          "lcp": 272,
+          "fcp": 56,
+          "dcl": 43,
+          "load": 67.5,
+          "resources": 30,
+          "path": "/board/qna"
+        },
+        {
+          "lcp": 272,
+          "fcp": 52,
+          "dcl": 39.400000005960464,
+          "load": 71.90000000596046,
+          "resources": 30,
+          "path": "/board/qna"
+        },
+        {
+          "lcp": 520,
+          "fcp": 52,
+          "dcl": 44.29999998211861,
+          "load": 74.09999999403954,
+          "resources": 30,
+          "path": "/board/qna"
+        },
+        {
+          "lcp": 504,
+          "fcp": 52,
+          "dcl": 44.30000001192093,
+          "load": 72.59999999403954,
+          "resources": 30,
+          "path": "/board/qna"
+        },
+        {
+          "lcp": 268,
+          "fcp": 52,
+          "dcl": 41.69999998807907,
+          "load": 67.7999999821186,
+          "resources": 30,
+          "path": "/board/qna"
+        },
+        {
+          "lcp": 496,
+          "fcp": 52,
+          "dcl": 42.5,
+          "load": 68.10000002384186,
+          "resources": 30,
+          "path": "/board/qna"
+        }
+      ]
+    },
+    "post-detail": {
+      "path": "/post/41",
+      "count": 10,
+      "lcpP50": 836,
+      "lcpP90": 936,
+      "lcpMax": 1044,
+      "fcpP90": 60,
+      "samples": [
+        {
+          "lcp": 912,
+          "fcp": 52,
+          "dcl": 45.69999998807907,
+          "load": 88,
+          "resources": 41,
+          "path": "/post/41"
+        },
+        {
+          "lcp": 1044,
+          "fcp": 52,
+          "dcl": 42.900000005960464,
+          "load": 80.09999999403954,
+          "resources": 41,
+          "path": "/post/41"
+        },
+        {
+          "lcp": 912,
+          "fcp": 64,
+          "dcl": 48,
+          "load": 78.2000000178814,
+          "resources": 41,
+          "path": "/post/41"
+        },
+        {
+          "lcp": 636,
+          "fcp": 60,
+          "dcl": 48.5,
+          "load": 83.2999999821186,
+          "resources": 41,
+          "path": "/post/41"
+        },
+        {
+          "lcp": 676,
+          "fcp": 60,
+          "dcl": 50.80000001192093,
+          "load": 86.90000000596046,
+          "resources": 41,
+          "path": "/post/41"
+        },
+        {
+          "lcp": 844,
+          "fcp": 52,
+          "dcl": 42.19999998807907,
+          "load": 75.39999997615814,
+          "resources": 41,
+          "path": "/post/41"
+        },
+        {
+          "lcp": 628,
+          "fcp": 52,
+          "dcl": 43.099999994039536,
+          "load": 73.59999999403954,
+          "resources": 41,
+          "path": "/post/41"
+        },
+        {
+          "lcp": 660,
+          "fcp": 52,
+          "dcl": 42.099999994039536,
+          "load": 75.2999999821186,
+          "resources": 41,
+          "path": "/post/41"
+        },
+        {
+          "lcp": 936,
+          "fcp": 60,
+          "dcl": 47.30000001192093,
+          "load": 75.59999999403954,
+          "resources": 41,
+          "path": "/post/41"
+        },
+        {
+          "lcp": 836,
+          "fcp": 60,
+          "dcl": 44.89999997615814,
+          "load": 84.39999997615814,
+          "resources": 41,
+          "path": "/post/41"
+        }
+      ]
+    },
+    "search-result": {
+      "path": "/search?keyword=Redis",
+      "count": 10,
+      "lcpP50": 272,
+      "lcpP90": 512,
+      "lcpMax": 532,
+      "fcpP90": 64,
+      "samples": [
+        {
+          "lcp": 532,
+          "fcp": 60,
+          "dcl": 50.70000001788139,
+          "load": 71.30000001192093,
+          "resources": 24,
+          "path": "/search?keyword=Redis"
+        },
+        {
+          "lcp": 252,
+          "fcp": 52,
+          "dcl": 45.19999998807907,
+          "load": 71.09999999403954,
+          "resources": 24,
+          "path": "/search?keyword=Redis"
+        },
+        {
+          "lcp": 496,
+          "fcp": 52,
+          "dcl": 42.900000005960464,
+          "load": 68.2999999821186,
+          "resources": 24,
+          "path": "/search?keyword=Redis"
+        },
+        {
+          "lcp": 260,
+          "fcp": 60,
+          "dcl": 44.900000005960464,
+          "load": 75.40000000596046,
+          "resources": 24,
+          "path": "/search?keyword=Redis"
+        },
+        {
+          "lcp": 496,
+          "fcp": 60,
+          "dcl": 46.400000005960464,
+          "load": 68.7000000178814,
+          "resources": 24,
+          "path": "/search?keyword=Redis"
+        },
+        {
+          "lcp": 512,
+          "fcp": 60,
+          "dcl": 47.30000001192093,
+          "load": 74.19999998807907,
+          "resources": 24,
+          "path": "/search?keyword=Redis"
+        },
+        {
+          "lcp": 260,
+          "fcp": 60,
+          "dcl": 44.20000001788139,
+          "load": 76.2000000178814,
+          "resources": 24,
+          "path": "/search?keyword=Redis"
+        },
+        {
+          "lcp": 272,
+          "fcp": 64,
+          "dcl": 48.599999994039536,
+          "load": 71.7999999821186,
+          "resources": 24,
+          "path": "/search?keyword=Redis"
+        },
+        {
+          "lcp": 252,
+          "fcp": 52,
+          "dcl": 44.70000001788139,
+          "load": 72.5,
+          "resources": 24,
+          "path": "/search?keyword=Redis"
+        },
+        {
+          "lcp": 504,
+          "fcp": 64,
+          "dcl": 47.79999998211861,
+          "load": 71.90000000596046,
+          "resources": 24,
+          "path": "/search?keyword=Redis"
+        }
+      ]
+    }
+  },
+  "finishedAt": "2026-10-26T04:28:30.225Z"
+}
