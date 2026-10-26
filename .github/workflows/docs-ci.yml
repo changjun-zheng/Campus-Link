@@ -1,0 +1,37 @@
+name: docs-ci
+
+# 文档一致性门禁（CR-146 / 问题清单 E-016；CI 挂载由 CR-147 落地）。
+# 只跑一个纯 stdlib 的 Python 脚本——零依赖、零服务，秒级完成：
+#   C1 docs/README §2 登记版本 ↔ 各文档头部〈版本〉（表格行与 YAML frontmatter 都认）
+#   C2 frontend/src/router/index.ts 路由 ↔ 界面规范页面清单
+#   C3 docs 内 #cr-xxx 引用 ↔ 台账 §1 行或 §2 小节锚（草案预留号走白名单）
+# 之所以单独开一个 workflow 而不是塞进 backend/frontend-ci：它同时依赖 docs/、frontend 路由与后台脚本，
+# 而那两个 workflow 都有 paths 过滤，docs-only 的提交不会触发它们。
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'backend/scripts/check_docs_consistency.py'
+      - 'frontend/src/router/index.ts'
+      - 'AGENTS.md'
+      - '.github/workflows/docs-ci.yml'
+  pull_request:
+    paths:
+      - 'docs/**'
+      - 'backend/scripts/check_docs_consistency.py'
+      - 'frontend/src/router/index.ts'
+      - 'AGENTS.md'
+      - '.github/workflows/docs-ci.yml'
+
+jobs:
+  consistency:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      # 脚本用 --json 之外的人类可读模式，日志里直接看到漂移清单
+      - name: Docs consistency (C1 versions / C2 routes / C3 anchors)
+        run: python backend/scripts/check_docs_consistency.py
