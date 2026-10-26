@@ -76,3 +76,19 @@ DB_PORT=33061 DB_NAME=campuslink_staging \
 | — | — | — | — | — | 尚无生产 / 共享环境的数据变更；开发期数据随 Flyway 重建 |
 | `D001__seed_dev_roster_45.py` | **本机开发库** `127.0.0.1:3306/campuslink`（经 8089 临时实例，`APP_ROSTER_BYPASS=false` + `VERIFY_IP_HOURLY_LIMIT=60`） | 2026-09-15 22:24~22:26 | AI 会话（[CR-054](../../docs/变更日志/变更台账.md#cr-054)） | **SQL 直写 0 行**；经接口产生 `student_roster` +45 行（批次 `dev-sim-45`）、`users` +45 个、`audit_logs` +1 条 `ROSTER_IMPORT` | 首灌。导入 `inserted=45 skipped=0 failed=0`；注册 45/45；抽 3 个账号登录 + `/users/me` 昵称复核**当次失败**（验证码重发间隔 60s 内重发被 `2002` 拒、旧码已被注册消耗 ⇒ `2005`），已修脚本为重发被拒时等待重试 |
 | `D001__seed_dev_roster_45.py` | 同上 | 2026-09-15 22:27 | AI 会话（同上） | **0 新增**（`inserted=0 skipped=45`、新注册 0） | 幂等复核 + 登录复核重跑：`3/3` 通过（`nickname=模拟学生01~03`）。复核后 `student_roster(dev-sim-45)=45` 行、`used_user_id` 全非空 45、`users(nickname LIKE '模拟学生%')=45` |
+
+## 文档一致性检查（CR-146）
+
+`check_docs_consistency.py` —— 纯 stdlib、零依赖，**只报告不改文件**：
+
+```bash
+python backend/scripts/check_docs_consistency.py        # 仓库根目录执行；有漂移 exit 1
+python backend/scripts/check_docs_consistency.py --json # 机器可读
+```
+
+- **C1 版本登记**：`docs/README` §2 登记的版本 ↔ 各文档头部〈版本〉（表格行与 YAML frontmatter 两种写法都认）；
+- **C2 页面清单**：`frontend/src/router/index.ts` 的路由 ↔ 界面规范里登记的路径；
+- **C3 台账锚点**：docs 内 `#cr-xxx` 引用 ↔ 台账 §1 行或 §2 小节锚（草案预留号走白名单，`#cr-0xx` 占位示例不计）。
+
+**为什么需要**：状态文档落后代码两轮过不止一次（F-003 把已交付的功能写成缺口、界面规范把 `/admin` 写成占位页、
+README 的登记版本落后文件头），后果是**决策输入错**。**未挂 CI**（CI 属红线，待发起人批），改完文档请手动跑一次。

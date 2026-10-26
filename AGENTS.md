@@ -78,6 +78,9 @@ npm install
 npm run dev           # 5173，/api 代理到 8088（VITE_API_TARGET 可覆盖）
 npm run build
 npm run lint          # ESLint 静态扫描（flat config，见 eslint.config.js）；合码前必须 exit 0
+
+# 文档一致性（CR-146 / 问题清单 E-016）：仓库根目录执行，只报告不改文件；改完文档先跑它
+python backend/scripts/check_docs_consistency.py    # C1 版本登记 / C2 路由↔页面清单 / C3 台账锚点；有漂移 exit 1
 ```
 
 **联调冒烟**：新链路合入前必须真实起栈（MySQL / Redis / 后端 / 前端）并**浏览器实测**，不能只依赖单测。主链路：注册（学籍核验 → 验证码）→ 登录 → 发帖（Markdown）→ 回帖 → 采纳 / 点赞 / 收藏 / 搜索 / 通知；**匿名 `POST /api/v1/posts` 必须 401**。
