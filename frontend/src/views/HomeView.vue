@@ -193,7 +193,7 @@ const myEntries = [
             :to="`/board/${b.code}`"
             class="flex items-center gap-2.5 rounded-md px-3 py-2.5 text-body text-ink-regular transition-colors duration-fast ease-standard hover:bg-bg-hover"
           >
-            <span class="inline-flex h-7 w-7 flex-none items-center justify-center rounded-sm bg-primary-soft text-primary">
+            <span class="inline-flex h-7 w-7 flex-none items-center justify-center rounded-sm bg-primary-soft text-primary-strong">
               <SvgIcon :name="b.icon" :size="15" />
             </span>
             {{ b.name }}
@@ -228,7 +228,7 @@ const myEntries = [
               :key="s.value"
               type="button"
               class="relative cursor-pointer border-0 bg-transparent px-3 py-1.5 text-body transition-colors duration-fast ease-standard"
-              :class="sort === s.value ? 'font-medium text-primary' : 'text-ink-regular hover:text-link'"
+              :class="sort === s.value ? 'font-medium text-primary-strong' : 'text-ink-regular hover:text-link'"
               :aria-pressed="sort === s.value"
               @click="sort = s.value"
             >
@@ -236,7 +236,7 @@ const myEntries = [
               <span
                 aria-hidden="true"
                 class="inset-x-3 -bottom-px absolute h-0.5 rounded-full transition-opacity duration-fast ease-standard"
-                :class="sort === s.value ? 'bg-primary opacity-100' : 'opacity-0'"
+                :class="sort === s.value ? 'bg-primary-strong opacity-100' : 'opacity-0'"
               />
             </button>
           </nav>
@@ -262,7 +262,7 @@ const myEntries = [
         </div>
 
         <div v-else-if="!posts.length" class="flex flex-col items-center py-16 text-center">
-          <span class="flex h-14 w-14 items-center justify-center rounded-full bg-primary-soft text-primary">
+          <span class="flex h-14 w-14 items-center justify-center rounded-full bg-primary-soft text-primary-strong">
             <SvgIcon name="messages" :size="26" />
           </span>
           <p class="mt-4 text-body font-medium text-ink">
@@ -303,7 +303,7 @@ const myEntries = [
       <button
         v-show="listScrollTop > 400"
         type="button"
-        class="absolute bottom-5 right-5 z-10 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border-[0.5px] border-line bg-card text-ink-regular transition-colors duration-fast ease-standard hover:border-primary hover:text-primary"
+        class="absolute bottom-5 right-5 z-10 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border-[0.5px] border-line bg-card text-ink-regular transition-colors duration-fast ease-standard hover:border-primary hover:text-primary-strong"
         aria-label="回到顶部"
         @click="scrollListTop"
       >
@@ -313,7 +313,7 @@ const myEntries = [
 
     <!-- ─── 右栏：热榜 + 最新发布 + 站点卡（xl 以上显示，栏内自滚） ─── -->
     <aside class="hidden w-[300px] flex-none xl:block xl:overflow-y-auto">
-      <el-card shadow="never" :body-style="{ padding: '16px' }">
+      <el-card shadow="never" class="side-card" :body-style="{ padding: '16px' }">
         <template #header>
           <div class="flex items-center justify-between">
             <span class="font-medium">全站热榜</span>
@@ -329,7 +329,7 @@ const myEntries = [
             <!-- 前三名徽章分级（CR-102）：第 1 实心主色白字、2/3 浅底主色，其余灰字——层级一眼可读 -->
             <span
               class="inline-flex h-5 w-5 flex-none items-center justify-center rounded-sm text-caption tabular-nums"
-              :class="i === 0 ? 'bg-primary font-medium text-white' : i < 3 ? 'bg-primary-soft font-medium text-primary' : 'text-ink-meta'"
+              :class="i === 0 ? 'bg-primary-strong font-medium text-white' : i < 3 ? 'bg-primary-soft font-medium text-primary-strong' : 'text-ink-meta'"
             >
               {{ i + 1 }}
             </span>
@@ -342,7 +342,7 @@ const myEntries = [
       </el-card>
 
       <!-- 等你来答（CR-142，N1）：问答帖且未采纳，把「提问 → 回答 → 采纳」循环的供给侧亮出来 -->
-      <el-card shadow="never" class="mt-4" :body-style="{ padding: '16px' }">
+      <el-card shadow="never" class="side-card mt-4" :body-style="{ padding: '16px' }">
         <template #header>
           <div class="flex items-center justify-between">
             <span class="font-medium">等你来答</span>
@@ -367,7 +367,7 @@ const myEntries = [
             <!-- 0 回答用主色：最需要帮助的排进视觉焦点；已有回答未采纳是次优先 -->
             <span
               class="flex-none text-caption tabular-nums"
-              :class="p.replyCount === 0 ? 'font-medium text-primary' : 'text-ink-meta'"
+              :class="p.replyCount === 0 ? 'font-medium text-primary-strong' : 'text-ink-meta'"
             >{{ p.replyCount }} 回答</span>
           </li>
         </ol>
@@ -375,7 +375,7 @@ const myEntries = [
       </el-card>
 
       <!-- 最新发布挂件（CR-091，参考 CSDN 右栏滚动接力）：随页面滚动，与热榜形成"滚动后换内容"的节奏 -->
-      <el-card shadow="never" class="mt-4" :body-style="{ padding: '16px' }">
+      <el-card shadow="never" class="side-card mt-4" :body-style="{ padding: '16px' }">
         <template #header>
           <div class="flex items-center justify-between">
             <span class="font-medium">最新发布</span>
@@ -422,5 +422,10 @@ const myEntries = [
 .sort-card :deep(.el-card__body) {
   flex: 1;
   min-height: 0;
+}
+/* 右栏三张异步卡片（CR-155）：数据回来前先把卡片体撑到成品高度，
+   否则「热榜计算中」等占位文本换成 5 条列表时会把下面的卡片顶下去（CLS 0.062） */
+.side-card :deep(.el-card__body) {
+  min-height: 230px;
 }
 </style>

@@ -12,6 +12,7 @@
   --color-primary: var(--cl-color-primary);
   --color-primary-hover: var(--cl-color-primary-hover);
   --color-primary-soft: var(--cl-color-primary-soft);
+  --color-primary-strong: var(--cl-color-primary-strong);
   --color-link: var(--cl-color-link);
   --color-ink: var(--cl-text-primary);
   --color-ink-regular: var(--cl-text-regular);

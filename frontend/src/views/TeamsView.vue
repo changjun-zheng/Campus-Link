@@ -120,7 +120,7 @@ function statusTagType(s: TeamStatusCode): 'success' | 'warning' | 'info' {
             :key="s"
             type="button"
             class="relative cursor-pointer px-3 py-1.5 text-body transition-colors duration-fast ease-standard"
-            :class="status === s ? 'font-medium text-primary' : 'text-ink-regular hover:text-link'"
+            :class="status === s ? 'font-medium text-primary-strong' : 'text-ink-regular hover:text-link'"
             :aria-pressed="status === s"
             @click="status = s"
           >
@@ -128,7 +128,7 @@ function statusTagType(s: TeamStatusCode): 'success' | 'warning' | 'info' {
             <span
               aria-hidden="true"
               class="inset-x-3 -bottom-px absolute h-0.5 rounded-full transition-opacity duration-fast ease-standard"
-              :class="status === s ? 'bg-primary opacity-100' : 'opacity-0'"
+              :class="status === s ? 'bg-primary-strong opacity-100' : 'opacity-0'"
             />
           </button>
         </nav>

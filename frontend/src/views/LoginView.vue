@@ -94,7 +94,7 @@ async function doRegister() {
       </p>
       <ul class="mt-6 flex flex-col gap-3.5">
         <li v-for="v in values" :key="v.title" class="flex items-start gap-2.5 text-note text-ink-regular">
-          <SvgIcon :name="v.icon" :size="16" class="mt-0.5 text-primary" />
+          <SvgIcon :name="v.icon" :size="16" class="mt-0.5 text-primary-strong" />
           <span class="font-medium text-ink">{{ v.title }}</span>
         </li>
       </ul>

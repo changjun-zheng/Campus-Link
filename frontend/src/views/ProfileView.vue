@@ -356,7 +356,7 @@ watch(userId, () => void loadAll(), { immediate: true })
               <template #reference>
                 <button
                   type="button"
-                  class="inline-flex cursor-pointer items-center gap-1 rounded-full border-0 bg-primary-soft px-2 py-0.5 text-caption text-primary"
+                  class="inline-flex cursor-pointer items-center gap-1 rounded-full border-0 bg-primary-soft px-2 py-0.5 text-caption text-primary-strong"
                   :aria-label="`等级 Lv${profile.level} ${profile.levelName}，查看声望口径`"
                 >
                   <SvgIcon name="trophy" :size="12" />
@@ -431,7 +431,7 @@ watch(userId, () => void loadAll(), { immediate: true })
                 aria-valuemax="100"
                 :aria-valuenow="profile.levelProgress"
               >
-                <div class="h-full rounded-full bg-primary" :style="{ width: `${profile.levelProgress}%` }" />
+                <div class="h-full rounded-full bg-primary-strong" :style="{ width: `${profile.levelProgress}%` }" />
               </div>
               <span class="text-caption tabular-nums">
                 距 Lv{{ profile.level + 1 }} 还差 {{ profile.nextLevelAt - profile.reputation }}
@@ -481,7 +481,7 @@ watch(userId, () => void loadAll(), { immediate: true })
           <button
             type="button"
             class="relative cursor-pointer border-0 bg-transparent px-3 py-1.5 text-body transition-colors duration-fast ease-standard"
-            :class="activeTab === 'posts' ? 'font-medium text-primary' : 'text-ink-regular hover:text-link'"
+            :class="activeTab === 'posts' ? 'font-medium text-primary-strong' : 'text-ink-regular hover:text-link'"
             :aria-pressed="activeTab === 'posts'"
             @click="switchTab('posts')"
           >
@@ -489,13 +489,13 @@ watch(userId, () => void loadAll(), { immediate: true })
             <span
               aria-hidden="true"
               class="inset-x-3 -bottom-px absolute h-0.5 rounded-full transition-opacity duration-fast ease-standard"
-              :class="activeTab === 'posts' ? 'bg-primary opacity-100' : 'opacity-0'"
+              :class="activeTab === 'posts' ? 'bg-primary-strong opacity-100' : 'opacity-0'"
             />
           </button>
           <button
             type="button"
             class="relative cursor-pointer border-0 bg-transparent px-3 py-1.5 text-body transition-colors duration-fast ease-standard"
-            :class="activeTab === 'replies' ? 'font-medium text-primary' : 'text-ink-regular hover:text-link'"
+            :class="activeTab === 'replies' ? 'font-medium text-primary-strong' : 'text-ink-regular hover:text-link'"
             :aria-pressed="activeTab === 'replies'"
             @click="switchTab('replies')"
           >
@@ -503,7 +503,7 @@ watch(userId, () => void loadAll(), { immediate: true })
             <span
               aria-hidden="true"
               class="inset-x-3 -bottom-px absolute h-0.5 rounded-full transition-opacity duration-fast ease-standard"
-              :class="activeTab === 'replies' ? 'bg-primary opacity-100' : 'opacity-0'"
+              :class="activeTab === 'replies' ? 'bg-primary-strong opacity-100' : 'opacity-0'"
             />
           </button>
         </nav>

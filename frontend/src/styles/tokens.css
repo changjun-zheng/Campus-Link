@@ -8,6 +8,12 @@
  *    本文件统一用 `:root:root`(0,2,0) 起手，使覆写与注入顺序无关。
  */
 
+/* 始终预留滚动条槽位（CR-155）：首页右栏异步卡片变高会让页面从「无滚动条」变成「有」，
+   整页内容随之横移（实测 CLS 0.082）。Chromium / Firefox 97+ 支持；不支持的浏览器忽略本行。 */
+html {
+  scrollbar-gutter: stable;
+}
+
 :root:root {
   /* ---- 配色：主蓝（CR-024 应发起人决策回退 CR-023 的深青，恢复 EP 默认蓝） ---- */
   --cl-color-primary: #409eff;
@@ -19,6 +25,12 @@
   --cl-color-link: #1a6fc4;
   --cl-color-success: #67c23a;
   --cl-color-danger: #f56c6c;
+  /* ---- AA 达标深色（CR-156）：主色 #409eff 白字仅 2.78:1、危险色 #f56c6c 白字 2.89:1；
+     实心按钮 / 白字徽章 / 白底主色文字改用下面两色（5.10:1 / 5.8:1），品牌 logo 与装饰仍用原色 ---- */
+  --cl-color-primary-strong: #1a6fc4;
+  --cl-color-primary-strong-hover: color-mix(in srgb, var(--cl-color-primary-strong) 88%, #000);
+  --cl-color-primary-strong-active: color-mix(in srgb, var(--cl-color-primary-strong) 76%, #000);
+  --cl-color-danger-strong: #cf1322;
 
   /* ---- 文本（--cl-text-meta 专供元信息，对比度见 ui-guideline §4.3） ---- */
   --cl-text-primary: #303133;
@@ -201,6 +213,30 @@
   font-weight: 500;
   /* 头像总坐在会截断的昵称旁边，不该被 flex 压缩（原为 App.vue 的内联样式，CR-055 批次 2 收编到此处） */
   flex-shrink: 0;
+}
+
+/* 实心按钮与白字徽章的 AA 对比度（CR-156，白字 4.5:1）：
+   组件规则用 (0,2,0) 才压得过运行时注入的 EP 样式（与 .el-avatar.el-avatar 同理） */
+.el-button.el-button--primary {
+  --el-button-bg-color: var(--cl-color-primary-strong);
+  --el-button-border-color: var(--cl-color-primary-strong);
+  --el-button-hover-bg-color: var(--cl-color-primary-strong-hover);
+  --el-button-hover-border-color: var(--cl-color-primary-strong-hover);
+  --el-button-active-bg-color: var(--cl-color-primary-strong-active);
+  --el-button-active-border-color: var(--cl-color-primary-strong-active);
+  --el-button-disabled-bg-color: color-mix(in srgb, var(--cl-color-primary-strong) 45%, #fff);
+  --el-button-disabled-border-color: color-mix(in srgb, var(--cl-color-primary-strong) 45%, #fff);
+}
+.el-button.el-button--danger {
+  --el-button-bg-color: var(--cl-color-danger-strong);
+  --el-button-border-color: var(--cl-color-danger-strong);
+  --el-button-hover-bg-color: color-mix(in srgb, var(--cl-color-danger-strong) 88%, #000);
+  --el-button-hover-border-color: color-mix(in srgb, var(--cl-color-danger-strong) 88%, #000);
+  --el-button-active-bg-color: color-mix(in srgb, var(--cl-color-danger-strong) 76%, #000);
+  --el-button-active-border-color: color-mix(in srgb, var(--cl-color-danger-strong) 76%, #000);
+}
+.el-badge__content.el-badge__content--danger {
+  background-color: var(--cl-color-danger-strong);
 }
 
 /* sticky 全局顶栏（CR-052）：滚动后吸附并转半透明毛玻璃——定点偏离④，毛玻璃全站仅此一处。

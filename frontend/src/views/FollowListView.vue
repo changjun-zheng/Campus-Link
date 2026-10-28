@@ -110,14 +110,14 @@ function onPageChange(next: number) {
           :key="tab.to"
           :to="tab.to"
           class="relative cursor-pointer px-3 py-1.5 text-body transition-colors duration-fast ease-standard"
-          :class="tab.active ? 'font-medium text-primary' : 'text-ink-regular hover:text-link'"
+          :class="tab.active ? 'font-medium text-primary-strong' : 'text-ink-regular hover:text-link'"
           :aria-current="tab.active ? 'page' : undefined"
         >
           {{ tab.label }}
           <span
             aria-hidden="true"
             class="inset-x-3 -bottom-px absolute h-0.5 rounded-full transition-opacity duration-fast ease-standard"
-            :class="tab.active ? 'bg-primary opacity-100' : 'opacity-0'"
+            :class="tab.active ? 'bg-primary-strong opacity-100' : 'opacity-0'"
           />
         </RouterLink>
       </nav>

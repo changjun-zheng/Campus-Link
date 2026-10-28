@@ -91,7 +91,7 @@ function statusTagType(s: MyTeamVo['status']): 'success' | 'warning' | 'info' {
         <button
           type="button"
           class="relative cursor-pointer px-3 py-1.5 text-body transition-colors duration-fast ease-standard"
-          :class="role === 'owner' ? 'font-medium text-primary' : 'text-ink-regular hover:text-link'"
+          :class="role === 'owner' ? 'font-medium text-primary-strong' : 'text-ink-regular hover:text-link'"
           :aria-pressed="role === 'owner'"
           @click="role = 'owner'"
         >
@@ -99,13 +99,13 @@ function statusTagType(s: MyTeamVo['status']): 'success' | 'warning' | 'info' {
           <span
             aria-hidden="true"
             class="inset-x-3 -bottom-px absolute h-0.5 rounded-full transition-opacity duration-fast ease-standard"
-            :class="role === 'owner' ? 'bg-primary opacity-100' : 'opacity-0'"
+            :class="role === 'owner' ? 'bg-primary-strong opacity-100' : 'opacity-0'"
           />
         </button>
         <button
           type="button"
           class="relative cursor-pointer px-3 py-1.5 text-body transition-colors duration-fast ease-standard"
-          :class="role === 'member' ? 'font-medium text-primary' : 'text-ink-regular hover:text-link'"
+          :class="role === 'member' ? 'font-medium text-primary-strong' : 'text-ink-regular hover:text-link'"
           :aria-pressed="role === 'member'"
           @click="role = 'member'"
         >
@@ -113,7 +113,7 @@ function statusTagType(s: MyTeamVo['status']): 'success' | 'warning' | 'info' {
           <span
             aria-hidden="true"
             class="inset-x-3 -bottom-px absolute h-0.5 rounded-full transition-opacity duration-fast ease-standard"
-            :class="role === 'member' ? 'bg-primary opacity-100' : 'opacity-0'"
+            :class="role === 'member' ? 'bg-primary-strong opacity-100' : 'opacity-0'"
           />
         </button>
       </nav>

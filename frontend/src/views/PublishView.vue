@@ -409,7 +409,7 @@ async function submit() {
       <!-- 面经模板入口（CR-143）：仅面经版块 + 正文为空时出现，填入后自动隐藏 -->
       <div v-if="showTemplateHint" class="flex flex-wrap items-center gap-1.5 pb-4 text-note text-ink-meta">
         <span>第一次写面经？按固定小节组织更易读——</span>
-        <button type="button" class="font-medium text-primary hover:underline" @click="applyInterviewTemplate">
+        <button type="button" class="font-medium text-primary-strong hover:underline" @click="applyInterviewTemplate">
           填入面经模板（公司 / 岗位 / 轮次 / 面试问题）
         </button>
       </div>

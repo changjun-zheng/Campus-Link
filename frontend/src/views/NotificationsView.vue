@@ -176,7 +176,7 @@ loadNotifications()
           <!-- 未读用小圆点占位，保证已读 / 未读行首对齐（不为对齐再用 invisible 字符） -->
           <span
             class="mt-2 h-1.5 w-1.5 shrink-0 rounded-full"
-            :class="n.read ? 'bg-transparent' : 'bg-primary'"
+            :class="n.read ? 'bg-transparent' : 'bg-primary-strong'"
           />
           <div class="min-w-0 flex-1">
             <p class="text-body text-ink-regular">

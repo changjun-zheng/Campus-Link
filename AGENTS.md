@@ -133,7 +133,7 @@ python backend/scripts/scan_deps_osv.py             # --fail-on high / none、--
 ### 前端
 
 - 页面按 PRD 5.1 清单实现；**Element Plus 按需自动引入**（unplugin-auto-import / unplugin-vue-components，勿回退全量引入）；
-- **`src/styles/tokens.css` 是设计令牌唯一来源**：主色 `#409eff`、**正文链接色 `#1a6fc4` 独立于主色**（不派生、不随动）、字号阶梯、间距为 4 的倍数、圆角三档、0.5px 细边框、去默认阴影 / 渐变；以 `:root:root` 覆写 EP 的 `--el-*`；**改主色只改 `--cl-color-primary`，但 `--el-color-primary-rgb` 须手工同步**；`src/styles/tailwind.css` 提供工具类（`@theme inline` 映射令牌），两者在 `main.ts` 一次性引入；
+- **`src/styles/tokens.css` 是设计令牌唯一来源**：主色 `#409eff`、**正文链接色 `#1a6fc4` 独立于主色**（不派生、不随动）、**白字实心按钮与白底主色文字用 `--cl-color-primary-strong`（#1a6fc4，AA 5.10:1）、未读徽章 / 危险按钮用 `--cl-color-danger-strong`（#cf1322，5.80:1）**、字号阶梯、间距为 4 的倍数、圆角三档、0.5px 细边框、去默认阴影 / 渐变；以 `:root:root` 覆写 EP 的 `--el-*`；**改主色只改 `--cl-color-primary`，但 `--el-color-primary-rgb` 须手工同步**；`src/styles/tailwind.css` 提供工具类（`@theme inline` 映射令牌），两者在 `main.ts` 一次性引入；
 - **层叠边界（强制约定，无 lint 强制）**：Tailwind v4 输出在 `@layer` 内、EP 样式不带 layer，**无层恒胜有层——EP 组件一律通过 CSS 变量调样式，自有元素才用工具类**；改页面前先查[界面规范](docs/设计/UI规范/界面规范.md)；
 - **图标统一走 `components/SvgIcon.vue`**（Tabler 线性图标，构建期内联静态 SVG；自带 `.cl-icon` 容器防 EP `fill: currentColor` 覆写描边）；**不复用 `el-icon`**；
 - **代码高亮**：`src/utils/highlight.ts`（highlight.js/lib/core 按需注册语言）**只对服务端已渲染的 `pre code` 的 `textContent` 着色**，不二次渲染 Markdown、不拼接 HTML、不做前端净化兜底；`src/styles/hljs.css` 只提供 `--cl-code-*` 色板（**不整份引入主题 CSS**——那含字面 hex，会破"颜色只来自令牌"）；

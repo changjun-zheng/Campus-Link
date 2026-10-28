@@ -155,7 +155,7 @@ async function onLike() {
           <button
             type="button"
             class="inline-flex cursor-pointer items-center gap-1 border-0 bg-transparent p-0 font-inherit text-caption transition-colors duration-fast ease-standard"
-            :class="post.likedByMe ? 'font-medium text-primary' : 'text-ink-meta hover:text-link'"
+            :class="post.likedByMe ? 'font-medium text-primary-strong' : 'text-ink-meta hover:text-link'"
             :aria-pressed="post.likedByMe"
             :aria-label="post.likedByMe ? '取消点赞' : '点赞'"
             :title="post.likedByMe ? '取消点赞' : '点赞'"

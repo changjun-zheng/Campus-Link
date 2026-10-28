@@ -93,7 +93,7 @@ load(1)
                   </span>
                   <span
                     v-if="c.unreadCount > 0"
-                    class="min-w-[18px] flex-none rounded-full bg-primary px-1.5 text-center text-caption text-white tabular-nums"
+                    class="min-w-[18px] flex-none rounded-full bg-primary-strong px-1.5 text-center text-caption text-white tabular-nums"
                     :aria-label="`${c.unreadCount} 条未读`"
                   >
                     {{ c.unreadCount > 99 ? '99+' : c.unreadCount }}
