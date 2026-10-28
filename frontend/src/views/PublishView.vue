@@ -477,10 +477,10 @@ async function submit() {
       </button>
       <button type="button" class="cl-md-tool text-caption font-medium" title="引用" aria-label="引用" @click="wrap('> ', '', '引用内容')">❝</button>
       <button type="button" class="cl-md-tool" title="无序列表" aria-label="无序列表" @click="wrap('- ', '', '列表项')">
-        <SvgIcon name="list" :size="15" />
+        <SvgIcon name="list" :size="16" />
       </button>
       <button type="button" class="cl-md-tool" title="插入链接" aria-label="插入链接" @click="wrap('[', '](https://)', '链接文字')">
-        <SvgIcon name="link" :size="15" />
+        <SvgIcon name="link" :size="16" />
       </button>
       <button
         type="button"
@@ -489,7 +489,7 @@ async function submit() {
         title="图片上传即将开放（暂无上传接口）"
         aria-label="图片（暂未开放）"
       >
-        <SvgIcon name="photo" :size="15" />
+        <SvgIcon name="photo" :size="16" />
       </button>
       <span class="mx-0.5 h-4 w-px bg-line" aria-hidden="true" />
       <button

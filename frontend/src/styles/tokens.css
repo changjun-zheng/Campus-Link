@@ -820,3 +820,23 @@ html {
 ::-webkit-scrollbar-corner {
   background: transparent;
 }
+
+/* 交互反馈（CR-160，ui-ux-pro-max「Stable Interaction States / Tap feedback」）：
+   可点元素 pressed 态用透明度反馈，不位移、不改布局边界；EP 按钮自带 active 态故排除 */
+a:active,
+button:not(:disabled):not(.el-button):active {
+  opacity: 0.7;
+}
+
+/* 降低动效偏好（CR-160）：系统开启 reduced-motion 时关闭过渡 / 动画 / 平滑滚动。
+   置于层外并加 !important，确保压过 EP 与 Tailwind 层内的 transition */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

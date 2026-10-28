@@ -12,6 +12,8 @@
 import { computed } from 'vue'
 import { iconSvg, type IconName } from '../assets/icons'
 
+/** 尺寸档位（CR-160，ui-ux-pro-max「Consistent Icon Sizing」）：12 元信息 / 16 正文 /
+ *  20 导航 / 24 卡片头 / 60 空态展示。新增尺寸须落入既有档位，不要引入散值。 */
 const props = withDefaults(defineProps<{ name: IconName; size?: number }>(), { size: 16 })
 
 const svg = computed(() => iconSvg(props.name))

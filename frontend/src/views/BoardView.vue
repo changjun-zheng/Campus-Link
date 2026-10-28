@@ -116,7 +116,7 @@ watch(
     <div class="flex items-center justify-between gap-3">
       <div class="flex min-w-0 items-center gap-3.5">
         <span :class="['cl-board-icon', `cl-board-icon--${code}`]">
-          <SvgIcon :name="boardIcon" :size="22" />
+          <SvgIcon :name="boardIcon" :size="24" />
         </span>
         <div class="min-w-0">
           <h2 class="text-title-lg font-medium text-ink">{{ board?.name || code }}</h2>

@@ -194,7 +194,7 @@ const myEntries = [
             class="flex items-center gap-2.5 rounded-md px-3 py-2.5 text-body text-ink-regular transition-colors duration-fast ease-standard hover:bg-bg-hover"
           >
             <span :class="['cl-board-icon', 'cl-board-icon--sm', `cl-board-icon--${b.code}`]">
-              <SvgIcon :name="b.icon" :size="15" />
+              <SvgIcon :name="b.icon" :size="16" />
             </span>
             {{ b.name }}
           </RouterLink>
@@ -208,7 +208,7 @@ const myEntries = [
             class="flex items-center gap-2.5 rounded-md px-3 py-2.5 text-body text-ink-regular transition-colors duration-fast ease-standard hover:bg-bg-hover"
           >
             <span class="inline-flex h-7 w-7 flex-none items-center justify-center rounded-sm bg-code text-ink-meta">
-              <SvgIcon :name="m.icon" :size="15" />
+              <SvgIcon :name="m.icon" :size="16" />
             </span>
             {{ m.label }}
           </RouterLink>
@@ -263,7 +263,7 @@ const myEntries = [
 
         <div v-else-if="!posts.length" class="flex flex-col items-center py-16 text-center">
           <span class="flex h-14 w-14 items-center justify-center rounded-full bg-primary-soft text-primary-strong">
-            <SvgIcon name="messages" :size="26" />
+            <SvgIcon name="messages" :size="24" />
           </span>
           <p class="mt-4 text-body font-medium text-ink">
             {{ sort === 'following' ? '还没有关注任何作者' : '还没有帖子' }}

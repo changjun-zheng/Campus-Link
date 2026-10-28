@@ -172,7 +172,7 @@ onBeforeUnmount(() => {
       <el-card shadow="never" class="mb-4" :body-style="{ padding: '12px 20px' }">
         <div class="flex items-center gap-3">
           <RouterLink to="/messages" class="flex items-center gap-1 text-note text-link hover:underline">
-            <SvgIcon name="arrow-left" :size="14" />
+            <SvgIcon name="arrow-left" :size="16" />
             私信
           </RouterLink>
           <span class="text-line" aria-hidden="true">/</span>
@@ -257,7 +257,7 @@ onBeforeUnmount(() => {
           <div class="mt-3 flex items-center justify-between gap-3">
             <span class="text-caption text-ink-meta">纯文本，不渲染 Markdown</span>
             <el-button type="primary" size="small" :loading="sending" :disabled="!draft.trim()" @click="send">
-              <SvgIcon name="send" :size="13" class="mr-1" />
+              <SvgIcon name="send" :size="16" class="mr-1" />
               发送
             </el-button>
           </div>

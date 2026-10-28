@@ -301,13 +301,13 @@ async function onDeactivate() {
             :to="entry.to"
             class="flex items-center gap-3 border-b-[0.5px] border-divider px-5 py-3 transition-colors duration-fast ease-standard hover:bg-bg-hover last:border-b-0"
           >
-            <SvgIcon :name="entry.icon" :size="18" class="flex-none text-ink-meta" />
+            <SvgIcon :name="entry.icon" :size="20" class="flex-none text-ink-meta" />
             <span class="min-w-0 flex-1">
               <span class="block text-body text-ink">{{ entry.label }}</span>
               <span class="mt-0.5 block text-caption text-ink-meta">{{ entry.hint }}</span>
             </span>
             <span class="flex-none text-note text-ink-meta">{{ counts[entry.key] ?? '—' }}</span>
-            <SvgIcon name="chevron-right" :size="14" class="flex-none text-ink-meta" />
+            <SvgIcon name="chevron-right" :size="16" class="flex-none text-ink-meta" />
           </RouterLink>
         </li>
       </ul>

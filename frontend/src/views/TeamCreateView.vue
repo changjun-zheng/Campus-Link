@@ -144,7 +144,7 @@ async function onSubmit() {
 
         <div class="mb-4 flex items-center gap-2">
           <el-button :loading="previewLoading" @click="onPreview">
-            <SvgIcon name="eye" :size="13" class="mr-1" />
+            <SvgIcon name="eye" :size="16" class="mr-1" />
             预览简介
           </el-button>
           <el-text v-if="previewError" type="danger" size="small">{{ previewError }}</el-text>

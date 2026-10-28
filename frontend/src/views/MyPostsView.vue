@@ -137,7 +137,7 @@ loadPosts()
 
   <div class="mt-4 flex justify-center">
     <RouterLink to="/settings" class="flex items-center gap-1 text-note text-link hover:underline">
-      <SvgIcon name="arrow-left" :size="14" />
+      <SvgIcon name="arrow-left" :size="16" />
       返回设置
     </RouterLink>
   </div>

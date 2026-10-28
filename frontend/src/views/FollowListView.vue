@@ -191,7 +191,7 @@ function onPageChange(next: number) {
 
     <div class="mt-4 flex justify-center">
       <RouterLink :to="`/u/${targetId}`" class="flex items-center gap-1 text-note text-link hover:underline">
-        <SvgIcon name="arrow-left" :size="14" />
+        <SvgIcon name="arrow-left" :size="16" />
         返回主页
       </RouterLink>
     </div>

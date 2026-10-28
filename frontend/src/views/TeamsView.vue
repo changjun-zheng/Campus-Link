@@ -100,7 +100,7 @@ function statusTagType(s: TeamStatusCode): 'success' | 'warning' | 'info' {
             <el-button>我的组队</el-button>
           </RouterLink>
           <el-button type="primary" @click="goCreate">
-            <SvgIcon name="pencil" :size="13" class="mr-1" />
+            <SvgIcon name="pencil" :size="16" class="mr-1" />
             发起组队
           </el-button>
         </div>

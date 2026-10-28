@@ -397,7 +397,7 @@ watch(userId, () => void loadAll(), { immediate: true })
                 {{ following ? '已关注' : '＋ 关注' }}
               </el-button>
               <el-button size="small" @click="openChat">
-                <SvgIcon name="mail" :size="13" class="mr-1" />
+                <SvgIcon name="mail" :size="16" class="mr-1" />
                 私信
               </el-button>
               <el-button
@@ -622,7 +622,7 @@ watch(userId, () => void loadAll(), { immediate: true })
 
     <div class="mt-4 flex justify-center">
       <RouterLink to="/" class="flex items-center gap-1 text-note text-link hover:underline">
-        <SvgIcon name="arrow-left" :size="14" />
+        <SvgIcon name="arrow-left" :size="16" />
         回首页
       </RouterLink>
     </div>

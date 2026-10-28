@@ -81,7 +81,7 @@ function statusTagType(s: MyTeamVo['status']): 'success' | 'warning' | 'info' {
         </div>
         <RouterLink to="/teams/new">
           <el-button type="primary">
-            <SvgIcon name="pencil" :size="13" class="mr-1" />
+            <SvgIcon name="pencil" :size="16" class="mr-1" />
             发起组队
           </el-button>
         </RouterLink>

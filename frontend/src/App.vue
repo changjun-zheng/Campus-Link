@@ -60,7 +60,7 @@ function onSearchSubmit() {
           <img src="/wordmark.png" alt="Campus-Link" class="h-[20px] w-auto" width="565" height="98" />
         </RouterLink>
         <RouterLink to="/" class="flex items-center gap-1 text-body">
-          <SvgIcon name="arrow-left" :size="14" />
+          <SvgIcon name="arrow-left" :size="16" />
           返回首页
         </RouterLink>
       </div>
@@ -90,7 +90,7 @@ function onSearchSubmit() {
               @keyup.enter="onSearchSubmit"
             >
               <template #prefix>
-                <SvgIcon name="search" :size="14" />
+                <SvgIcon name="search" :size="16" />
               </template>
             </el-input>
           </div>
@@ -101,22 +101,22 @@ function onSearchSubmit() {
             aria-label="搜索"
             @click="onSearchSubmit"
           >
-            <SvgIcon name="search" :size="18" />
+            <SvgIcon name="search" :size="20" />
           </button>
           <RouterLink to="/publish" class="hidden md:block">
             <el-button type="primary" size="small">
-              <SvgIcon name="pencil" :size="13" class="mr-1" />
+              <SvgIcon name="pencil" :size="16" class="mr-1" />
               提问
             </el-button>
           </RouterLink>
           <RouterLink to="/notifications" class="text-ink-regular hover:text-link" aria-label="通知中心">
             <el-badge :value="unreadCount" :max="99" :hidden="!unreadCount">
-              <SvgIcon name="bell" :size="18" />
+              <SvgIcon name="bell" :size="20" />
             </el-badge>
           </RouterLink>
           <RouterLink to="/messages" class="text-ink-regular hover:text-link" aria-label="私信">
             <el-badge :value="unreadMessages" :max="99" :hidden="!unreadMessages">
-              <SvgIcon name="mail" :size="18" />
+              <SvgIcon name="mail" :size="20" />
             </el-badge>
           </RouterLink>
           <el-dropdown v-if="isLoggedIn">

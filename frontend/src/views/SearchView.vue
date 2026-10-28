@@ -120,7 +120,7 @@ onMounted(async () => {
         @keyup.enter="onSubmit"
       >
         <template #prefix>
-          <SvgIcon name="search" :size="14" />
+          <SvgIcon name="search" :size="16" />
         </template>
       </el-input>
       <div class="flex shrink-0 items-center gap-2">
