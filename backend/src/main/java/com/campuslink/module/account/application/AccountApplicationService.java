@@ -10,6 +10,7 @@ import com.campuslink.module.account.application.cmd.AccountCommands.RegisterCom
 import com.campuslink.module.account.application.cmd.AccountCommands.VerifyStudentCommand;
 import com.campuslink.module.account.application.cmd.AccountCommands.VerifyStudentResult;
 import com.campuslink.module.account.domain.event.AccountRegisteredEvent;
+import com.campuslink.module.account.domain.model.DefaultAvatar;
 import com.campuslink.module.account.domain.exception.AccountConflictException;
 import com.campuslink.module.account.domain.gateway.AccountRepository;
 import com.campuslink.module.account.domain.gateway.RateLimitGateway;
@@ -110,6 +111,15 @@ public class AccountApplicationService {
                     .orElse(null);
             account = accountRepository.save(Account.registered(
                     contact.email(), contact.phone(), StudentId.of(studentId), command.nickname(), cohortYear));
+            // 默认头像（CR-162）：自增 id 落库后才可映射；条件 UPDATE 只写空列，并把值回填到聚合，
+            // 让本次注册响应（UserVo.avatarUrl）立即带图。id 为空只可能出现在违约的适配器 / 测试替身，
+            // 此时跳过头像而不是让注册失败（头像属展示资料，不是注册前置）
+            Long accountId = account.getId();
+            if (accountId != null) {
+                String defaultAvatar = DefaultAvatar.forUser(accountId);
+                accountRepository.updateAvatarIfAbsent(accountId, defaultAvatar);
+                account.assignAvatarIfAbsent(defaultAvatar);
+            }
         } catch (AccountConflictException e) {
             // 邮箱 / 手机号冲突可明确提示（二者均非名册信息）；学号冲突必须与其它核验失败**同提示**，
             // 否则可据提示差异枚举出"哪些学号在名册中且已被占用"（PRD F-ACC-004 防名册枚举）
@@ -193,15 +203,20 @@ public class AccountApplicationService {
     }
 
     /**
-     * 批量取昵称：其他上下文（forum）展示作者名的唯一入口（ADR-012 跨上下文只调对方 application）。
-     * 一次查询取齐整页作者，不做 N+1；查不到的 id 不出现在结果中，由调用方决定回落文案。
+     * 批量取作者摘要（昵称 + 头像）：其他上下文（forum / notification）展示作者的唯一入口
+     * （ADR-012 跨上下文只调对方 application）。一次查询取齐整页作者，不做 N+1；
+     * 查不到的 id 不出现在结果中，由调用方决定回落文案。
+     *
+     * <p>CR-162 起由 {@code nicknamesOf} 升级而来：forum 列表 / 详情 / 楼层需要头像，
+     * 若另开一个只取头像的方法会变成两次批量查询，故一次返回 {@link AuthorBrief}。
      */
-    public Map<Long, String> nicknamesOf(Collection<Long> ids) {
+    public Map<Long, AuthorBrief> authorBriefsOf(Collection<Long> ids) {
         if (ids == null || ids.isEmpty()) {
             return Map.of();
         }
         return accountRepository.findByIds(ids).stream()
-                .collect(Collectors.toMap(Account::getId, Account::getNickname));
+                .collect(Collectors.toMap(Account::getId,
+                        account -> new AuthorBrief(account.getNickname(), account.getAvatarUrl())));
     }
 
     /**

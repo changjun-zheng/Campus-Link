@@ -111,7 +111,7 @@ async function onLike() {
       <div class="min-w-0 flex-1">
         <!-- 作者行（CSDN / 掘金式）：头像 + 昵称 + 时间在标题上方（CR-085） -->
         <div class="flex items-center gap-1.5 text-caption text-ink-meta">
-          <UserAvatar :name="post.authorNickname" :size="20" />
+          <UserAvatar :src="post.authorAvatarUrl ?? ''" :name="post.authorNickname" :size="20" />
           <span class="text-ink-regular">{{ post.authorNickname }}</span>
           <!-- 匿名帖（F-FORUM-010 / CR-139）：昵称已由服务端掩为「匿名用户」，这里只加一枚标记 -->
           <el-tag v-if="post.anonymous" size="small" effect="plain" class="flex-none">匿名</el-tag>

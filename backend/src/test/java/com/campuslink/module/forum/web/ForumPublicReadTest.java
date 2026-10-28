@@ -57,16 +57,16 @@ class ForumPublicReadTest {
     @DisplayName("帖子列表与详情：匿名可读（含 sort=hot 与 filter=unanswered——新参数没有把公开读端点变成受保护端点）")
     void postsAreReadableAnonymously() {
         when(forumQueryService.listPosts(null, "latest", null, 1, 20, null)).thenReturn(new PageResult<>(
-                List.of(new PostSummary(1L, "qna", "技术问答", "标题", "张三", 0, 0, 0, null, null, "摘要", CREATED_AT, false, false, false)),
+                List.of(new PostSummary(1L, "qna", "技术问答", "标题", "张三", null, 0, 0, 0, null, null, "摘要", CREATED_AT, false, false, false)),
                 1, 1, 20));
         when(forumQueryService.listPosts(null, "hot", null, 1, 20, null)).thenReturn(new PageResult<>(
-                List.of(new PostSummary(1L, "qna", "技术问答", "标题", "张三", 0, 0, 0, null, null, "摘要", CREATED_AT, false, false, false)),
+                List.of(new PostSummary(1L, "qna", "技术问答", "标题", "张三", null, 0, 0, 0, null, null, "摘要", CREATED_AT, false, false, false)),
                 1, 1, 20));
         when(forumQueryService.listPosts(null, "latest", "unanswered", 1, 20, null)).thenReturn(new PageResult<>(
-                List.of(new PostSummary(2L, "qna", "技术问答", "待解答的题", "张三", 0, 0, 0, null, null, "摘要", CREATED_AT, false, false, false)),
+                List.of(new PostSummary(2L, "qna", "技术问答", "待解答的题", "张三", null, 0, 0, 0, null, null, "摘要", CREATED_AT, false, false, false)),
                 1, 1, 20));
         when(forumQueryService.postDetail(1L, null)).thenReturn(new PostDetail(1L, "qna", "技术问答", "QUESTION",
-                "标题", "<p>正文</p>", 42L, "张三", 0, 0, 0, null, false, false, false, CREATED_AT, false));
+                "标题", "<p>正文</p>", 42L, "张三", null, 0, 0, 0, null, false, false, false, CREATED_AT, false));
 
         var list = postController.list(null, "latest", null, 1, 20, null);
         var hotList = postController.list(null, "hot", null, 1, 20, null);
@@ -86,7 +86,7 @@ class ForumPublicReadTest {
     @DisplayName("站内搜索：匿名可读（F-FORUM-008）")
     void searchIsReadableAnonymously() {
         when(forumQueryService.searchPosts("Redis", null, null, 1, 20, null)).thenReturn(new PageResult<>(
-                List.of(new PostSummary(1L, "qna", "技术问答", "Redis 怎么用", "张三", 0, 0, 0, null, null, "摘要", CREATED_AT, false, false, false)),
+                List.of(new PostSummary(1L, "qna", "技术问答", "Redis 怎么用", "张三", null, 0, 0, 0, null, null, "摘要", CREATED_AT, false, false, false)),
                 1, 1, 20));
 
         var response = postController.search("Redis", null, null, 1, 20, null);
@@ -99,7 +99,7 @@ class ForumPublicReadTest {
     @DisplayName("楼层列表：匿名可读")
     void repliesAreReadableAnonymously() {
         when(forumQueryService.listReplies(1L, 1, 20, null)).thenReturn(new PageResult<>(
-                List.of(new ReplyItem(11L, 1, "<p>一</p>", 42L, "张三", false, 0, false, null, CREATED_AT)), 1, 1, 20));
+                List.of(new ReplyItem(11L, 1, "<p>一</p>", 42L, "张三", null, false, 0, false, null, CREATED_AT)), 1, 1, 20));
 
         var response = replyController.list(1L, 1, 20, null);
 

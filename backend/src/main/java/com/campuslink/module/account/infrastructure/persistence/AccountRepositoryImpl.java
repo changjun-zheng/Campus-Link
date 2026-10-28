@@ -82,9 +82,20 @@ public class AccountRepositoryImpl implements AccountRepository {
         userMapper.update(null, update);
     }
 
+    /** 默认头像（CR-162）：条件 UPDATE，只在列为空时写——重复注册 / 并发重试都不会覆盖已有头像 */
     @Override
-    public boolean existsByEmailHash(String emailHash) {
-        return userMapper.selectCount(new LambdaQueryWrapper<UserDO>()
+    public void updateAvatarIfAbsent(Long accountId, String avatarUrl) {
+        if (accountId == null || avatarUrl == null || avatarUrl.isBlank()) {
+            return;
+        }
+        userMapper.update(null, new LambdaUpdateWrapper<UserDO>()
+                .eq(UserDO::getId, accountId)
+                .isNull(UserDO::getAvatarUrl)
+                .set(UserDO::getAvatarUrl, avatarUrl));
+    }
+
+    @Override
+    public boolean existsByEmailHash(String emailHash) {        return userMapper.selectCount(new LambdaQueryWrapper<UserDO>()
                 .eq(UserDO::getEmailHash, emailHash)) > 0;
     }
 

@@ -22,6 +22,8 @@ export interface PostSummaryVo {
   boardName: string
   title: string
   authorNickname: string
+  /** 默认头像（CR-162）：匿名帖恒为 null，前端回落昵称首字 */
+  authorAvatarUrl: string | null
   replyCount: number
   likeCount: number
   /** 阅读数（CR-074）：详情读取去重计数（每帖每账号每日 +1），列表展示用 */
@@ -53,6 +55,8 @@ export interface PostDetailVo {
   /** 匿名帖对非作者恒为 null（CR-139）：前端据此隐藏主页链接 / 关注 / 私信入口 */
   authorId: number | null
   authorNickname: string
+  /** 默认头像（CR-162）：匿名帖恒为 null */
+  authorAvatarUrl: string | null
   replyCount: number
   likeCount: number
   /** 阅读数（CR-074） */
@@ -76,6 +80,8 @@ export interface ReplyVo {
   contentHtml: string
   authorId: number
   authorNickname: string
+  /** 默认头像（CR-162）：未回填 / 查不到时 null，前端回落昵称首字 */
+  authorAvatarUrl: string | null
   /** 最佳答案（F-QA-001）；楼层列表按 is_accepted DESC 排序，最佳答案自然置顶 */
   accepted: boolean
   /** 当前登录用户是否已点赞该楼层（F-FORUM-005）；匿名请求恒 false */

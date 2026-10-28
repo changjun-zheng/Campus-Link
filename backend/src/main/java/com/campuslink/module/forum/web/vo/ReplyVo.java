@@ -14,7 +14,8 @@ import java.time.Instant;
  * （下架 / 已删除）时为 null——null 即前端不渲染引用块，被处置的内容不从这里外泄。
  */
 public record ReplyVo(Long id, int floorNo, String contentHtml, long authorId, String authorNickname,
-                      boolean accepted, int likeCount, boolean likedByMe, QuotedReplyVo quoted, Instant createdAt) {
+                      String authorAvatarUrl, boolean accepted, int likeCount, boolean likedByMe,
+                      QuotedReplyVo quoted, Instant createdAt) {
 
     /** 被引用楼层摘要（F-009 / CR-085）：excerpt 为服务端去 Markdown 后的 120 字纯文本，前端不二次处理 */
     public record QuotedReplyVo(long replyId, int floorNo, String authorNickname, String excerpt) {
@@ -23,7 +24,7 @@ public record ReplyVo(Long id, int floorNo, String contentHtml, long authorId, S
     public static ReplyVo from(ReplyItem item) {
         QuotedBrief brief = item.quoted();
         return new ReplyVo(item.id(), item.floorNo(), item.contentHtml(), item.authorId(),
-                item.authorNickname(), item.accepted(), item.likeCount(), item.likedByMe(),
+                item.authorNickname(), item.authorAvatarUrl(), item.accepted(), item.likeCount(), item.likedByMe(),
                 brief == null ? null
                         : new QuotedReplyVo(brief.replyId(), brief.floorNo(), brief.authorNickname(), brief.excerpt()),
                 item.createdAt());

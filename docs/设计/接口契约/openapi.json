@@ -7103,6 +7103,9 @@
           "authorNickname": {
             "type": "string"
           },
+          "authorAvatarUrl": {
+            "type": "string"
+          },
           "replyCount": {
             "type": "integer",
             "format": "int32"
@@ -7589,6 +7592,9 @@
           "authorNickname": {
             "type": "string"
           },
+          "authorAvatarUrl": {
+            "type": "string"
+          },
           "accepted": {
             "type": "boolean"
           },
@@ -7653,6 +7659,9 @@
             "format": "int64"
           },
           "authorNickname": {
+            "type": "string"
+          },
+          "authorAvatarUrl": {
             "type": "string"
           },
           "replyCount": {

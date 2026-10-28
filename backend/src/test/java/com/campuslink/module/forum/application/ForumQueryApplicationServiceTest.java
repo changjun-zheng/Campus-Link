@@ -39,7 +39,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import com.campuslink.module.account.application.AuthorBrief;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -101,7 +103,8 @@ class ForumQueryApplicationServiceTest {
         when(postRepository.findPage(null, PostSortOrder.LATEST, PostListFilter.NONE, java.util.Set.of(), java.util.Set.of(), 1, 20))
                 .thenReturn(new PageResult<>(List.of(post(1L, 100L), post(2L, 200L)), 2, 1, 20));
         when(boardRepository.findAllEnabled()).thenReturn(List.of(board(1L, "qna", "技术问答")));
-        when(accountApplicationService.nicknamesOf(List.of(100L, 200L))).thenReturn(Map.of(100L, "张三"));
+        when(accountApplicationService.authorBriefsOf(List.of(100L, 200L)))
+                .thenReturn(Map.of(100L, new AuthorBrief("张三", "/avatars/avatar-01-terminal.png")));
 
         PageResult<PostSummary> page = service.listPosts(null, "latest", null, 1, 20, null);
 
@@ -110,7 +113,9 @@ class ForumQueryApplicationServiceTest {
                 .containsExactly("张三", "已注销用户");
         assertThat(page.items()).extracting(PostSummary::boardCode).containsExactly("qna", "qna");
         assertThat(page.items()).extracting(PostSummary::boardName).containsExactly("技术问答", "技术问答");
-        verify(accountApplicationService, times(1)).nicknamesOf(any());
+        assertThat(page.items()).extracting(PostSummary::authorAvatarUrl)
+                .containsExactly("/avatars/avatar-01-terminal.png", null);
+        verify(accountApplicationService, times(1)).authorBriefsOf(any());
     }
 
     @Test
@@ -119,8 +124,8 @@ class ForumQueryApplicationServiceTest {
         when(postRepository.findPage(null, PostSortOrder.LATEST, PostListFilter.NONE, java.util.Set.of(), java.util.Set.of(), 1, 20))
                 .thenReturn(new PageResult<>(List.of(post(1L, 101L), post(2L, 102L), post(3L, 103L)), 3, 1, 20));
         when(boardRepository.findAllEnabled()).thenReturn(List.of());
-        when(accountApplicationService.nicknamesOf(List.of(101L, 102L, 103L)))
-                .thenReturn(Map.of(101L, "甲", 102L, "乙", 103L, "丙"));
+        when(accountApplicationService.authorBriefsOf(List.of(101L, 102L, 103L)))
+                .thenReturn(briefs(101L, "甲", 102L, "乙", 103L, "丙"));
         when(likeRepository.findLikedTargetIds(42L,
                 com.campuslink.module.forum.domain.model.LikeTargetType.POST, List.of(1L, 2L, 3L)))
                 .thenReturn(java.util.Set.of(2L));
@@ -139,7 +144,7 @@ class ForumQueryApplicationServiceTest {
         when(postRepository.findPage(null, PostSortOrder.LATEST, PostListFilter.NONE, java.util.Set.of(), java.util.Set.of(), 1, 20))
                 .thenReturn(new PageResult<>(List.of(post(1L, 101L)), 1, 1, 20));
         when(boardRepository.findAllEnabled()).thenReturn(List.of());
-        when(accountApplicationService.nicknamesOf(List.of(101L))).thenReturn(Map.of(101L, "甲"));
+        when(accountApplicationService.authorBriefsOf(List.of(101L))).thenReturn(briefs(101L, "甲"));
 
         PageResult<PostSummary> page = service.listPosts(null, "latest", null, 1, 20, null);
 
@@ -153,12 +158,14 @@ class ForumQueryApplicationServiceTest {
         when(postRepository.findPage(null, PostSortOrder.LATEST, PostListFilter.NONE, java.util.Set.of(), java.util.Set.of(), 1, 20))
                 .thenReturn(new PageResult<>(List.of(anonymousPost(1L, 100L)), 1, 1, 20));
         when(boardRepository.findAllEnabled()).thenReturn(List.of(board(1L, "qna", "技术问答")));
-        when(accountApplicationService.nicknamesOf(any())).thenReturn(Map.of(100L, "张三"));
+        when(accountApplicationService.authorBriefsOf(any()))
+                .thenReturn(Map.of(100L, new AuthorBrief("张三", "/avatars/avatar-01-terminal.png")));
 
         PostSummary item = service.listPosts(null, "latest", null, 1, 20, null).items().getFirst();
 
         assertThat(item.authorNickname()).isEqualTo("匿名用户");
         assertThat(item.anonymous()).isTrue();
+        assertThat(item.authorAvatarUrl()).isNull();
     }
 
     @Test
@@ -167,7 +174,7 @@ class ForumQueryApplicationServiceTest {
         when(favoriteRepository.findFavoritePosts(42L, 1, 20))
                 .thenReturn(new PageResult<>(List.of(anonymousPost(9L, 100L)), 1, 1, 20));
         when(boardRepository.findAllEnabled()).thenReturn(List.of(board(1L, "qna", "技术问答")));
-        when(accountApplicationService.nicknamesOf(any())).thenReturn(Map.of(100L, "张三"));
+        when(accountApplicationService.authorBriefsOf(any())).thenReturn(briefs(100L, "张三"));
         when(likeRepository.findLikedTargetIds(42L,
                 com.campuslink.module.forum.domain.model.LikeTargetType.POST, List.of(9L)))
                 .thenReturn(java.util.Set.of());
@@ -224,7 +231,7 @@ class ForumQueryApplicationServiceTest {
         when(postRepository.findPage(null, PostSortOrder.LATEST, PostListFilter.NONE, java.util.Set.of(), java.util.Set.of(), 1, 20))
                 .thenReturn(new PageResult<>(List.of(post(1L, 100L, longMarkdown)), 1, 1, 20));
         when(boardRepository.findAllEnabled()).thenReturn(List.of());
-        when(accountApplicationService.nicknamesOf(any())).thenReturn(Map.of(100L, "张三"));
+        when(accountApplicationService.authorBriefsOf(any())).thenReturn(briefs(100L, "张三"));
 
         String summary = service.listPosts(null, "latest", null, 1, 20, null).items().get(0).summary();
 
@@ -290,12 +297,14 @@ class ForumQueryApplicationServiceTest {
     void detailReturnsRenderedHtml() {
         when(postRepository.findById(9L)).thenReturn(Optional.of(post(9L, 100L)));
         when(boardRepository.findAllEnabled()).thenReturn(List.of(board(1L, "qna", "技术问答")));
-        when(accountApplicationService.nicknamesOf(List.of(100L))).thenReturn(Map.of(100L, "张三"));
+        when(accountApplicationService.authorBriefsOf(List.of(100L)))
+                .thenReturn(Map.of(100L, new AuthorBrief("张三", "/avatars/avatar-02-keyboard.png")));
 
         PostDetail detail = service.postDetail(9L, null);
 
         assertThat(detail.contentHtml()).isEqualTo("<p>正文</p>");
         assertThat(detail.boardCode()).isEqualTo("qna");
+        assertThat(detail.authorAvatarUrl()).isEqualTo("/avatars/avatar-02-keyboard.png");
         assertThat(detail.boardName()).isEqualTo("技术问答");
         assertThat(detail.authorNickname()).isEqualTo("张三");
         assertThat(detail.authorId()).isEqualTo(100L);
@@ -313,7 +322,7 @@ class ForumQueryApplicationServiceTest {
         assertThat(detail.authorId()).isNull();
         assertThat(detail.authorNickname()).isEqualTo("匿名用户");
         assertThat(detail.anonymous()).isTrue();
-        verify(accountApplicationService, never()).nicknamesOf(any());
+        verify(accountApplicationService, never()).authorBriefsOf(any());
     }
 
     @Test
@@ -365,8 +374,8 @@ class ForumQueryApplicationServiceTest {
         when(postRepository.findById(9L)).thenReturn(Optional.of(post(9L, 100L)));
         when(replyRepository.findPageByPostId(9L, java.util.Set.of(), java.util.Set.of(), 1, 20))
                 .thenReturn(new PageResult<>(List.of(reply(11L, 100L, 1), reply(12L, 200L, 2)), 2, 1, 20));
-        when(accountApplicationService.nicknamesOf(List.of(100L, 200L)))
-                .thenReturn(Map.of(100L, "张三", 200L, "李四"));
+        when(accountApplicationService.authorBriefsOf(List.of(100L, 200L)))
+                .thenReturn(briefs(100L, "张三", 200L, "李四"));
 
         PageResult<ReplyItem> page = service.listReplies(9L, 1, 20, null);
 
@@ -388,7 +397,7 @@ class ForumQueryApplicationServiceTest {
         when(replyRepository.findVisibleByIds(java.util.Set.of(11L))).thenReturn(List.of(
                 Reply.rehydrate(11L, 9L, 100L, 1, "# 标题\n\n" + "正文".repeat(80), "<p>…</p>",
                         null, false, 0, CREATED_AT)));
-        when(accountApplicationService.nicknamesOf(any())).thenReturn(Map.of(100L, "张三", 200L, "李四"));
+        when(accountApplicationService.authorBriefsOf(any())).thenReturn(briefs(100L, "张三", 200L, "李四"));
 
         List<ReplyItem> items = service.listReplies(9L, 1, 20, null).items();
 
@@ -407,13 +416,13 @@ class ForumQueryApplicationServiceTest {
         when(replyRepository.findPageByPostId(9L, java.util.Set.of(), java.util.Set.of(), 1, 20)).thenReturn(new PageResult<>(
                 List.of(replyQuoted(12L, 200L, 2, 99L)), 1, 1, 20));
         when(replyRepository.findVisibleByIds(java.util.Set.of(99L))).thenReturn(List.of());
-        when(accountApplicationService.nicknamesOf(List.of(200L))).thenReturn(Map.of(200L, "李四"));
+        when(accountApplicationService.authorBriefsOf(List.of(200L))).thenReturn(briefs(200L, "李四"));
 
         ReplyItem item = service.listReplies(9L, 1, 20, null).items().getFirst();
 
         assertThat(item.quoted()).isNull();
         // 只查了楼层作者：被引楼层的内容已不可见，其作者昵称无从渲染、也不该被批量查询带出
-        verify(accountApplicationService).nicknamesOf(List.of(200L));
+        verify(accountApplicationService).authorBriefsOf(List.of(200L));
     }
 
     @Test
@@ -421,7 +430,8 @@ class ForumQueryApplicationServiceTest {
     void detailWithViewerPopulatesMyState() {
         when(postRepository.findById(9L)).thenReturn(Optional.of(post(9L, 100L)));
         when(boardRepository.findAllEnabled()).thenReturn(List.of(board(1L, "qna", "技术问答")));
-        when(accountApplicationService.nicknamesOf(List.of(100L))).thenReturn(Map.of(100L, "张三"));
+        when(accountApplicationService.authorBriefsOf(List.of(100L)))
+                .thenReturn(Map.of(100L, new AuthorBrief("张三", "/avatars/avatar-02-keyboard.png")));
         when(likeRepository.findLikedTargetIds(42L, com.campuslink.module.forum.domain.model.LikeTargetType.POST,
                 List.of(9L))).thenReturn(java.util.Set.of(9L));
         when(favoriteRepository.findFavoritedPostIds(42L, List.of(9L))).thenReturn(java.util.Set.of());
@@ -439,7 +449,8 @@ class ForumQueryApplicationServiceTest {
                 .thenReturn(new PageResult<>(List.of(post(1L, 100L), post(2L, 200L)), 2, 1, 20));
         when(boardRepository.findByCode("qna")).thenReturn(Optional.of(board(1L, "qna", "技术问答")));
         when(boardRepository.findAllEnabled()).thenReturn(List.of(board(1L, "qna", "技术问答")));
-        when(accountApplicationService.nicknamesOf(List.of(100L, 200L))).thenReturn(Map.of(100L, "张三"));
+        when(accountApplicationService.authorBriefsOf(List.of(100L, 200L)))
+                .thenReturn(Map.of(100L, new AuthorBrief("张三", "/avatars/avatar-01-terminal.png")));
 
         PageResult<PostSummary> page = service.searchPosts("  Redis  ", "qna", null, 1, 20, null);
 
@@ -456,7 +467,8 @@ class ForumQueryApplicationServiceTest {
         when(postRepository.search("命中词", null, null, java.util.Set.of(), java.util.Set.of(), 1, 20))
                 .thenReturn(new PageResult<>(List.of(post(1L, 100L, deepContent)), 1, 1, 20));
         when(boardRepository.findAllEnabled()).thenReturn(List.of(board(1L, "qna", "技术问答")));
-        when(accountApplicationService.nicknamesOf(List.of(100L))).thenReturn(Map.of(100L, "张三"));
+        when(accountApplicationService.authorBriefsOf(List.of(100L)))
+                .thenReturn(Map.of(100L, new AuthorBrief("张三", "/avatars/avatar-02-keyboard.png")));
 
         PageResult<PostSummary> page = service.searchPosts("命中词", null, null, 1, 20, null);
 
@@ -569,7 +581,7 @@ class ForumQueryApplicationServiceTest {
         assertThat(page.items()).extracting(MyPostSummary::status).containsExactly("PUBLISHED", "REMOVED", "PUBLISHED");
         assertThat(page.items()).extracting(MyPostSummary::anonymous).containsExactly(false, false, true);
         assertThat(page.items()).allSatisfy(item -> assertThat(item.boardCode()).isEqualTo("qna"));
-        verify(accountApplicationService, never()).nicknamesOf(any());
+        verify(accountApplicationService, never()).authorBriefsOf(any());
     }
 
     @Test
@@ -651,7 +663,7 @@ class ForumQueryApplicationServiceTest {
         when(reportRepository.findPendingTargetsByReporter(42L))
                 .thenReturn(new com.campuslink.module.forum.domain.model.ReportedTargets(
                         java.util.Set.of(7L), java.util.Set.of()));
-        when(accountApplicationService.nicknamesOf(any())).thenReturn(java.util.Map.of(100L, "作者乙"));
+        when(accountApplicationService.authorBriefsOf(any())).thenReturn(briefs(100L, "作者乙"));
         when(boardRepository.findAllEnabled()).thenReturn(List.of(board(1L, "qna", "技术问答")));
 
         assertThatThrownBy(() -> service.postDetail(7L, 42L))
@@ -670,7 +682,7 @@ class ForumQueryApplicationServiceTest {
         when(postRepository.findPage(null, PostSortOrder.LATEST, PostListFilter.NONE, java.util.Set.of(), java.util.Set.of(7L), 1, 20))
                 .thenReturn(new PageResult<>(List.of(post(8L, 100L)), 1, 1, 20));
         when(boardRepository.findAllEnabled()).thenReturn(List.of(board(1L, "qna", "技术问答")));
-        when(accountApplicationService.nicknamesOf(any())).thenReturn(java.util.Map.of(100L, "作者乙"));
+        when(accountApplicationService.authorBriefsOf(any())).thenReturn(briefs(100L, "作者乙"));
 
         PageResult<PostSummary> result = service.listPosts(null, "latest", null, 1, 20, 42L);
 
@@ -694,7 +706,7 @@ class ForumQueryApplicationServiceTest {
         when(replyRepository.findPageByPostId(9L, java.util.Set.of(), java.util.Set.of(11L), 1, 20))
                 .thenReturn(new PageResult<>(List.of(replyQuoted(12L, 100L, 1, 11L)), 1, 1, 20));
         when(replyRepository.findVisibleByIds(any())).thenReturn(List.of(reply(11L, 200L, 2)));
-        when(accountApplicationService.nicknamesOf(any())).thenReturn(java.util.Map.of(100L, "作者乙", 200L, "作者丙"));
+        when(accountApplicationService.authorBriefsOf(any())).thenReturn(briefs(100L, "作者乙", 200L, "作者丙"));
         when(likeRepository.findLikedTargetIds(anyLong(), any(), any()))
                 .thenReturn(java.util.Set.of());
 
@@ -777,5 +789,13 @@ class ForumQueryApplicationServiceTest {
         assertThat(result.get(1).accepted()).isTrue();
         // excludeAuthorId=42 passed to repository — own posts excluded at SQL level
         verify(postRepository).findSimilar("如何学习Java编程", 1L, 42L, java.util.Set.of(), 3);
+    }
+
+    private static Map<Long, AuthorBrief> briefs(Object... kv) {
+        Map<Long, AuthorBrief> map = new LinkedHashMap<>();
+        for (int i = 0; i < kv.length; i += 2) {
+            map.put((Long) kv[i], new AuthorBrief((String) kv[i + 1], null));
+        }
+        return map;
     }
 }

@@ -139,9 +139,18 @@ public class Account {
         return changed;
     }
 
+    /**
+     * 默认头像分配（CR-162）：注册落库拿到自增 id 后由应用层调用。
+     * **只在空值时写入**——未来用户自选 / 上传头像落地后，重复调用不会覆盖。
+     */
+    public void assignAvatarIfAbsent(String avatarUrl) {
+        if (this.avatarUrl == null && avatarUrl != null && !avatarUrl.isBlank()) {
+            this.avatarUrl = avatarUrl;
+        }
+    }
+
     /** 昵称是唯一不许清空的资料列（顶栏与帖子作者位靠它认人）；空串归一后为 null，即视为"想清空" → 拒 */
-    private static String requireNickname(String trimmed) {
-        if (trimmed == null || trimmed.length() < FieldRules.NICKNAME_MIN_CHARS) {
+    private static String requireNickname(String trimmed) {        if (trimmed == null || trimmed.length() < FieldRules.NICKNAME_MIN_CHARS) {
             throw new ApiException(ResultCode.INVALID_PARAM);
         }
         return trimmed;

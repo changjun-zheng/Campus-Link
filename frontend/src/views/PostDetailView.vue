@@ -440,11 +440,11 @@ watch(
               :to="`/u/${post.authorId}`"
               class="inline-flex items-center gap-1.5 hover:text-link hover:underline"
             >
-              <UserAvatar :name="post.authorNickname" :size="20" />
+              <UserAvatar :src="post.authorAvatarUrl ?? ''" :name="post.authorNickname" :size="20" />
               <span>{{ post.authorNickname }}</span>
             </RouterLink>
             <span v-else class="inline-flex items-center gap-1.5">
-              <UserAvatar :name="post.authorNickname" :size="20" />
+              <UserAvatar :src="post.authorAvatarUrl ?? ''" :name="post.authorNickname" :size="20" />
               <span>{{ post.authorNickname }}</span>
             </span>
             <el-tag v-if="post.anonymous" size="small" effect="plain">匿名发布</el-tag>
@@ -587,7 +587,7 @@ watch(
                     :to="`/u/${r.authorId}`"
                     class="inline-flex items-center gap-1.5 text-ink hover:text-link hover:underline"
                   >
-                    <UserAvatar :name="r.authorNickname" :size="20" />
+                    <UserAvatar :src="r.authorAvatarUrl ?? ''" :name="r.authorNickname" :size="20" />
                     <span>{{ r.authorNickname }}</span>
                   </RouterLink>
                   <!-- 匿名帖 authorId 对非作者为 null（CR-139）：不能拿它和楼层作者比对，否则会反推出楼主 -->

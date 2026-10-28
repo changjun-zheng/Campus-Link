@@ -5,6 +5,7 @@ import com.campuslink.common.markdown.MarkdownRenderer;
 import com.campuslink.common.result.ResultCode;
 import com.campuslink.config.AppProperties;
 import com.campuslink.module.account.application.AccountApplicationService;
+import com.campuslink.module.account.application.AuthorBrief;
 import com.campuslink.module.account.application.FollowApplicationService;
 import com.campuslink.module.account.application.UserBlockApplicationService;
 import com.campuslink.module.forum.application.cmd.ForumResults.AuthorStats;
@@ -161,10 +162,13 @@ public class ForumQueryApplicationService {
             throw new PostNotFoundException();
         }
         Board board = boardsById().get(post.getBoardId());
+        AuthorBrief author = post.isAnonymous() ? null
+                : accountApplicationService.authorBriefsOf(List.of(post.getAuthorId())).get(post.getAuthorId());
         String nickname = post.isAnonymous()
                 ? ANONYMOUS_NICKNAME
-                : accountApplicationService.nicknamesOf(List.of(post.getAuthorId()))
-                        .getOrDefault(post.getAuthorId(), NICKNAME_FALLBACK);
+                : author == null ? NICKNAME_FALLBACK : author.nickname();
+        // 匿名帖头像与昵称一起脱敏（CR-162 / 先例 CR-139）：不回传真实头像，前端回落「匿」首字
+        String authorAvatarUrl = post.isAnonymous() || author == null ? null : author.avatarUrl();
         // 匿名帖的 authorId 只回填给作者本人：采纳 / 编辑 / 关注判定要用；其他读者（含匿名访客）拿不到
         Long visibleAuthorId = post.isAnonymous() && !post.getAuthorId().equals(viewerId)
                 ? null : post.getAuthorId();
@@ -176,7 +180,7 @@ public class ForumQueryApplicationService {
                 board == null ? null : board.getCode(),
                 board == null ? null : board.getName(),
                 board == null ? null : board.getType().name(),
-                post.getTitle(), post.getContentHtml(), visibleAuthorId, nickname,
+                post.getTitle(), post.getContentHtml(), visibleAuthorId, nickname, authorAvatarUrl,
                 post.getReplyCount(), post.getLikeCount(), post.getViewCount(), post.getTags(), post.isAccepted(),
                 likedByMe, favoritedByMe, post.getCreatedAt(), post.isAnonymous());
     }
@@ -222,16 +226,21 @@ public class ForumQueryApplicationService {
                 .collect(Collectors.toMap(Reply::getId, Function.identity()));
         Set<Long> authorIds = new LinkedHashSet<>(found.items().stream().map(Reply::getAuthorId).toList());
         quotedVisible.values().forEach(quoted -> authorIds.add(quoted.getAuthorId()));
-        Map<Long, String> nicknames = accountApplicationService.nicknamesOf(List.copyOf(authorIds));
+        Map<Long, AuthorBrief> authors = accountApplicationService.authorBriefsOf(List.copyOf(authorIds));
         Set<Long> likedReplyIds = viewerId == null ? Set.of()
                 : likeRepository.findLikedTargetIds(viewerId, LikeTargetType.REPLY,
                         found.items().stream().map(Reply::getId).toList());
         List<ReplyItem> items = found.items().stream()
-                .map(reply -> new ReplyItem(reply.getId(), reply.getFloorNo(), reply.getContentHtml(),
-                        reply.getAuthorId(), nicknames.getOrDefault(reply.getAuthorId(), NICKNAME_FALLBACK),
-                        reply.isAccepted(), reply.getLikeCount(),
-                        likedReplyIds.contains(reply.getId()),
-                        quotedBriefOf(reply, quotedVisible, nicknames), reply.getCreatedAt()))
+                .map(reply -> {
+                    AuthorBrief author = authors.get(reply.getAuthorId());
+                    return new ReplyItem(reply.getId(), reply.getFloorNo(), reply.getContentHtml(),
+                            reply.getAuthorId(),
+                            author == null ? NICKNAME_FALLBACK : author.nickname(),
+                            author == null ? null : author.avatarUrl(),
+                            reply.isAccepted(), reply.getLikeCount(),
+                            likedReplyIds.contains(reply.getId()),
+                            quotedBriefOf(reply, quotedVisible, authors), reply.getCreatedAt());
+                })
                 .toList();
         return new PageResult<>(items, found.total(), currentPage, pageSize);
     }
@@ -240,7 +249,7 @@ public class ForumQueryApplicationService {
      * 被引用楼层摘要（F-009 / CR-085）：目标不在可见集合（不存在 / 已下架 / 已删除）→ null，
      * 前端不渲染引用块——"内容不可见不外泄"同 CR-066 通知标题回落的判定思路。
      */
-    private QuotedBrief quotedBriefOf(Reply reply, Map<Long, Reply> quotedVisible, Map<Long, String> nicknames) {
+    private QuotedBrief quotedBriefOf(Reply reply, Map<Long, Reply> quotedVisible, Map<Long, AuthorBrief> authors) {
         if (reply.getQuotedReplyId() == null) {
             return null;
         }
@@ -249,7 +258,7 @@ public class ForumQueryApplicationService {
             return null;
         }
         return new QuotedBrief(target.getId(), target.getFloorNo(),
-                nicknames.getOrDefault(target.getAuthorId(), NICKNAME_FALLBACK),
+                authors.getOrDefault(target.getAuthorId(), new AuthorBrief(NICKNAME_FALLBACK, null)).nickname(),
                 markdownRenderer.toPlainSummary(target.getContentMd(), SUMMARY_MAX_CHARS));
     }
 
@@ -568,7 +577,7 @@ public class ForumQueryApplicationService {
      */
     private List<PostSummary> toSummaries(List<Post> posts, Long viewerId, Function<Post, String> summaryFactory) {
         Map<Long, Board> boardsById = boardsById();
-        Map<Long, String> nicknames = accountApplicationService.nicknamesOf(
+        Map<Long, AuthorBrief> authors = accountApplicationService.authorBriefsOf(
                 posts.stream().map(Post::getAuthorId).toList());
         List<Long> postIds = posts.stream().map(Post::getId).toList();
         Set<Long> likedIds = viewerId == null || postIds.isEmpty()
@@ -577,12 +586,14 @@ public class ForumQueryApplicationService {
         return posts.stream()
                 .map(post -> {
                     Board board = boardsById.get(post.getBoardId());
+                    AuthorBrief author = authors.get(post.getAuthorId());
                     return new PostSummary(post.getId(),
                             board == null ? null : board.getCode(),
                             board == null ? null : board.getName(),
                             post.getTitle(),
                             post.isAnonymous() ? ANONYMOUS_NICKNAME
-                                    : nicknames.getOrDefault(post.getAuthorId(), NICKNAME_FALLBACK),
+                                    : author == null ? NICKNAME_FALLBACK : author.nickname(),
+                            post.isAnonymous() || author == null ? null : author.avatarUrl(),
                             post.getReplyCount(), post.getLikeCount(), post.getViewCount(), post.getCoverUrl(),
                             post.getTags(),
                             summaryFactory.apply(post),

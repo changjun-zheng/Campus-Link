@@ -126,6 +126,32 @@ class AccountApplicationServiceRegisterTest {
         }
 
         @Test
+        @DisplayName("注册：落库拿到 id 后按 userId 分配默认头像并回填响应（CR-162）")
+        void registerAssignsDefaultAvatarFromUserId() {
+                when(codec.decrypt(ENCRYPTED_STUDENT_ID)).thenReturn(PLAIN_STUDENT_ID);
+                when(codec.hash(anyString())).thenAnswer(inv -> "H(" + inv.getArgument(0) + ")");
+                when(ticketStore.consume("ticket-1")).thenReturn(Optional.of(ENCRYPTED_STUDENT_ID));
+                when(captchaService.verify(anyString(), anyString())).thenReturn(true);
+                when(accountRepository.existsByEmailHash(anyString())).thenReturn(false);
+                when(accountRepository.save(any(Account.class))).thenReturn(Account.rehydrate(24L,
+                                com.campuslink.module.account.domain.model.EmailAddress.of("someone@example.com"), null,
+                                com.campuslink.module.account.domain.model.StudentId.of(PLAIN_STUDENT_ID), "张三",
+                                null, null, null, null, null,
+                                com.campuslink.module.account.domain.model.AccountRole.USER,
+                                com.campuslink.module.account.domain.model.AccountStatus.ACTIVE, true, false, null,
+                                null, null));
+                when(rosterGateway.occupy(anyString(), any())).thenReturn(true);
+                when(tokenIssuer.issue(any(), anyString())).thenReturn("jwt-token");
+                when(tokenIssuer.ttlSeconds()).thenReturn(604800L);
+
+                LoginResult result = service.register(
+                                new RegisterCommand("ticket-1", "someone@example.com", "123456", "张三"));
+
+                verify(accountRepository).updateAvatarIfAbsent(24L, "/avatars/avatar-01-terminal.png");
+                assertThat(result.account().getAvatarUrl()).isEqualTo("/avatars/avatar-01-terminal.png");
+        }
+
+        @Test
         @DisplayName("注册：学号唯一键冲突 -> 统一为学籍核验失败提示（防名册枚举），不得返回 9999")
         void studentIdConflictMapsToUnifiedVerificationFailure() {
                 stubReachingSave();

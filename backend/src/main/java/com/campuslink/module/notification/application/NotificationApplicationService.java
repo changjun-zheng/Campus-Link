@@ -127,8 +127,10 @@ public class NotificationApplicationService {
             return new PageResult<>(List.of(), found.total(), currentPage, pageSize);
         }
 
-        Map<Long, String> nicknames = accountApplicationService.nicknamesOf(
-                rows.stream().map(Notification::getActorId).toList());
+        Map<Long, String> nicknames = accountApplicationService.authorBriefsOf(
+                        rows.stream().map(Notification::getActorId).toList())
+                .entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().nickname()));
         // 楼层类通知先解析所属帖子，再与帖子类通知合并成一次帖子标题批量查询
         Map<Long, ReplyBrief> replyBriefs = forumQueryService.replyBriefsOf(
                 rows.stream().filter(n -> n.getTargetType() == NotificationTargetType.REPLY)

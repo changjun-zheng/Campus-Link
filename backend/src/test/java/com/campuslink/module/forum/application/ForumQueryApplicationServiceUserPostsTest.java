@@ -26,7 +26,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import com.campuslink.module.account.application.AuthorBrief;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -104,7 +106,7 @@ class ForumQueryApplicationServiceUserPostsTest {
         when(postRepository.findPageByAuthors(List.of(AUTHOR_ID), java.util.Set.of(), java.util.Set.of(), 1, 20))
                 .thenReturn(new PageResult<>(List.of(post(7L, AUTHOR_ID)), 1, 1, 20));
         when(boardRepository.findAllEnabled()).thenReturn(List.of(board(1L, "qna", "技术问答")));
-        when(accountApplicationService.nicknamesOf(List.of(AUTHOR_ID))).thenReturn(Map.of(AUTHOR_ID, "张三同学"));
+        when(accountApplicationService.authorBriefsOf(List.of(AUTHOR_ID))).thenReturn(briefs(AUTHOR_ID, "张三同学"));
 
         PageResult<PostSummary> page = service.listVisiblePostsByAuthor(AUTHOR_ID, 1, 20, null);
 
@@ -157,5 +159,13 @@ class ForumQueryApplicationServiceUserPostsTest {
 
     private static Board board(Long id, String code, String name) {
         return Board.rehydrate(id, code, name, "描述", BoardType.QUESTION, 1);
+    }
+
+    private static Map<Long, AuthorBrief> briefs(Object... kv) {
+        Map<Long, AuthorBrief> map = new LinkedHashMap<>();
+        for (int i = 0; i < kv.length; i += 2) {
+            map.put((Long) kv[i], new AuthorBrief((String) kv[i + 1], null));
+        }
+        return map;
     }
 }

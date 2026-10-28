@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.Set;
 
 /**
@@ -66,8 +67,10 @@ public class AdminContentSearchApplicationService {
         }
         PageResult<ContentRow> found = adminContentSearchGateway.search(normalizedKind,
                 kw.isEmpty() ? null : kw, authorIds, days, currentPage, pageSize);
-        Map<Long, String> nicknames = accountApplicationService.nicknamesOf(
-                found.items().stream().map(ContentRow::authorId).toList());
+        Map<Long, String> nicknames = accountApplicationService.authorBriefsOf(
+                        found.items().stream().map(ContentRow::authorId).toList())
+                .entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().nickname()));
         List<AdminContentItem> items = found.items().stream()
                 .map(row -> new AdminContentItem(row.id(), row.kind(), row.title(),
                         markdownRenderer.toPlainSummary(row.contentMd(), SUMMARY_MAX_CHARS),

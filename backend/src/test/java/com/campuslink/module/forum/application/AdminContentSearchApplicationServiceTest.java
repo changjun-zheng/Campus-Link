@@ -18,7 +18,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import com.campuslink.module.account.application.AuthorBrief;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -57,7 +59,7 @@ class AdminContentSearchApplicationServiceTest {
         when(gateway.search(eq("post"), isNull(), isNull(), isNull(), eq(1), eq(100)))
                 .thenReturn(new PageResult<>(List.of(row("post", "帖子标题")), 1, 1, 100));
         when(markdownRenderer.toPlainSummary("正文", 200)).thenReturn("正文摘要");
-        when(accountApplicationService.nicknamesOf(List.of(AUTHOR_ID))).thenReturn(Map.of(AUTHOR_ID, "作者甲"));
+        when(accountApplicationService.authorBriefsOf(List.of(AUTHOR_ID))).thenReturn(briefs(AUTHOR_ID, "作者甲"));
 
         AdminContentPage result = service.search(null, "   ", null, null, null, 0, 999);
 
@@ -82,7 +84,7 @@ class AdminContentSearchApplicationServiceTest {
         when(gateway.search("reply", "Redis", List.of(AUTHOR_ID), 7, 2, 10))
                 .thenReturn(new PageResult<>(List.of(row("reply", "父帖标题")), 1, 2, 10));
         when(markdownRenderer.toPlainSummary("正文", 200)).thenReturn("摘要");
-        when(accountApplicationService.nicknamesOf(List.of(AUTHOR_ID))).thenReturn(Map.of(AUTHOR_ID, "张三"));
+        when(accountApplicationService.authorBriefsOf(List.of(AUTHOR_ID))).thenReturn(briefs(AUTHOR_ID, "张三"));
 
         AdminContentPage result = service.search("reply", " Redis ", null, " 张 ", 7, 2, 10);
 
@@ -138,5 +140,13 @@ class AdminContentSearchApplicationServiceTest {
     private static ContentRow row(String kind, String title) {
         return new ContentRow(POST_ID, kind, title, "正文", "技术问答",
                 AUTHOR_ID, "作者甲", "PUBLISHED", CREATED_AT);
+    }
+
+    private static Map<Long, AuthorBrief> briefs(Object... kv) {
+        Map<Long, AuthorBrief> map = new LinkedHashMap<>();
+        for (int i = 0; i < kv.length; i += 2) {
+            map.put((Long) kv[i], new AuthorBrief((String) kv[i + 1], null));
+        }
+        return map;
     }
 }

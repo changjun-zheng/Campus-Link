@@ -35,8 +35,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * 跨上下文只读方法 nicknamesOf：整页作者名必须一次查齐（不做 N+1），
- * 查不到的 id 由调用方回落文案，方法本身不编造昵称。
+ * 跨上下文只读方法 authorBriefsOf：整页作者昵称 + 头像必须一次查齐（不做 N+1），
+ * 查不到的 id 由调用方回落文案，方法本身不编造昵称 / 头像。
  */
 @ExtendWith(MockitoExtension.class)
 class AccountApplicationServiceNicknameTest {
@@ -76,7 +76,7 @@ class AccountApplicationServiceNicknameTest {
         List<Long> ids = LongStream.rangeClosed(1, 20).boxed().toList();
         when(accountRepository.findByIds(any())).thenReturn(List.of());
 
-        service.nicknamesOf(ids);
+        service.authorBriefsOf(ids);
 
         verify(accountRepository, times(1)).findByIds(ids);
     }
@@ -87,23 +87,41 @@ class AccountApplicationServiceNicknameTest {
         when(accountRepository.findByIds(any())).thenReturn(List.of(
                 account(1L, "张三"), account(3L, "王五")));
 
-        Map<Long, String> nicknames = service.nicknamesOf(List.of(1L, 2L, 3L));
+        Map<Long, AuthorBrief> briefs = service.authorBriefsOf(List.of(1L, 2L, 3L));
 
-        assertThat(nicknames).containsExactlyInAnyOrderEntriesOf(Map.of(1L, "张三", 3L, "王五"));
-        assertThat(nicknames).doesNotContainKey(2L);
+        assertThat(briefs).containsOnlyKeys(1L, 3L);
+        assertThat(briefs.get(1L).nickname()).isEqualTo("张三");
+        assertThat(briefs.get(3L).nickname()).isEqualTo("王五");
+        assertThat(briefs.values()).allSatisfy(brief -> assertThat(brief.avatarUrl()).isNull());
     }
 
     @Test
     @DisplayName("空入参直接返回空 Map，不触达仓储")
     void emptyInputSkipsRepository() {
-        assertThat(service.nicknamesOf(List.of())).isEmpty();
-        assertThat(service.nicknamesOf(null)).isEmpty();
+        assertThat(service.authorBriefsOf(List.of())).isEmpty();
+        assertThat(service.authorBriefsOf(null)).isEmpty();
 
         verify(accountRepository, never()).findByIds(any());
     }
 
+    @Test
+    @DisplayName("头像随昵称一起返回（CR-162）：同一批查询，不额外触达仓储")
+    void returnsAvatarAlongsideNickname() {
+        when(accountRepository.findByIds(any())).thenReturn(List.of(account(7L, "小李", "/avatars/avatar-08-robot.png")));
+
+        Map<Long, AuthorBrief> briefs = service.authorBriefsOf(List.of(7L));
+
+        assertThat(briefs.get(7L).nickname()).isEqualTo("小李");
+        assertThat(briefs.get(7L).avatarUrl()).isEqualTo("/avatars/avatar-08-robot.png");
+        verify(accountRepository, times(1)).findByIds(any());
+    }
+
     private static Account account(Long id, String nickname) {
-        return Account.rehydrate(id, EmailAddress.of("u" + id + "@example.com"), null, null, nickname, null, null, null,
-                null, null, AccountRole.USER, AccountStatus.ACTIVE, true, false, null, null, null);
+        return account(id, nickname, null);
+    }
+
+    private static Account account(Long id, String nickname, String avatarUrl) {
+        return Account.rehydrate(id, EmailAddress.of("u" + id + "@example.com"), null, null, nickname, avatarUrl,
+                null, null, null, null, AccountRole.USER, AccountStatus.ACTIVE, true, false, null, null, null);
     }
 }

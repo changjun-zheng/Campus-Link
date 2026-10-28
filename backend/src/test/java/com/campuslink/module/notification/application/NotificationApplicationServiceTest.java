@@ -26,7 +26,9 @@ import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import com.campuslink.module.account.application.AuthorBrief;
 import java.util.Optional;
 import java.util.Set;
 
@@ -173,8 +175,8 @@ class NotificationApplicationServiceTest {
                 List.of(notification(1L, NotificationType.REPLY, NotificationTargetType.REPLY, 11L, false),
                         notification(2L, NotificationType.LIKE, NotificationTargetType.POST, 9L, true)),
                 2, 1, 20));
-        when(accountApplicationService.nicknamesOf(anyCollection()))
-                .thenReturn(Map.of(7L, "小李", 8L, "小王"));
+        when(accountApplicationService.authorBriefsOf(anyCollection()))
+                .thenReturn(briefs(7L, "小李", 8L, "小王"));
         when(forumQueryService.replyBriefsOf(Set.of(11L))).thenReturn(Map.of(11L, new ReplyBrief(9L, 3)));
         when(forumQueryService.postBriefsOf(Set.of(9L))).thenReturn(Map.of(9L, new PostBrief("Spring 事务失效")));
 
@@ -195,7 +197,7 @@ class NotificationApplicationServiceTest {
         assertThat(postItem.floorNo()).isNull();
         assertThat(postItem.read()).isTrue();
         // 一页只有一次批量查，不做 N+1
-        verify(accountApplicationService).nicknamesOf(anyCollection());
+        verify(accountApplicationService).authorBriefsOf(anyCollection());
         verify(forumQueryService).postBriefsOf(anyCollection());
     }
 
@@ -205,7 +207,7 @@ class NotificationApplicationServiceTest {
         when(notificationRepository.findPage(RECIPIENT, null, 1, 20)).thenReturn(new PageResult<>(
                 List.of(notification(1L, NotificationType.REPLY, NotificationTargetType.REPLY, 11L, false)),
                 1, 1, 20));
-        when(accountApplicationService.nicknamesOf(anyCollection())).thenReturn(Map.of());
+        when(accountApplicationService.authorBriefsOf(anyCollection())).thenReturn(briefs());
         when(forumQueryService.replyBriefsOf(Set.of(11L))).thenReturn(Map.of());
         when(forumQueryService.postBriefsOf(Set.of())).thenReturn(Map.of());
 
@@ -230,7 +232,7 @@ class NotificationApplicationServiceTest {
         when(notificationRepository.findPage(RECIPIENT, null, 1, 20)).thenReturn(new PageResult<>(
                 List.of(notification(1L, NotificationType.LIKE, NotificationTargetType.POST, 9L, false)),
                 1, 1, 20));
-        when(accountApplicationService.nicknamesOf(anyCollection())).thenReturn(Map.of(7L, "小李"));
+        when(accountApplicationService.authorBriefsOf(anyCollection())).thenReturn(briefs(7L, "小李"));
         when(forumQueryService.replyBriefsOf(Set.of())).thenReturn(Map.of());
         when(forumQueryService.postBriefsOf(Set.of(9L))).thenReturn(Map.of());
 
@@ -248,7 +250,7 @@ class NotificationApplicationServiceTest {
         when(notificationRepository.findPage(RECIPIENT, null, 1, 20)).thenReturn(new PageResult<>(
                 List.of(notification(1L, NotificationType.LIKE, NotificationTargetType.POST, 9L, false)),
                 1, 1, 20));
-        when(accountApplicationService.nicknamesOf(anyCollection())).thenReturn(Map.of(7L, "小李"));
+        when(accountApplicationService.authorBriefsOf(anyCollection())).thenReturn(briefs(7L, "小李"));
         when(forumQueryService.replyBriefsOf(Set.of())).thenReturn(Map.of());
         when(forumQueryService.postBriefsOf(Set.of(9L))).thenReturn(Map.of(9L, new PostBrief("在架帖子")));
 
@@ -353,5 +355,13 @@ class NotificationApplicationServiceTest {
     private static Notification ownedBy(long recipientId, boolean read) {
         return Notification.rehydrate(NOTIFICATION_ID, recipientId, NotificationType.REPLY, 7L,
                 NotificationTargetType.REPLY, 11L, read, CREATED_AT);
+    }
+
+    private static Map<Long, AuthorBrief> briefs(Object... kv) {
+        Map<Long, AuthorBrief> map = new LinkedHashMap<>();
+        for (int i = 0; i < kv.length; i += 2) {
+            map.put((Long) kv[i], new AuthorBrief((String) kv[i + 1], null));
+        }
+        return map;
     }
 }

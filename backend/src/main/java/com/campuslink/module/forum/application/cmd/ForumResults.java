@@ -15,6 +15,7 @@ public final class ForumResults {
 
     /** 列表项（设计 §3.2）：summary 为服务端去 Markdown 后的纯文本摘要；accepted 供列表 [已采纳] 徽标（F-QA-001）；viewCount / coverUrl / tags 供阅读数、封面缩略图与标签 chips（CR-074 / CR-083） */
     public record PostSummary(Long id, String boardCode, String boardName, String title, String authorNickname,
+                              String authorAvatarUrl,
                               int replyCount, int likeCount, int viewCount, String coverUrl,
                               java.util.List<String> tags, String summary, Instant createdAt,
                               boolean accepted, boolean likedByMe, boolean anonymous) {
@@ -22,7 +23,7 @@ public final class ForumResults {
 
     /** 详情（设计 §3.4）：contentHtml 是发布时渲染好的 HTML，前端直接渲染；authorId / boardType 供前端判定采纳按钮可见性（F-QA-001）；likedByMe / favoritedByMe 仅登录时填充、匿名恒 false（F-FORUM-005）；viewCount / tags 供阅读数与标签展示（CR-074 / CR-083） */
     public record PostDetail(Long id, String boardCode, String boardName, String boardType, String title,
-                             String contentHtml, Long authorId, String authorNickname,
+                             String contentHtml, Long authorId, String authorNickname, String authorAvatarUrl,
                              int replyCount, int likeCount, int viewCount, java.util.List<String> tags, boolean accepted,
                              boolean likedByMe, boolean favoritedByMe,
                              Instant createdAt, boolean anonymous) {
@@ -30,7 +31,7 @@ public final class ForumResults {
 
     /** 楼层项（设计 §3.5）：authorId / accepted 供前端渲染采纳按钮与已采纳标识（F-QA-001）；likeCount / likedByMe 供楼层点赞回显（F-FORUM-005），likedByMe 仅登录时填充；quoted 为被引用楼层摘要（F-009 / CR-085），无引用或被引楼层不可见时为 null */
     public record ReplyItem(Long id, int floorNo, String contentHtml, long authorId,
-                            String authorNickname, boolean accepted, int likeCount,
+                            String authorNickname, String authorAvatarUrl, boolean accepted, int likeCount,
                             boolean likedByMe, QuotedBrief quoted, Instant createdAt) {
     }
 

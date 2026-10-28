@@ -37,6 +37,12 @@ public interface AccountRepository {
      */
     void updateProfile(Long accountId, Account account, Set<ProfileField> changed);
 
+    /**
+     * 默认头像定向写入（CR-162）：只在 {@code avatar_url IS NULL} 时生效，绝不覆盖已有值
+     * （未来用户自选 / 上传头像的预留位）。与 {@link #updateProfile} 同理不整行回写。
+     */
+    void updateAvatarIfAbsent(Long accountId, String avatarUrl);
+
     boolean existsByEmailHash(String emailHash);
 
     /** 手机号占用预检（CR-093 / F-011）：HMAC 哈希等值查询，与邮箱侧同规矩 */

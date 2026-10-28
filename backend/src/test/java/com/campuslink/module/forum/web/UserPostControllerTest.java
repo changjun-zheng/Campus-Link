@@ -106,7 +106,7 @@ class UserPostControllerTest {
     }
 
     private static PostSummary summary(Long id) {
-        return new PostSummary(id, "qna", "技术问答", "标题", "张三同学", 3, 2, 100, null, null, "摘要", CREATED_AT, true, false, false);
+        return new PostSummary(id, "qna", "技术问答", "标题", "张三同学", null, 3, 2, 100, null, null, "摘要", CREATED_AT, true, false, false);
     }
 }
 
