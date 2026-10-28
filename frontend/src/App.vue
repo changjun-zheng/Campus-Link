@@ -55,7 +55,7 @@ function onSearchSubmit() {
       <!-- 窄屏下 --el-header-height 为 auto（tokens.css），补上下内边距撑回约 56px -->
       <div class="mx-auto flex h-full max-w-page items-center justify-between max-md:py-4">
         <!-- 品牌字样用主色：WCAG 对 logo / 品牌名的文字不计对比度要求 -->
-        <RouterLink to="/" class="flex shrink-0 items-center gap-2 text-title font-medium text-primary">
+        <RouterLink to="/" class="flex shrink-0 items-center gap-2 py-1 -my-1 text-title font-medium text-primary">
           <img src="/logo.svg" alt="" class="h-[22px] w-auto" width="64" height="64" />
           <img src="/wordmark.png" alt="Campus-Link" class="h-[20px] w-auto" width="565" height="98" />
         </RouterLink>
@@ -74,11 +74,11 @@ function onSearchSubmit() {
            行高由 tokens.css 的窄屏媒体查询把 --el-header-height 放开为 auto -->
       <div class="mx-auto flex h-full max-w-page flex-wrap items-center gap-x-5 gap-y-1 max-md:py-2 xl:flex-nowrap">
         <!-- 品牌字样用主色：WCAG 对 logo / 品牌名的文字不计对比度要求 -->
-        <RouterLink to="/" class="order-1 flex shrink-0 items-center gap-2 text-title font-medium text-primary">
+        <RouterLink to="/" class="order-1 flex shrink-0 items-center gap-2 py-1 -my-1 text-title font-medium text-primary">
           <img src="/logo.svg" alt="" class="h-[22px] w-auto" width="64" height="64" />
           <img src="/wordmark.png" alt="Campus-Link" class="h-[20px] w-auto" width="565" height="98" />
         </RouterLink>
-        <div class="order-2 ml-auto flex shrink-0 items-center gap-4 md:order-3 md:ml-0 xl:min-w-0 xl:shrink">
+        <div class="order-2 ml-auto flex shrink-0 items-center gap-4 max-md:gap-2 md:order-3 md:ml-0 xl:min-w-0 xl:shrink">
           <div
             class="hidden w-[320px] min-w-0 transition-[width] duration-fast ease-standard md:block md:ml-auto md:mr-auto md:focus-within:w-[380px] xl:min-w-[200px]"
           >
@@ -97,7 +97,7 @@ function onSearchSubmit() {
           <!-- 窄屏折叠为图标（ui-guideline §7）：进搜索页，该页输入框自动聚焦 -->
           <button
             type="button"
-            class="cursor-pointer text-ink-regular hover:text-link md:hidden"
+            class="-mx-1 -my-1 inline-flex h-7 w-7 cursor-pointer items-center justify-center text-ink-regular hover:text-link md:hidden"
             aria-label="搜索"
             @click="onSearchSubmit"
           >
@@ -109,12 +109,12 @@ function onSearchSubmit() {
               提问
             </el-button>
           </RouterLink>
-          <RouterLink to="/notifications" class="text-ink-regular hover:text-link" aria-label="通知中心">
+          <RouterLink to="/notifications" class="-mx-1 -my-1 inline-flex h-7 w-7 items-center justify-center text-ink-regular hover:text-link" aria-label="通知中心">
             <el-badge :value="unreadCount" :max="99" :hidden="!unreadCount">
               <SvgIcon name="bell" :size="20" />
             </el-badge>
           </RouterLink>
-          <RouterLink to="/messages" class="text-ink-regular hover:text-link" aria-label="私信">
+          <RouterLink to="/messages" class="-mx-1 -my-1 inline-flex h-7 w-7 items-center justify-center text-ink-regular hover:text-link" aria-label="私信">
             <el-badge :value="unreadMessages" :max="99" :hidden="!unreadMessages">
               <SvgIcon name="mail" :size="20" />
             </el-badge>

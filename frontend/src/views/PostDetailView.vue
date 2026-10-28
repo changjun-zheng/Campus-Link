@@ -519,7 +519,7 @@ watch(
               v-else
               link
               size="small"
-              :class="{ 'ml-auto': true }"
+              :class="{ 'ml-auto max-md:!h-7': true }"
               @click="openReport('POST', post.id)"
             >
               举报
