@@ -36,6 +36,18 @@ function onFilterChange() {
   loadPosts()
 }
 
+/** 筛选 Tab（CR-158）：与首页排序条同构的文字 Tab，取代 EP radio-button 的蓝色实心标签 */
+const filterOptions = [
+  { value: false, label: '全部' },
+  { value: true, label: '待解答' },
+]
+
+function setFilter(next: boolean) {
+  if (onlyUnanswered.value === next) return
+  onlyUnanswered.value = next
+  onFilterChange()
+}
+
 async function loadBoards() {
   try {
     const list = await listBoards()
@@ -119,10 +131,24 @@ watch(
 
   <!-- 待解答筛选（CR-142）：仅问答版块露出；「待解答」= 问答帖且尚无采纳答案 -->
   <div v-if="isQuestionBoard" class="mb-4">
-    <el-radio-group v-model="onlyUnanswered" size="small" @change="onFilterChange">
-      <el-radio-button :value="false">全部</el-radio-button>
-      <el-radio-button :value="true">待解答</el-radio-button>
-    </el-radio-group>
+    <nav class="inline-flex items-center gap-1" aria-label="帖子筛选">
+      <button
+        v-for="opt in filterOptions"
+        :key="String(opt.value)"
+        type="button"
+        class="relative cursor-pointer border-0 bg-transparent px-3 py-1.5 text-body transition-colors duration-fast ease-standard"
+        :class="onlyUnanswered === opt.value ? 'font-medium text-primary-strong' : 'text-ink-regular hover:text-link'"
+        :aria-pressed="onlyUnanswered === opt.value"
+        @click="setFilter(opt.value)"
+      >
+        {{ opt.label }}
+        <span
+          aria-hidden="true"
+          class="inset-x-3 -bottom-px absolute h-0.5 rounded-full transition-opacity duration-fast ease-standard"
+          :class="onlyUnanswered === opt.value ? 'bg-primary-strong opacity-100' : 'opacity-0'"
+        />
+      </button>
+    </nav>
   </div>
 
   <el-card shadow="never" :body-style="{ padding: 0 }">

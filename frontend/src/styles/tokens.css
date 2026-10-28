@@ -571,6 +571,47 @@ html {
     color: var(--cl-board-chat);
   }
 
+  /* 版块图标容器小尺寸档（CR-158）：首页左栏导航 28px，圆角取小档，与 40px 档共用识别色 */
+  .cl-board-icon--sm {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--cl-radius-sm);
+  }
+
+  /* 版块色点（CR-158，界面规范 §2 第 5 处定点放宽）：列表项元信息行的 6px 辅助标识。
+     仅引用既有 --cl-board-* 变量，不写字面色值；不承载唯一信息（版块名文字仍在），
+     不用于文字色 / 背景块 / 按钮——超出此用途即违例 */
+  .cl-board-dot {
+    flex: none;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+  }
+
+  .cl-board-dot--qna {
+    background: var(--cl-board-qna);
+  }
+
+  .cl-board-dot--resources {
+    background: var(--cl-board-resources);
+  }
+
+  .cl-board-dot--interview {
+    background: var(--cl-board-interview);
+  }
+
+  .cl-board-dot--contest {
+    background: var(--cl-board-contest);
+  }
+
+  .cl-board-dot--course {
+    background: var(--cl-board-course);
+  }
+
+  .cl-board-dot--chat {
+    background: var(--cl-board-chat);
+  }
+
   /* 版块卡 hover 微抬（CR-052 定点偏离③：translateY 但不用投影，反馈靠主色描边 + 图标实色化） */
   .cl-board-card {
     transition:

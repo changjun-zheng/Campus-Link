@@ -12,7 +12,7 @@
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { togglePostLike, type PostSummaryVo } from '../api/forum'
-import { boardNameOf } from '../constants/boards'
+import { BOARD_MAP, boardNameOf, type BoardCode } from '../constants/boards'
 import { useAuthStore } from '../stores/auth'
 import { formatCount } from '../utils/format'
 import { formatRelativeTime } from '../utils/time'
@@ -65,6 +65,15 @@ function splitByKeyword(text: string, keyword?: string): TextPart[] {
 
 const titleParts = computed(() => splitByKeyword(props.post.title, props.highlight))
 const summaryParts = computed(() => splitByKeyword(props.post.summary, props.highlight))
+
+/**
+ * 版块色点（CR-158，界面规范 §2 第 5 处定点放宽）：元信息行版块名前的 6px 辅助标识。
+ * 走 `BOARD_MAP` 白名单映射类名，不把后端 `boardCode` 拼进 style / 任意类——未知 code 不渲染色点。
+ */
+const boardDotClass = computed(() => {
+  const code = props.post.boardCode as BoardCode
+  return BOARD_MAP[code] ? `cl-board-dot cl-board-dot--${code}` : ''
+})
 
 const route = useRoute()
 const router = useRouter()
@@ -128,7 +137,7 @@ async function onLike() {
         <!-- 摘要单行截断（CR-091，参考 CSDN 列表项红框样式） -->
         <p
           v-if="showSummary && post.summary"
-          class="mt-1.5 truncate text-note leading-body text-ink-regular"
+          class="mt-1.5 truncate text-note leading-body text-ink-meta"
         >
           <template v-for="(part, i) in summaryParts" :key="i">
             <mark v-if="part.hit" class="bg-primary-soft text-ink">{{ part.text }}</mark>
@@ -140,7 +149,11 @@ async function onLike() {
              tabular-nums（CR-102）让数字等宽，点赞数变化时不抖动 -->
         <div class="mt-2 flex flex-wrap items-center gap-x-3.5 gap-y-1 text-caption text-ink-meta tabular-nums">
           <template v-if="showBoard">
-            <RouterLink :to="`/board/${post.boardCode}`" class="text-link hover:underline">
+            <RouterLink
+              :to="`/board/${post.boardCode}`"
+              class="inline-flex items-center gap-1.5 text-link hover:underline"
+            >
+              <span v-if="boardDotClass" :class="boardDotClass" aria-hidden="true" />
               {{ post.boardName || boardNameOf(post.boardCode) }}
             </RouterLink>
           </template>

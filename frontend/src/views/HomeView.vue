@@ -193,7 +193,7 @@ const myEntries = [
             :to="`/board/${b.code}`"
             class="flex items-center gap-2.5 rounded-md px-3 py-2.5 text-body text-ink-regular transition-colors duration-fast ease-standard hover:bg-bg-hover"
           >
-            <span class="inline-flex h-7 w-7 flex-none items-center justify-center rounded-sm bg-primary-soft text-primary-strong">
+            <span :class="['cl-board-icon', 'cl-board-icon--sm', `cl-board-icon--${b.code}`]">
               <SvgIcon :name="b.icon" :size="15" />
             </span>
             {{ b.name }}
@@ -316,7 +316,7 @@ const myEntries = [
       <el-card shadow="never" class="side-card" :body-style="{ padding: '16px' }">
         <template #header>
           <div class="flex items-center justify-between">
-            <span class="font-medium">全站热榜</span>
+            <span class="text-title-sm font-medium">全站热榜</span>
             <RouterLink to="/board/qna" class="text-caption text-link hover:underline">更多</RouterLink>
           </div>
         </template>
@@ -324,7 +324,7 @@ const myEntries = [
           <li
             v-for="(p, i) in hotTop5"
             :key="p.id"
-            class="-mx-2 flex items-start gap-2 rounded-md border-b-[0.5px] border-divider px-2 py-2 transition-colors duration-fast ease-standard last:border-b-0 hover:bg-bg-hover"
+            class="-mx-2 flex items-start gap-2 rounded-md border-b-[0.5px] border-divider px-2 py-1.5 transition-colors duration-fast ease-standard last:border-b-0 hover:bg-bg-hover"
           >
             <!-- 前三名徽章分级（CR-102）：第 1 实心主色白字、2/3 浅底主色，其余灰字——层级一眼可读 -->
             <span
@@ -345,7 +345,7 @@ const myEntries = [
       <el-card shadow="never" class="side-card mt-4" :body-style="{ padding: '16px' }">
         <template #header>
           <div class="flex items-center justify-between">
-            <span class="font-medium">等你来答</span>
+            <span class="text-title-sm font-medium">等你来答</span>
             <RouterLink
               to="/board/qna?filter=unanswered"
               class="text-caption text-link hover:underline"
@@ -356,7 +356,7 @@ const myEntries = [
           <li
             v-for="(p, i) in unansweredTop5"
             :key="p.id"
-            class="-mx-2 flex items-start gap-2 rounded-md border-b-[0.5px] border-divider px-2 py-2 transition-colors duration-fast ease-standard last:border-b-0 hover:bg-bg-hover"
+            class="-mx-2 flex items-start gap-2 rounded-md border-b-[0.5px] border-divider px-2 py-1.5 transition-colors duration-fast ease-standard last:border-b-0 hover:bg-bg-hover"
           >
             <span class="inline-flex h-5 w-5 flex-none items-center justify-center rounded-sm text-caption tabular-nums text-ink-meta">
               {{ i + 1 }}
@@ -378,14 +378,14 @@ const myEntries = [
       <el-card shadow="never" class="side-card mt-4" :body-style="{ padding: '16px' }">
         <template #header>
           <div class="flex items-center justify-between">
-            <span class="font-medium">最新发布</span>
+            <span class="text-title-sm font-medium">最新发布</span>
           </div>
         </template>
         <ol v-if="latestTop5.length">
           <li
             v-for="p in latestTop5"
             :key="p.id"
-            class="-mx-2 rounded-md border-b-[0.5px] border-divider px-2 py-2 transition-colors duration-fast ease-standard last:border-b-0 hover:bg-bg-hover"
+            class="-mx-2 rounded-md border-b-[0.5px] border-divider px-2 py-1.5 transition-colors duration-fast ease-standard last:border-b-0 hover:bg-bg-hover"
           >
             <RouterLink :to="`/post/${p.id}`" class="block truncate text-note text-ink-regular hover:text-link">
               {{ p.title }}
