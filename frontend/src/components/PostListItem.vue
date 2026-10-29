@@ -170,7 +170,6 @@ async function onLike() {
             class="-mx-1 -my-2 inline-flex cursor-pointer items-center gap-1 border-0 bg-transparent px-1 py-2 font-inherit text-caption transition-colors duration-fast ease-standard"
             :class="post.likedByMe ? 'font-medium text-primary-strong' : 'text-ink-meta hover:text-link'"
             :aria-pressed="post.likedByMe"
-            :aria-label="post.likedByMe ? '取消点赞' : '点赞'"
             :title="post.likedByMe ? '取消点赞' : '点赞'"
             :disabled="liking"
             @click="onLike"

@@ -1,5 +1,6 @@
 # Campus-Link · 重工计算机学生社区
 # 公开内容可抓取；个人数据与后台页面不对外开放（登录后才有内容，抓取也没有意义）。
+# LLM / AI Agent 的站点说明与公开入口见 /llms.txt。
 User-agent: *
 Allow: /
 Disallow: /admin
