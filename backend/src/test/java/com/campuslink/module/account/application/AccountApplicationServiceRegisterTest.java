@@ -147,8 +147,8 @@ class AccountApplicationServiceRegisterTest {
                 LoginResult result = service.register(
                                 new RegisterCommand("ticket-1", "someone@example.com", "123456", "张三"));
 
-                verify(accountRepository).updateAvatarIfAbsent(24L, "/avatars/avatar-01-terminal.png");
-                assertThat(result.account().getAvatarUrl()).isEqualTo("/avatars/avatar-01-terminal.png");
+                verify(accountRepository).updateAvatarIfAbsent(24L, "/avatars/avatar-01-cat.png");
+                assertThat(result.account().getAvatarUrl()).isEqualTo("/avatars/avatar-01-cat.png");
         }
 
         @Test

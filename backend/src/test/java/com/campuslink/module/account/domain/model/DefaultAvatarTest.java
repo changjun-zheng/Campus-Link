@@ -27,11 +27,11 @@ class DefaultAvatarTest {
     @Test
     @DisplayName("取模边界：24 的倍数回第 1 张，0 与负数也落在合法下标")
     void moduloEdges() {
-        assertThat(DefaultAvatar.forUser(24)).isEqualTo("/avatars/avatar-01-terminal.png");
-        assertThat(DefaultAvatar.forUser(48)).isEqualTo("/avatars/avatar-01-terminal.png");
-        assertThat(DefaultAvatar.forUser(25)).isEqualTo("/avatars/avatar-02-keyboard.png");
-        assertThat(DefaultAvatar.forUser(0)).isEqualTo("/avatars/avatar-01-terminal.png");
-        assertThat(DefaultAvatar.forUser(-1)).isEqualTo("/avatars/avatar-24-globe.png");
+        assertThat(DefaultAvatar.forUser(24)).isEqualTo("/avatars/avatar-01-cat.png");
+        assertThat(DefaultAvatar.forUser(48)).isEqualTo("/avatars/avatar-01-cat.png");
+        assertThat(DefaultAvatar.forUser(25)).isEqualTo("/avatars/avatar-02-frog.png");
+        assertThat(DefaultAvatar.forUser(0)).isEqualTo("/avatars/avatar-01-cat.png");
+        assertThat(DefaultAvatar.forUser(-1)).isEqualTo("/avatars/avatar-24-crab.png");
     }
 
     @Test
