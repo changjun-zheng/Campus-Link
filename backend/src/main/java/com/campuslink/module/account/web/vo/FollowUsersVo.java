@@ -16,13 +16,14 @@ import java.util.List;
  */
 public record FollowUsersVo(List<FollowUserVo> items, long total, int page, int size) {
 
-    public record FollowUserVo(Long id, String nickname, String major, String bio) {
+    public record FollowUserVo(Long id, String nickname, String avatarUrl, String major, String bio) {
     }
 
     public static FollowUsersVo from(FollowUsers result) {
         return new FollowUsersVo(
                 result.items().stream()
-                        .map(item -> new FollowUserVo(item.id(), item.nickname(), item.major(), item.bio()))
+                        .map(item -> new FollowUserVo(item.id(), item.nickname(), item.avatarUrl(), item.major(),
+                                item.bio()))
                         .toList(),
                 result.total(), result.page(), result.size());
     }

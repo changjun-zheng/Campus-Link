@@ -97,7 +97,8 @@ public class FollowApplicationService {
         List<FollowUsers.FollowUser> items = ids.stream()
                 .map(accounts::get)
                 .filter(Objects::nonNull)
-                .map(a -> new FollowUsers.FollowUser(a.getId(), a.getNickname(), a.getMajor(), a.getBio()))
+                .map(a -> new FollowUsers.FollowUser(a.getId(), a.getNickname(), a.getAvatarUrl(), a.getMajor(),
+                        a.getBio()))
                 .toList();
         return new FollowUsers(items, total, page, size);
     }

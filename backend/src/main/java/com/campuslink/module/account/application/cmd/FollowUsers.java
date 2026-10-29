@@ -13,6 +13,6 @@ import java.util.List;
  */
 public record FollowUsers(List<FollowUser> items, long total, int page, int size) {
 
-    public record FollowUser(Long id, String nickname, String major, String bio) {
+    public record FollowUser(Long id, String nickname, String avatarUrl, String major, String bio) {
     }
 }

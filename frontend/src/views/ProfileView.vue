@@ -340,7 +340,7 @@ watch(userId, () => void loadAll(), { immediate: true })
       </div>
 
       <div v-else-if="profile" class="flex items-start gap-4">
-        <UserAvatar :name="profile.nickname" :size="64" class="flex-none" />
+        <UserAvatar :src="profile.avatarUrl ?? ''" :name="profile.nickname" :size="64" class="flex-none" />
         <div class="min-w-0 flex-1">
           <div class="flex flex-wrap items-center gap-2">
             <h2 class="min-w-0 truncate text-title-lg font-medium text-ink">{{ profile.nickname }}</h2>

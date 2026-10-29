@@ -166,7 +166,7 @@ function onPageChange(next: number) {
               :to="`/u/${u.id}`"
               class="flex items-center gap-3 px-5 py-3 transition-colors duration-fast ease-standard hover:bg-bg-hover"
             >
-              <UserAvatar :name="u.nickname" :size="40" class="flex-none" />
+              <UserAvatar :src="u.avatarUrl ?? ''" :name="u.nickname" :size="40" class="flex-none" />
               <div class="min-w-0 flex-1">
                 <p class="truncate text-title-sm font-medium text-ink">{{ u.nickname }}</p>
                 <!-- major / bio 为 null 时服务端会整个删掉字段，判空用真值判断 -->

@@ -71,7 +71,8 @@ public class UserProfileApplicationService {
         long reputation = ReputationRules.reputation(stats.acceptedCount(), stats.likeCount(),
                 stats.postCount(), stats.replyCount());
         CommunityLevel level = CommunityLevel.of(reputation);
-        return new PublicProfile(account.getId(), account.getNickname(), account.getMajor(), account.getBio(),
+        return new PublicProfile(account.getId(), account.getNickname(), account.getAvatarUrl(),
+                account.getMajor(), account.getBio(),
                 account.getCreatedAt(), account.getGrade(),
                 stats.postCount(), stats.replyCount(), stats.likeCount(), stats.acceptedCount(),
                 reputation, level.level(), level.displayName(), level.nextThreshold(),
@@ -96,8 +97,8 @@ public class UserProfileApplicationService {
      * <p>{@code grade} 为注册时快照的名册入学年级（CR-145 届徽章，{@code CohortYear.normalize} 归一后的
      * 4 位年份）：null 表示无名册年级（bypass / 名册无值 / 已匿名化），前端不渲染徽章。
      */
-    public record PublicProfile(Long id, String nickname, String major, String bio, Instant createdAt,
-                                String grade,
+    public record PublicProfile(Long id, String nickname, String avatarUrl, String major, String bio,
+                                Instant createdAt, String grade,
                                 long postCount, long replyCount, long likeCount, long acceptedCount,
                                 long reputation, int level, String levelName, Long nextLevelAt, int levelProgress,
                                 long followerCount, long followingCount) {

@@ -65,7 +65,7 @@ class UserControllerPublicProfileTest {
     @DisplayName("正常返回：展示列（含入学年级）+ 六个计数 + 等级组逐位落到 VO（long 计数饱和收窄成 int）")
     void mapsProfileAndCountsOntoVo() {
         when(userProfileApplicationService.publicProfileOf(eq(USER_ID), anyString())).thenReturn(new PublicProfile(
-                USER_ID, "张三同学", "软件工程", "在写代码", CREATED_AT, "2024",
+                USER_ID, "张三同学", null, "软件工程", "在写代码", CREATED_AT, "2024",
                 12L, 7L, 30L, 3L, 109L, 2, "学徒", 200L, 39, 34L, 5L));
 
         UserProfileVo vo = controller.profile(USER_ID, new MockHttpServletRequest()).data();
@@ -115,7 +115,7 @@ class UserControllerPublicProfileTest {
     @DisplayName("IP 接线：无 X-Forwarded-For 取 remoteAddr，有则取首段——传给 application 的是 IP 不是 userId")
     void passesClientIpExtractedFromRequest() {
         when(userProfileApplicationService.publicProfileOf(eq(USER_ID), anyString())).thenReturn(new PublicProfile(
-                USER_ID, "张三同学", "软件工程", "在写代码", CREATED_AT, null,
+                USER_ID, "张三同学", null, "软件工程", "在写代码", CREATED_AT, null,
                 0L, 0L, 0L, 0L, 0L, 1, "初入", 50L, 0, 0L, 0L));
 
         MockHttpServletRequest direct = new MockHttpServletRequest();
@@ -135,13 +135,13 @@ class UserControllerPublicProfileTest {
         List<String> fields = Arrays.stream(UserProfileVo.class.getRecordComponents())
                 .map(RecordComponent::getName).toList();
 
-        // grade 是注册时快照的名册入学年级（CR-145），公开展示列；仍不含 school / avatarUrl（无写入也无展示位）
-        assertThat(fields).containsExactly("id", "nickname", "major", "bio", "createdAt", "grade",
+        // grade 是注册时快照的名册入学年级（CR-145）；avatarUrl 为默认头像（CR-163），公开列；仍不含 school
+        assertThat(fields).containsExactly("id", "nickname", "avatarUrl", "major", "bio", "createdAt", "grade",
                 "postCount", "replyCount", "likeCount", "acceptedCount",
                 "reputation", "level", "levelName", "nextLevelAt", "levelProgress",
                 "followerCount", "followingCount");
         assertThat(fields).doesNotContain("email", "emailHash", "emailEnc", "phone", "studentId", "studentIdHash",
                 "role", "status", "verified", "anonymized", "deleteAt", "accountType", "following",
-                "school", "avatarUrl");
+                "school");
     }
 }

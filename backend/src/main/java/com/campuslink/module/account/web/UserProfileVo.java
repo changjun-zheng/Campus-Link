@@ -37,14 +37,14 @@ import java.time.Instant;
  * 窄化只在这一处发生，且用饱和而非抛异常——展示层不该因为一个不可能到达的溢出而 500。
  */
 @Schema(description = "用户公开资料（他人主页资料卡）")
-public record UserProfileVo(Long id, String nickname, String major, String bio, Instant createdAt,
+public record UserProfileVo(Long id, String nickname, String avatarUrl, String major, String bio, Instant createdAt,
                             String grade,
                             int postCount, int replyCount, int likeCount, int acceptedCount,
                             int reputation, int level, String levelName, Long nextLevelAt, int levelProgress,
                             int followerCount, int followingCount) {
 
     public static UserProfileVo from(PublicProfile profile) {
-        return new UserProfileVo(profile.id(), profile.nickname(), profile.major(), profile.bio(),
+        return new UserProfileVo(profile.id(), profile.nickname(), profile.avatarUrl(), profile.major(), profile.bio(),
                 profile.createdAt(), profile.grade(),
                 narrow(profile.postCount()), narrow(profile.replyCount()),
                 narrow(profile.likeCount()), narrow(profile.acceptedCount()),

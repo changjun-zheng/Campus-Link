@@ -6797,6 +6797,9 @@
           "nickname": {
             "type": "string"
           },
+          "avatarUrl": {
+            "type": "string"
+          },
           "major": {
             "type": "string"
           },
@@ -6915,6 +6918,9 @@
             "format": "int64"
           },
           "nickname": {
+            "type": "string"
+          },
+          "avatarUrl": {
             "type": "string"
           },
           "major": {

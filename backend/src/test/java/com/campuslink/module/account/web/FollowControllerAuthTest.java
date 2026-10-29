@@ -55,7 +55,7 @@ class FollowControllerAuthTest {
     @DisplayName("登录查粉丝列表：viewerId 只从令牌取，page / size 透传并映射为 VO")
     void followersPassesPrincipalAndMapsVo() {
         when(service.pageFollowers(1L, TARGET_ID, 2, 10)).thenReturn(new FollowUsers(
-                List.of(new FollowUsers.FollowUser(8L, "学生八", "计算机科学与技术", "签名")),
+                List.of(new FollowUsers.FollowUser(8L, "学生八", null, "计算机科学与技术", "签名")),
                 1L, 2, 10));
 
         ApiResponse<FollowUsersVo> response = controller.followers(TARGET_ID, 2, 10, auth(1L));

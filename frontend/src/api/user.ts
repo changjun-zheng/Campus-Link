@@ -12,6 +12,8 @@ import type { PageVo, PostSummaryVo } from './forum'
 export interface UserProfileVo {
   id: number
   nickname: string
+  /** 默认头像（CR-163）：匿名化 / 历史空值为 null，前端回落昵称首字 */
+  avatarUrl?: string | null
   /** 专业（学籍名册导入 / 本人可改）；未填为 null */
   major: string | null
   /** 个性签名；未填为 null */

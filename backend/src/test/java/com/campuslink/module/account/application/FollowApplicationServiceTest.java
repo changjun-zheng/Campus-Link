@@ -96,6 +96,7 @@ class FollowApplicationServiceTest {
         assertThat(result.size()).isEqualTo(20);
         assertThat(result.items()).extracting(FollowUsers.FollowUser::id).containsExactly(8L, 9L);
         assertThat(result.items().get(0).nickname()).isEqualTo("学生八");
+        assertThat(result.items().get(0).avatarUrl()).isEqualTo("/avatars/avatar-08-x.png");
         assertThat(result.items().get(0).major()).isEqualTo("计算机科学与技术");
         assertThat(result.items().get(1).bio()).isEqualTo("签名");
     }
@@ -162,6 +163,7 @@ class FollowApplicationServiceTest {
         Account account = mock(Account.class);
         lenient().when(account.getId()).thenReturn(id);
         lenient().when(account.getNickname()).thenReturn(nickname);
+        lenient().when(account.getAvatarUrl()).thenReturn(String.format("/avatars/avatar-%02d-x.png", id));
         lenient().when(account.getMajor()).thenReturn("计算机科学与技术");
         lenient().when(account.getBio()).thenReturn("签名");
         return account;

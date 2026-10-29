@@ -25,6 +25,8 @@ export const getFollowState = (targetId: number) => get<FollowStateVo>(`/users/$
 export interface FollowUserVo {
   id: number
   nickname: string
+  /** 默认头像（CR-163）：空值为 null / 缺省，前端回落昵称首字 */
+  avatarUrl?: string | null
   major?: string | null
   bio?: string | null
 }

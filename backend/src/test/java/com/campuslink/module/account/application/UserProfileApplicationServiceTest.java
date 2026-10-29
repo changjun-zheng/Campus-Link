@@ -71,6 +71,7 @@ class UserProfileApplicationServiceTest {
 
         assertThat(profile.id()).isEqualTo(USER_ID);
         assertThat(profile.nickname()).isEqualTo("张三同学");
+        assertThat(profile.avatarUrl()).isEqualTo("/avatars/avatar-09-chip.png");
         assertThat(profile.major()).isEqualTo("软件工程");
         assertThat(profile.bio()).isEqualTo("在写代码");
         assertThat(profile.createdAt()).isEqualTo(CREATED_AT);
@@ -206,6 +207,6 @@ class UserProfileApplicationServiceTest {
     }
 
     private static Account account() {
-        return Account.rehydrate(USER_ID, EmailAddress.of("dev-stu-01@dev.campuslink.local"), null, null, "张三同学", null, null, "软件工程", null, "在写代码", AccountRole.USER, AccountStatus.ACTIVE, true, false, null, CREATED_AT, null);
+        return Account.rehydrate(USER_ID, EmailAddress.of("dev-stu-01@dev.campuslink.local"), null, null, "张三同学", "/avatars/avatar-09-chip.png", null, "软件工程", null, "在写代码", AccountRole.USER, AccountStatus.ACTIVE, true, false, null, CREATED_AT, null);
     }
 }
