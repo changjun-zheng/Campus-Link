@@ -24,7 +24,11 @@ html {
      链接固定用 #1a6fc4（白底 5.10:1）——改主色时本行不动、不派生 */
   --cl-color-link: #1a6fc4;
   --cl-color-success: #67c23a;
+  --cl-color-warning: #e6a23c;
   --cl-color-danger: #f56c6c;
+  /* 成功 / 警告标签文字用的 AA 深色（CR-169）：EP 原色在 light 标签底上只有 2.08 / 2.04，达 4.5:1 需压暗 */
+  --cl-color-success-strong: #3f7a1f;
+  --cl-color-warning-strong: #8a5a12;
   /* ---- AA 达标深色（CR-156）：主色 #409eff 白字仅 2.78:1、危险色 #f56c6c 白字 2.89:1；
      实心按钮 / 白字徽章 / 白底主色文字改用下面两色（5.10:1 / 5.8:1），品牌 logo 与装饰仍用原色 ---- */
   --cl-color-primary-strong: #1a6fc4;
@@ -217,7 +221,7 @@ html {
 
 /* 实心按钮与白字徽章的 AA 对比度（CR-156，白字 4.5:1）：
    组件规则用 (0,2,0) 才压得过运行时注入的 EP 样式（与 .el-avatar.el-avatar 同理） */
-.el-button.el-button--primary {
+.el-button.el-button--primary:not(.is-plain):not(.is-text):not(.is-link) {
   --el-button-bg-color: var(--cl-color-primary-strong);
   --el-button-border-color: var(--cl-color-primary-strong);
   --el-button-hover-bg-color: var(--cl-color-primary-strong-hover);
@@ -227,7 +231,7 @@ html {
   --el-button-disabled-bg-color: color-mix(in srgb, var(--cl-color-primary-strong) 45%, #fff);
   --el-button-disabled-border-color: color-mix(in srgb, var(--cl-color-primary-strong) 45%, #fff);
 }
-.el-button.el-button--danger {
+.el-button.el-button--danger:not(.is-plain):not(.is-text):not(.is-link) {
   --el-button-bg-color: var(--cl-color-danger-strong);
   --el-button-border-color: var(--cl-color-danger-strong);
   --el-button-hover-bg-color: color-mix(in srgb, var(--cl-color-danger-strong) 88%, #000);
@@ -235,8 +239,56 @@ html {
   --el-button-active-bg-color: color-mix(in srgb, var(--cl-color-danger-strong) 76%, #000);
   --el-button-active-border-color: color-mix(in srgb, var(--cl-color-danger-strong) 76%, #000);
 }
+/* 危险色 plain / 文字 / 链接变体（CR-169）：实心覆写排除变体后，文字仍是 EP 的 #f56c6c
+   （白底 3.0:1、浅红底 2.6:1），统一换 danger-strong；plain 底仍由 EP 的浅红接管。 */
+.el-button.el-button--danger.is-plain,
+.el-button.el-button--danger.is-text,
+.el-button.el-button--danger.is-link {
+  --el-button-text-color: var(--cl-color-danger-strong);
+  --el-button-hover-text-color: var(--cl-color-danger-strong);
+  --el-button-hover-link-text-color: var(--cl-color-danger-strong);
+  --el-button-active-color: var(--cl-color-danger-strong);
+}
 .el-badge__content.el-badge__content--danger {
   background-color: var(--cl-color-danger-strong);
+}
+
+/* 文字 / 链接型主色按钮（CR-169）：EP 这两档取 --el-color-primary（#409eff），白底 2.78:1、
+   未读行浅底 2.57:1，与实心按钮同一口径改用 primary-strong。选择器比 EP 的
+   .el-button--primary.is-text / .is-link 多一层 .el-button，稳定压过运行时注入。 */
+.el-button.el-button--primary.is-text,
+.el-button.el-button--primary.is-link {
+  --el-button-text-color: var(--cl-color-primary-strong);
+  --el-button-hover-link-text-color: var(--cl-color-primary-strong-hover);
+  --el-button-active-color: var(--cl-color-primary-strong-active);
+}
+
+/* 选中态单选按钮（CR-169）：EP 同样用主色做底、白字，实测 2.78:1。 */
+.el-radio-button.el-radio-button {
+  --el-radio-button-checked-bg-color: var(--cl-color-primary-strong);
+  --el-radio-button-checked-border-color: var(--cl-color-primary-strong);
+  --el-radio-button-checked-text-color: #fff;
+}
+
+/* 输入框字数统计（CR-169）：EP 用 --el-text-color-secondary（#909399），12px 白底仅 3.07:1。 */
+.el-textarea .el-input__count,
+.el-input .el-input__count {
+  color: var(--cl-text-meta);
+}
+
+/* light 标签文字 AA（CR-169）：EP 四种语义色在各自浅底上只有 2.04~2.80；
+   dark 变体是白字实底，不动（:not 排除，选择器 (0,3,0) 稳过 EP 的 (0,2,0)）。 */
+.el-tag.el-tag--success:not(.el-tag--dark) {
+  --el-tag-text-color: var(--cl-color-success-strong);
+}
+.el-tag.el-tag--warning:not(.el-tag--dark) {
+  --el-tag-text-color: var(--cl-color-warning-strong);
+}
+.el-tag.el-tag--danger:not(.el-tag--dark) {
+  --el-tag-text-color: var(--cl-color-danger-strong);
+}
+.el-tag.el-tag--info:not(.el-tag--dark) {
+  --el-tag-text-color: var(--cl-text-meta);
 }
 
 /* sticky 全局顶栏（CR-052）：滚动后吸附并转半透明毛玻璃——定点偏离④，毛玻璃全站仅此一处。

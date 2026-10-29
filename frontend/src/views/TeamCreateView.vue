@@ -102,7 +102,7 @@ async function onSubmit() {
 
         <div class="grid gap-4 md:grid-cols-2">
           <el-form-item label="方向">
-            <el-select v-model="form.direction" placeholder="请选择方向" class="w-full">
+            <el-select v-model="form.direction" aria-label="项目方向" placeholder="请选择方向" class="w-full">
               <el-option v-for="d in TEAM_DIRECTIONS" :key="d.code" :label="d.label" :value="d.code" />
             </el-select>
           </el-form-item>

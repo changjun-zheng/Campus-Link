@@ -14,6 +14,9 @@ const auth = useAuthStore()
 const { unreadCount } = useUnreadNotifications()
 /** 私信未读角标（F-SOC-003 / CR-135）：30 秒轮询 + 会话页发送 / 已读后主动刷新 */
 const { unreadCount: unreadMessages } = useUnreadMessages()
+/** 角标显示口径（>99 折成 99+）必须同步进无障碍名称，否则可见数字不在名称里（label-content-name-mismatch） */
+const unreadLabel = computed(() => (unreadCount.value > 99 ? '99+' : String(unreadCount.value)))
+const unreadMessageLabel = computed(() => (unreadMessages.value > 99 ? '99+' : String(unreadMessages.value)))
 
 const nickname = computed(() => auth.user?.nickname || '')
 const isLoggedIn = computed(() => auth.isLoggedIn)
@@ -109,12 +112,20 @@ function onSearchSubmit() {
               提问
             </el-button>
           </RouterLink>
-          <RouterLink to="/notifications" class="-mx-1 -my-1 inline-flex h-7 w-7 items-center justify-center text-ink-regular hover:text-link" aria-label="通知中心">
+          <RouterLink
+            to="/notifications"
+            class="-mx-1 -my-1 inline-flex h-7 w-7 items-center justify-center text-ink-regular hover:text-link"
+            :aria-label="unreadCount ? `通知中心，${unreadLabel} 条未读` : '通知中心'"
+          >
             <el-badge :value="unreadCount" :max="99" :hidden="!unreadCount">
               <SvgIcon name="bell" :size="20" />
             </el-badge>
           </RouterLink>
-          <RouterLink to="/messages" class="-mx-1 -my-1 inline-flex h-7 w-7 items-center justify-center text-ink-regular hover:text-link" aria-label="私信">
+          <RouterLink
+            to="/messages"
+            class="-mx-1 -my-1 inline-flex h-7 w-7 items-center justify-center text-ink-regular hover:text-link"
+            :aria-label="unreadMessages ? `私信，${unreadMessageLabel} 条未读` : '私信'"
+          >
             <el-badge :value="unreadMessages" :max="99" :hidden="!unreadMessages">
               <SvgIcon name="mail" :size="20" />
             </el-badge>

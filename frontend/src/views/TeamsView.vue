@@ -109,7 +109,7 @@ function statusTagType(s: TeamStatusCode): 'success' | 'warning' | 'info' {
 
     <el-card shadow="never" class="mb-5">
       <div class="flex flex-wrap items-center gap-3">
-        <el-select v-model="direction" placeholder="全部方向" clearable class="w-[150px]">
+        <el-select v-model="direction" aria-label="按方向筛选" placeholder="全部方向" clearable class="w-[150px]">
           <el-option label="全部方向" value="" />
           <el-option v-for="d in TEAM_DIRECTIONS" :key="d.code" :label="d.label" :value="d.code" />
         </el-select>

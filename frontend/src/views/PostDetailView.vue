@@ -738,7 +738,7 @@ watch(
     <el-dialog v-model="reportDialogVisible" title="提交举报" width="440px">
       <el-form label-position="top">
         <el-form-item label="举报理由">
-          <el-select v-model="reportForm.reason" class="w-full">
+          <el-select v-model="reportForm.reason" aria-label="举报理由" class="w-full">
             <el-option v-for="r in REPORT_REASONS" :key="r.value" :label="r.label" :value="r.value" />
           </el-select>
         </el-form-item>

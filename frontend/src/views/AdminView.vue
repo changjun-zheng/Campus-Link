@@ -501,7 +501,7 @@ function goLogin() {
           style="width: 220px"
           @keyup.enter="onTagSearch"
         />
-        <el-select v-model="tagSort" style="width: 150px" @change="onTagSearch">
+        <el-select v-model="tagSort" aria-label="标签排序" style="width: 150px" @change="onTagSearch">
           <el-option label="按使用次数" value="use_count" />
           <el-option label="按名称" value="name" />
         </el-select>
@@ -558,7 +558,7 @@ function goLogin() {
       </template>
 
       <div class="mb-4 flex flex-wrap items-center gap-2">
-        <el-select v-model="reviewKind" style="width: 140px" @change="onReviewKindChange">
+        <el-select v-model="reviewKind" aria-label="巡查对象" style="width: 140px" @change="onReviewKindChange">
           <el-option label="帖子" value="post" />
           <el-option label="楼层" value="reply" />
         </el-select>
@@ -736,7 +736,7 @@ function goLogin() {
             />
           </el-form-item>
           <el-form-item label="时间">
-            <el-select v-model="contentDays" placeholder="全部" clearable class="w-[110px]">
+            <el-select v-model="contentDays" aria-label="时间范围" placeholder="全部" clearable class="w-[110px]">
               <el-option label="近 7 天" value="7" />
               <el-option label="近 30 天" value="30" />
               <el-option label="近 90 天" value="90" />

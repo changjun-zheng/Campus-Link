@@ -373,6 +373,7 @@ async function submit() {
       <el-select
         v-if="!editing"
         v-model="form.boardCode"
+        aria-label="选择版块"
         placeholder="选择版块"
         class="w-[180px] max-md:w-full max-md:flex-1"
       >
@@ -401,6 +402,7 @@ async function submit() {
       <!-- 标题：超大无边框输入（CSDN / 掘金式） -->
       <input
         v-model="form.title"
+        aria-label="帖子标题"
         maxlength="100"
         :placeholder="form.boardCode === 'interview' ? '如：XX 公司 Java 后端一面面经' : '输入标题（1~100 字）'"
         class="block w-full border-0 bg-transparent py-6 text-[26px] leading-snug font-medium text-ink outline-none placeholder:text-ink-meta max-md:text-[22px]"
@@ -421,6 +423,7 @@ async function submit() {
         allow-create
         default-first-option
         :multiple-limit="5"
+        aria-label="添加标签"
         placeholder="添加标签（0~5 个，回车自建）"
         class="mb-4 w-full"
       >
@@ -461,21 +464,21 @@ async function submit() {
 
     <!-- 工具条：通栏（CSDN 式），样式来自全局 .cl-md-tool -->
     <div class="flex flex-wrap items-center gap-1 border-y-[0.5px] border-line bg-code px-5 py-1.5" role="toolbar" aria-label="Markdown 工具条">
-      <button type="button" class="cl-md-tool text-caption font-medium" title="一级标题" aria-label="一级标题" @click="wrap('# ', '', '标题')">#</button>
-      <button type="button" class="cl-md-tool text-caption font-medium" title="二级标题" aria-label="二级标题" @click="wrap('## ', '', '标题')">H2</button>
-      <button type="button" class="cl-md-tool font-medium" title="加粗" aria-label="加粗" @click="wrap('**', '**', '加粗文字')">B</button>
-      <button type="button" class="cl-md-tool italic" title="斜体" aria-label="斜体" @click="wrap('*', '*', '斜体文字')">I</button>
+      <button type="button" class="cl-md-tool text-caption font-medium" title="一级标题" aria-label="# 一级标题" @click="wrap('# ', '', '标题')">#</button>
+      <button type="button" class="cl-md-tool text-caption font-medium" title="二级标题" aria-label="H2 二级标题" @click="wrap('## ', '', '标题')">H2</button>
+      <button type="button" class="cl-md-tool font-medium" title="加粗" aria-label="B 加粗" @click="wrap('**', '**', '加粗文字')">B</button>
+      <button type="button" class="cl-md-tool italic" title="斜体" aria-label="I 斜体" @click="wrap('*', '*', '斜体文字')">I</button>
       <span class="mx-0.5 h-4 w-px bg-line" aria-hidden="true" />
       <button
         type="button"
         class="cl-md-tool font-mono text-caption"
         title="代码块"
-        aria-label="代码块"
+        aria-label="</> 代码块"
         @click="wrap('```\n', '\n```', '代码')"
       >
         &lt;/&gt;
       </button>
-      <button type="button" class="cl-md-tool text-caption font-medium" title="引用" aria-label="引用" @click="wrap('> ', '', '引用内容')">❝</button>
+      <button type="button" class="cl-md-tool text-caption font-medium" title="引用" aria-label="❝ 引用" @click="wrap('> ', '', '引用内容')">❝</button>
       <button type="button" class="cl-md-tool" title="无序列表" aria-label="无序列表" @click="wrap('- ', '', '列表项')">
         <SvgIcon name="list" :size="16" />
       </button>

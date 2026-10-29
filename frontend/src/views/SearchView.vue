@@ -113,6 +113,7 @@ onMounted(async () => {
       <el-input
         ref="inputRef"
         v-model="keyword"
+        aria-label="搜索关键词"
         class="md:flex-1"
         placeholder="搜索帖子标题 / 正文 / 标签（至少 2 个字）"
         maxlength="50"
@@ -124,11 +125,11 @@ onMounted(async () => {
         </template>
       </el-input>
       <div class="flex shrink-0 items-center gap-2">
-        <el-select v-model="boardCode" class="w-[130px]" placeholder="全部版块">
+        <el-select v-model="boardCode" aria-label="按版块筛选" class="w-[130px]" placeholder="全部版块">
           <el-option label="全部版块" value="" />
           <el-option v-for="b in BOARDS" :key="b.code" :label="b.name" :value="b.code" />
         </el-select>
-        <el-select v-model="days" class="w-[120px]" placeholder="全部时间">
+        <el-select v-model="days" aria-label="按时间筛选" class="w-[120px]" placeholder="全部时间">
           <el-option v-for="w in timeWindows" :key="String(w.value)" :label="w.label" :value="w.value" />
         </el-select>
         <el-button type="primary" @click="onSubmit">搜索</el-button>
