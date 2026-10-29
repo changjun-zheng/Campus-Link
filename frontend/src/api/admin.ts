@@ -1,4 +1,4 @@
-import { get, post, put } from './client'
+import { del, get, post, put } from './client'
 
 /** 举报工单（F-SAFE-002 / CR-082）：仅 SUPERADMIN 可读写列表与处理 */
 export interface AdminReportVo {

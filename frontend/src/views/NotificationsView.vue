@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { listNotifications, markAllRead, markNotificationRead, type NotificationVo } from '../api/notifications'
 import { refreshUnreadCount } from '../composables/useUnreadNotifications'
 import { formatRelativeTime } from '../utils/time'
+import UserAvatar from '../components/UserAvatar.vue'
 
 const items = ref<NotificationVo[]>([])
 const total = ref(0)
@@ -177,6 +178,14 @@ loadNotifications()
           <span
             class="mt-2 h-1.5 w-1.5 shrink-0 rounded-full"
             :class="n.read ? 'bg-transparent' : 'bg-primary-strong'"
+          />
+          <!-- 触发人头像（CR-164）：平台类通知与头像缺失时不下发，保持「未读点 + 文本」原样 -->
+          <UserAvatar
+            v-if="n.actorAvatarUrl"
+            :src="n.actorAvatarUrl"
+            :name="n.actorNickname"
+            :size="20"
+            class="mt-0.5 flex-none"
           />
           <div class="min-w-0 flex-1">
             <p class="text-body text-ink-regular">

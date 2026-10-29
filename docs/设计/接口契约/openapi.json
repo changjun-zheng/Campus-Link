@@ -7909,6 +7909,9 @@
           "actorNickname": {
             "type": "string"
           },
+          "actorAvatarUrl": {
+            "type": "string"
+          },
           "targetType": {
             "type": "string"
           },

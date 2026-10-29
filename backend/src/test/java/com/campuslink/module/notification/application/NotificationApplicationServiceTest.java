@@ -176,7 +176,8 @@ class NotificationApplicationServiceTest {
                         notification(2L, NotificationType.LIKE, NotificationTargetType.POST, 9L, true)),
                 2, 1, 20));
         when(accountApplicationService.authorBriefsOf(anyCollection()))
-                .thenReturn(briefs(7L, "小李", 8L, "小王"));
+                .thenReturn(Map.of(7L, new AuthorBrief("小李", "/avatars/avatar-07-fox.png"),
+                        8L, new AuthorBrief("小王", "/avatars/avatar-08-koala.png")));
         when(forumQueryService.replyBriefsOf(Set.of(11L))).thenReturn(Map.of(11L, new ReplyBrief(9L, 3)));
         when(forumQueryService.postBriefsOf(Set.of(9L))).thenReturn(Map.of(9L, new PostBrief("Spring 事务失效")));
 
@@ -186,6 +187,7 @@ class NotificationApplicationServiceTest {
         NotificationItem replyItem = result.items().get(0);
         assertThat(replyItem.type()).isEqualTo("reply");
         assertThat(replyItem.actorNickname()).isEqualTo("小李");
+        assertThat(replyItem.actorAvatarUrl()).isEqualTo("/avatars/avatar-07-fox.png");
         assertThat(replyItem.postId()).isEqualTo(9L);
         assertThat(replyItem.postTitle()).isEqualTo("Spring 事务失效");
         assertThat(replyItem.floorNo()).isEqualTo(3);
@@ -199,6 +201,23 @@ class NotificationApplicationServiceTest {
         // 一页只有一次批量查，不做 N+1
         verify(accountApplicationService).authorBriefsOf(anyCollection());
         verify(forumQueryService).postBriefsOf(anyCollection());
+    }
+
+    @Test
+    @DisplayName("平台类通知（下架 / 恢复）不下发操作人头像（CR-164）：界面文案固定「平台」")
+    void platformNotificationHidesActorAvatar() {
+        when(notificationRepository.findPage(RECIPIENT, null, 1, 20)).thenReturn(new PageResult<>(
+                List.of(notification(3L, NotificationType.CONTENT_REMOVED, NotificationTargetType.POST, 9L, false)),
+                1, 1, 20));
+        when(accountApplicationService.authorBriefsOf(anyCollection()))
+                .thenReturn(Map.of(7L, new AuthorBrief("管理员", "/avatars/avatar-01-cat.png")));
+        when(forumQueryService.postBriefsOf(Set.of(9L))).thenReturn(Map.of(9L, new PostBrief("被下架的帖子")));
+
+        NotificationItem item = service.list(RECIPIENT, null, 1, 20).items().getFirst();
+
+        assertThat(item.type()).isEqualTo("content_removed");
+        assertThat(item.actorNickname()).isEqualTo("管理员");
+        assertThat(item.actorAvatarUrl()).isNull();
     }
 
     @Test

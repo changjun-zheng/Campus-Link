@@ -22,6 +22,7 @@ public final class NotificationResults {
      * （{@code ReplyRepository#findByIds} 刻意不过滤 status），但条目能否点击只取决于所属帖子。
      */
     public record NotificationItem(Long id, String type, Long actorId, String actorNickname,
+                                   String actorAvatarUrl,
                                    String targetType, Long targetId,
                                    Long postId, String postTitle, Integer floorNo,
                                    boolean read, Instant createdAt) {

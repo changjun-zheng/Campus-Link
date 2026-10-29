@@ -3,6 +3,7 @@ package com.campuslink.module.notification.application;
 import com.campuslink.common.exception.ApiException;
 import com.campuslink.common.result.ResultCode;
 import com.campuslink.module.account.application.AccountApplicationService;
+import com.campuslink.module.account.application.AuthorBrief;
 import com.campuslink.module.account.application.UserBlockApplicationService;
 import com.campuslink.module.forum.application.ForumQueryApplicationService;
 import com.campuslink.module.forum.application.cmd.ForumResults.PostBrief;
@@ -127,10 +128,8 @@ public class NotificationApplicationService {
             return new PageResult<>(List.of(), found.total(), currentPage, pageSize);
         }
 
-        Map<Long, String> nicknames = accountApplicationService.authorBriefsOf(
-                        rows.stream().map(Notification::getActorId).toList())
-                .entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().nickname()));
+        Map<Long, AuthorBrief> authors = accountApplicationService.authorBriefsOf(
+                rows.stream().map(Notification::getActorId).toList());
         // 楼层类通知先解析所属帖子，再与帖子类通知合并成一次帖子标题批量查询
         Map<Long, ReplyBrief> replyBriefs = forumQueryService.replyBriefsOf(
                 rows.stream().filter(n -> n.getTargetType() == NotificationTargetType.REPLY)
@@ -142,7 +141,7 @@ public class NotificationApplicationService {
         Map<Long, PostBrief> postBriefs = forumQueryService.postBriefsOf(postIds);
 
         List<NotificationItem> items = rows.stream()
-                .map(n -> toItem(n, nicknames, replyBriefs, postBriefs))
+                .map(n -> toItem(n, authors, replyBriefs, postBriefs))
                 .toList();
         return new PageResult<>(items, found.total(), currentPage, pageSize);
     }
@@ -215,16 +214,21 @@ public class NotificationApplicationService {
      * {@code NotificationsView.vue} 一直按"服务端不下发 postId 即不给跳转"实现（那句注释写了很久，
      * 服务端却从未真的履行）。现在两侧对齐，标题回落与不可点击是**同一个判定**的两个出口。
      */
-    private static NotificationItem toItem(Notification notification, Map<Long, String> nicknames,
+    private static NotificationItem toItem(Notification notification, Map<Long, AuthorBrief> authors,
             Map<Long, ReplyBrief> replyBriefs, Map<Long, PostBrief> postBriefs) {
         Long resolvedPostId = postIdOf(notification, replyBriefs);
         PostBrief post = resolvedPostId == null ? null : postBriefs.get(resolvedPostId);
         ReplyBrief reply = notification.getTargetType() == NotificationTargetType.REPLY
                 ? replyBriefs.get(notification.getTargetId())
                 : null;
+        AuthorBrief actor = authors.get(notification.getActorId());
+        // 平台类通知（下架 / 恢复）界面文案固定「平台」，不下发操作人真实头像（CR-164）
+        boolean platform = notification.getType() == NotificationType.CONTENT_REMOVED
+                || notification.getType() == NotificationType.CONTENT_RESTORED;
         return new NotificationItem(notification.getId(), notification.getType().code(),
                 notification.getActorId(),
-                nicknames.getOrDefault(notification.getActorId(), NICKNAME_FALLBACK),
+                actor == null ? NICKNAME_FALLBACK : actor.nickname(),
+                platform || actor == null ? null : actor.avatarUrl(),
                 notification.getTargetType().name(), notification.getTargetId(),
                 post == null ? null : resolvedPostId,
                 post == null ? CONTENT_FALLBACK : post.title(),

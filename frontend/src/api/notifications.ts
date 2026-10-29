@@ -23,6 +23,8 @@ export interface NotificationVo {
   type: NotificationType
   actorId: number
   actorNickname: string
+  /** 默认头像（CR-164）：平台类通知 / 头像缺失时不下发，前端不渲染 */
+  actorAvatarUrl?: string | null
   /** POST = 目标是帖子（点赞 / 收藏），REPLY = 目标是楼层（回复 / 采纳 / 楼层点赞） */
   targetType: 'POST' | 'REPLY'
   targetId: number
