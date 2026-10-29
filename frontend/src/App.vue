@@ -41,6 +41,14 @@ function logout() {
   router.push('/')
 }
 
+/** 跳转链接（CR-171）：把焦点送到主区而不是只滚动，读屏与键盘用户从此处继续 Tab */
+function skipToMain() {
+  const main = document.getElementById('main-content')
+  if (!main) return
+  main.focus()
+  main.scrollIntoView({ block: 'start' })
+}
+
 /** 顶栏回车即搜；关键词为空时进搜索页（该页自带输入框并自动聚焦） */
 function onSearchSubmit() {
   const kw = searchKeyword.value.trim()
@@ -50,6 +58,8 @@ function onSearchSubmit() {
 
 <template>
   <el-container class="min-h-screen">
+    <!-- 键盘用户跳过顶栏与版块导航（CR-171）：首 Tab 可见，激活后把焦点送到主区 -->
+    <a href="#main-content" class="cl-skip-link" @click.prevent="skipToMain">跳到主内容</a>
     <el-header
       v-if="bare"
       class="cl-app-header border-b-[0.5px] border-line bg-card"
@@ -176,7 +186,7 @@ function onSearchSubmit() {
         </nav>
       </div>
     </el-header>
-    <el-main class="mx-auto w-full max-w-page">
+    <el-main id="main-content" tabindex="-1" class="mx-auto w-full max-w-page">
       <!-- key 用 fullPath：同组件换参（如 /board/qna → /board/chat）也要触发淡入；
            外包一层 div 保证 Transition 子节点恒为单元素（部分视图是多根 fragment，直接动画会告警且淡入失效） -->
       <RouterView v-slot="{ Component: viewComponent, route: viewRoute }">
@@ -214,5 +224,24 @@ function onSearchSubmit() {
     min-height: calc(100vh - 60px);
     min-height: calc(100svh - 60px);
   }
+}
+
+/* 跳转链接只在聚焦时出现在左上角；主区要留出粘性顶栏的高度，否则跳过来会被页头盖住 */
+.cl-skip-link {
+  position: fixed;
+  top: -64px;
+  left: 8px;
+  z-index: 3000;
+  padding: 8px 14px;
+  border-radius: var(--cl-radius-sm);
+  background: var(--cl-color-primary-strong);
+  color: #fff;
+  font-size: var(--cl-font-body);
+}
+.cl-skip-link:focus {
+  top: 8px;
+}
+#main-content {
+  scroll-margin-top: 68px;
 }
 </style>

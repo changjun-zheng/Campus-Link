@@ -405,7 +405,7 @@ async function submit() {
         aria-label="帖子标题"
         maxlength="100"
         :placeholder="form.boardCode === 'interview' ? '如：XX 公司 Java 后端一面面经' : '输入标题（1~100 字）'"
-        class="block w-full border-0 bg-transparent py-6 text-[26px] leading-snug font-medium text-ink outline-none placeholder:text-ink-meta max-md:text-[22px]"
+        class="cl-editor-title block w-full border-0 bg-transparent py-6 text-[26px] leading-snug font-medium text-ink outline-none placeholder:text-ink-meta max-md:text-[22px]"
       />
 
       <!-- 面经模板入口（CR-143）：仅面经版块 + 正文为空时出现，填入后自动隐藏 -->
@@ -515,8 +515,9 @@ async function submit() {
           v-show="!previewMode || !narrow"
           v-model="form.contentMd"
           maxlength="20000"
+          aria-label="正文（Markdown）"
           placeholder="正文支持 Markdown：标题 / 列表 / 代码块（```语言）/ 链接 / 引用。开始输入…"
-          class="min-h-[50vh] w-full resize-none border-0 bg-transparent py-5 text-body leading-[1.9] text-ink outline-none placeholder:text-ink-meta max-md:min-h-[36vh] md:w-1/2 md:flex-none"
+          class="cl-editor-body min-h-[50vh] w-full resize-none border-0 bg-transparent py-5 text-body leading-[1.9] text-ink outline-none placeholder:text-ink-meta max-md:min-h-[36vh] md:w-1/2 md:flex-none"
         />
         <!-- 预览面板：服务端渲染并净化的 HTML，直接 v-html（XSS 防线在 MarkdownRenderer） -->
         <div
@@ -538,3 +539,14 @@ async function submit() {
     </div>
   </div>
 </template>
+
+<style scoped>
+/* 无边框编辑器（CR-171）：标题与正文用 outline-none 去掉了浏览器焦点环，键盘用户看不到落点。
+   只补一个不占布局的内描边外轮廓，保持沉浸式外观。 */
+.cl-editor-title:focus-visible,
+.cl-editor-body:focus-visible {
+  outline: 2px solid var(--cl-color-primary-strong);
+  outline-offset: 2px;
+  border-radius: var(--cl-radius-sm);
+}
+</style>

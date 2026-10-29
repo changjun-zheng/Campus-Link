@@ -253,6 +253,15 @@ html {
   background-color: var(--cl-color-danger-strong);
 }
 
+/* EP 组件焦点环（CR-171）：EP 按钮 / 下拉触发器的默认焦点是 primary-light-5，白底不足 3:1。
+   外轮廓落在按钮外侧（背景色）上，用 primary-strong 才能被键盘用户看见。 */
+.el-button.el-button:focus-visible,
+.el-dropdown > [tabindex="0"]:focus-visible {
+  outline: 2px solid var(--cl-color-primary-strong);
+  outline-offset: 2px;
+  border-radius: var(--cl-radius-sm);
+}
+
 /* 文字 / 链接型主色按钮（CR-169）：EP 这两档取 --el-color-primary（#409eff），白底 2.78:1、
    未读行浅底 2.57:1，与实心按钮同一口径改用 primary-strong。选择器比 EP 的
    .el-button--primary.is-text / .is-link 多一层 .el-button，稳定压过运行时注入。 */
@@ -418,7 +427,7 @@ html {
 :root:root .el-input__wrapper.is-focus,
 :root:root .el-textarea__inner:focus,
 :root:root .el-select__wrapper.is-focused {
-  box-shadow: 0 0 0 var(--cl-hairline) var(--el-color-primary) inset;
+  box-shadow: 0 0 0 var(--cl-hairline) var(--cl-color-primary-strong) inset;
 }
 
 :root:root .el-input.is-disabled .el-input__wrapper,
@@ -460,11 +469,11 @@ html {
     background: var(--cl-color-primary-soft);
   }
 
-  /* 键盘焦点环（CR-052）：只给自有 a / 原生 button；EP 组件（.el-button / 输入控件）
-     有自己的焦点样式，不叠加外轮廓避免双重焦点 */
+  /* 键盘焦点环（CR-052；CR-171 改色）：只给自有 a / 原生 button。
+     焦点指示需 3:1（WCAG 2.4.11），主色 #409eff 白底仅 2.78:1 ⇒ 统一换 primary-strong（5.10:1）。 */
   a:focus-visible,
   button:not(.el-button):focus-visible {
-    outline: 2px solid var(--cl-color-primary);
+    outline: 2px solid var(--cl-color-primary-strong);
     outline-offset: 2px;
     border-radius: var(--cl-radius-sm);
   }
