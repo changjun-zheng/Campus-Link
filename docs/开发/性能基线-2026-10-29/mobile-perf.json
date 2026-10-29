@@ -1,0 +1,997 @@
+{
+  "base": "http://[::1]:4173",
+  "viewport": "375x812@2x",
+  "cpu": 4,
+  "network": {
+    "latency": 150,
+    "downMbps": 1.6,
+    "upMbps": 0.75
+  },
+  "pages": [
+    {
+      "path": "/",
+      "fcp": 1396,
+      "lcp": 2356,
+      "tbt": 459,
+      "cls": 0,
+      "dcl": 1369,
+      "load": 1769,
+      "requests": 32,
+      "jsKb": 126,
+      "cssKb": 24,
+      "imgKb": 42,
+      "fontKb": 0,
+      "totalKb": 209,
+      "lcpEl": "A.min-w-0 flex-1 truncate text-title font-",
+      "top": [
+        {
+          "name": "index-DDF2UmMY.js",
+          "kb": 111,
+          "type": "script"
+        },
+        {
+          "name": "wordmark.png",
+          "kb": 24,
+          "type": "img"
+        },
+        {
+          "name": "index-CBNH3dye.css",
+          "kb": 17,
+          "type": "link"
+        },
+        {
+          "name": "HomeView-BqgEzVPG.js",
+          "kb": 5,
+          "type": "script"
+        },
+        {
+          "name": "avatar-11-owl.png",
+          "kb": 4,
+          "type": "img"
+        },
+        {
+          "name": "posts?page=1&size=6&sort=latest",
+          "kb": 3,
+          "type": "fetch"
+        }
+      ],
+      "runs": [
+        {
+          "path": "/",
+          "fcp": 1552,
+          "lcp": 2520,
+          "lcpEl": "A.min-w-0 flex-1 truncate text-title font-",
+          "cls": 0,
+          "tbt": 674,
+          "longtasks": 5,
+          "dcl": 1520,
+          "load": 1895,
+          "requests": 32,
+          "jsKb": 126,
+          "cssKb": 24,
+          "imgKb": 42,
+          "fontKb": 0,
+          "totalKb": 209,
+          "top": [
+            {
+              "name": "index-DDF2UmMY.js",
+              "kb": 111,
+              "type": "script"
+            },
+            {
+              "name": "wordmark.png",
+              "kb": 24,
+              "type": "img"
+            },
+            {
+              "name": "index-CBNH3dye.css",
+              "kb": 17,
+              "type": "link"
+            },
+            {
+              "name": "HomeView-BqgEzVPG.js",
+              "kb": 5,
+              "type": "script"
+            },
+            {
+              "name": "avatar-11-owl.png",
+              "kb": 4,
+              "type": "img"
+            },
+            {
+              "name": "posts?page=1&size=6&sort=latest",
+              "kb": 3,
+              "type": "fetch"
+            }
+          ]
+        },
+        {
+          "path": "/",
+          "fcp": 1396,
+          "lcp": 2356,
+          "lcpEl": "A.min-w-0 flex-1 truncate text-title font-",
+          "cls": 0,
+          "tbt": 459,
+          "longtasks": 5,
+          "dcl": 1369,
+          "load": 1769,
+          "requests": 32,
+          "jsKb": 126,
+          "cssKb": 24,
+          "imgKb": 42,
+          "fontKb": 0,
+          "totalKb": 209,
+          "top": [
+            {
+              "name": "index-DDF2UmMY.js",
+              "kb": 111,
+              "type": "script"
+            },
+            {
+              "name": "wordmark.png",
+              "kb": 24,
+              "type": "img"
+            },
+            {
+              "name": "index-CBNH3dye.css",
+              "kb": 17,
+              "type": "link"
+            },
+            {
+              "name": "HomeView-BqgEzVPG.js",
+              "kb": 5,
+              "type": "script"
+            },
+            {
+              "name": "avatar-11-owl.png",
+              "kb": 4,
+              "type": "img"
+            },
+            {
+              "name": "posts?page=1&size=6&sort=latest",
+              "kb": 3,
+              "type": "fetch"
+            }
+          ]
+        },
+        {
+          "path": "/",
+          "fcp": 1380,
+          "lcp": 2332,
+          "lcpEl": "A.min-w-0 flex-1 truncate text-title font-",
+          "cls": 0,
+          "tbt": 439,
+          "longtasks": 5,
+          "dcl": 1351,
+          "load": 1750,
+          "requests": 32,
+          "jsKb": 126,
+          "cssKb": 24,
+          "imgKb": 42,
+          "fontKb": 0,
+          "totalKb": 209,
+          "top": [
+            {
+              "name": "index-DDF2UmMY.js",
+              "kb": 111,
+              "type": "script"
+            },
+            {
+              "name": "wordmark.png",
+              "kb": 24,
+              "type": "img"
+            },
+            {
+              "name": "index-CBNH3dye.css",
+              "kb": 17,
+              "type": "link"
+            },
+            {
+              "name": "HomeView-BqgEzVPG.js",
+              "kb": 5,
+              "type": "script"
+            },
+            {
+              "name": "avatar-11-owl.png",
+              "kb": 4,
+              "type": "img"
+            },
+            {
+              "name": "posts?page=1&size=6&sort=latest",
+              "kb": 3,
+              "type": "fetch"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/post/51",
+      "fcp": 1380,
+      "lcp": 2988,
+      "tbt": 292,
+      "cls": 0,
+      "dcl": 1354,
+      "load": 1997,
+      "requests": 41,
+      "jsKb": 169,
+      "cssKb": 33,
+      "imgKb": 32,
+      "fontKb": 0,
+      "totalKb": 235,
+      "lcpEl": "H1.my-2.5 text-h1 font-medium leading-snug ",
+      "top": [
+        {
+          "name": "index-DDF2UmMY.js",
+          "kb": 111,
+          "type": "script"
+        },
+        {
+          "name": "wordmark.png",
+          "kb": 24,
+          "type": "img"
+        },
+        {
+          "name": "index-CBNH3dye.css",
+          "kb": 17,
+          "type": "link"
+        },
+        {
+          "name": "el-select-CIYZUxwb.js",
+          "kb": 11,
+          "type": "script"
+        },
+        {
+          "name": "el-form-item-5uoVhg65.js",
+          "kb": 10,
+          "type": "script"
+        },
+        {
+          "name": "PostDetailView-QT1rEKGX.js",
+          "kb": 8,
+          "type": "script"
+        }
+      ],
+      "runs": [
+        {
+          "path": "/post/51",
+          "fcp": 1508,
+          "lcp": 3232,
+          "lcpEl": "H1.my-2.5 text-h1 font-medium leading-snug ",
+          "cls": 0,
+          "tbt": 427,
+          "longtasks": 3,
+          "dcl": 1467,
+          "load": 2106,
+          "requests": 41,
+          "jsKb": 169,
+          "cssKb": 33,
+          "imgKb": 32,
+          "fontKb": 0,
+          "totalKb": 235,
+          "top": [
+            {
+              "name": "index-DDF2UmMY.js",
+              "kb": 111,
+              "type": "script"
+            },
+            {
+              "name": "wordmark.png",
+              "kb": 24,
+              "type": "img"
+            },
+            {
+              "name": "index-CBNH3dye.css",
+              "kb": 17,
+              "type": "link"
+            },
+            {
+              "name": "el-select-CIYZUxwb.js",
+              "kb": 11,
+              "type": "script"
+            },
+            {
+              "name": "el-form-item-5uoVhg65.js",
+              "kb": 10,
+              "type": "script"
+            },
+            {
+              "name": "PostDetailView-QT1rEKGX.js",
+              "kb": 8,
+              "type": "script"
+            }
+          ]
+        },
+        {
+          "path": "/post/51",
+          "fcp": 1380,
+          "lcp": 2988,
+          "lcpEl": "H1.my-2.5 text-h1 font-medium leading-snug ",
+          "cls": 0,
+          "tbt": 292,
+          "longtasks": 3,
+          "dcl": 1354,
+          "load": 1997,
+          "requests": 41,
+          "jsKb": 169,
+          "cssKb": 33,
+          "imgKb": 32,
+          "fontKb": 0,
+          "totalKb": 235,
+          "top": [
+            {
+              "name": "index-DDF2UmMY.js",
+              "kb": 111,
+              "type": "script"
+            },
+            {
+              "name": "wordmark.png",
+              "kb": 24,
+              "type": "img"
+            },
+            {
+              "name": "index-CBNH3dye.css",
+              "kb": 17,
+              "type": "link"
+            },
+            {
+              "name": "el-select-CIYZUxwb.js",
+              "kb": 11,
+              "type": "script"
+            },
+            {
+              "name": "el-form-item-5uoVhg65.js",
+              "kb": 10,
+              "type": "script"
+            },
+            {
+              "name": "PostDetailView-QT1rEKGX.js",
+              "kb": 8,
+              "type": "script"
+            }
+          ]
+        },
+        {
+          "path": "/post/51",
+          "fcp": 1380,
+          "lcp": 2924,
+          "lcpEl": "H1.my-2.5 text-h1 font-medium leading-snug ",
+          "cls": 0,
+          "tbt": 284,
+          "longtasks": 2,
+          "dcl": 1354,
+          "load": 1996,
+          "requests": 41,
+          "jsKb": 169,
+          "cssKb": 33,
+          "imgKb": 32,
+          "fontKb": 0,
+          "totalKb": 235,
+          "top": [
+            {
+              "name": "index-DDF2UmMY.js",
+              "kb": 111,
+              "type": "script"
+            },
+            {
+              "name": "wordmark.png",
+              "kb": 24,
+              "type": "img"
+            },
+            {
+              "name": "index-CBNH3dye.css",
+              "kb": 17,
+              "type": "link"
+            },
+            {
+              "name": "el-select-CIYZUxwb.js",
+              "kb": 11,
+              "type": "script"
+            },
+            {
+              "name": "el-form-item-5uoVhg65.js",
+              "kb": 10,
+              "type": "script"
+            },
+            {
+              "name": "PostDetailView-QT1rEKGX.js",
+              "kb": 8,
+              "type": "script"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/search?q=Java",
+      "fcp": 1412,
+      "lcp": 2860,
+      "tbt": 466,
+      "cls": 0,
+      "dcl": 1379,
+      "load": 1842,
+      "requests": 24,
+      "jsKb": 141,
+      "cssKb": 25,
+      "imgKb": 26,
+      "fontKb": 0,
+      "totalKb": 192,
+      "lcpEl": "P.mt-1.5 text-note text-ink-meta",
+      "top": [
+        {
+          "name": "index-DDF2UmMY.js",
+          "kb": 111,
+          "type": "script"
+        },
+        {
+          "name": "wordmark.png",
+          "kb": 24,
+          "type": "img"
+        },
+        {
+          "name": "index-CBNH3dye.css",
+          "kb": 17,
+          "type": "link"
+        },
+        {
+          "name": "el-select-CIYZUxwb.js",
+          "kb": 11,
+          "type": "script"
+        },
+        {
+          "name": "el-pagination-DM8CeRdE.js",
+          "kb": 4,
+          "type": "script"
+        },
+        {
+          "name": "SearchView-BThKV99I.js",
+          "kb": 3,
+          "type": "script"
+        }
+      ],
+      "runs": [
+        {
+          "path": "/search?q=Java",
+          "fcp": 1412,
+          "lcp": 2828,
+          "lcpEl": "P.mt-1.5 text-note text-ink-meta",
+          "cls": 0,
+          "tbt": 466,
+          "longtasks": 2,
+          "dcl": 1379,
+          "load": 1842,
+          "requests": 24,
+          "jsKb": 141,
+          "cssKb": 25,
+          "imgKb": 26,
+          "fontKb": 0,
+          "totalKb": 192,
+          "top": [
+            {
+              "name": "index-DDF2UmMY.js",
+              "kb": 111,
+              "type": "script"
+            },
+            {
+              "name": "wordmark.png",
+              "kb": 24,
+              "type": "img"
+            },
+            {
+              "name": "index-CBNH3dye.css",
+              "kb": 17,
+              "type": "link"
+            },
+            {
+              "name": "el-select-CIYZUxwb.js",
+              "kb": 11,
+              "type": "script"
+            },
+            {
+              "name": "el-pagination-DM8CeRdE.js",
+              "kb": 4,
+              "type": "script"
+            },
+            {
+              "name": "SearchView-BThKV99I.js",
+              "kb": 3,
+              "type": "script"
+            }
+          ]
+        },
+        {
+          "path": "/search?q=Java",
+          "fcp": 1384,
+          "lcp": 2860,
+          "lcpEl": "P.mt-1.5 text-note text-ink-meta",
+          "cls": 0,
+          "tbt": 443,
+          "longtasks": 2,
+          "dcl": 1353,
+          "load": 1825,
+          "requests": 24,
+          "jsKb": 141,
+          "cssKb": 25,
+          "imgKb": 26,
+          "fontKb": 0,
+          "totalKb": 192,
+          "top": [
+            {
+              "name": "index-DDF2UmMY.js",
+              "kb": 111,
+              "type": "script"
+            },
+            {
+              "name": "wordmark.png",
+              "kb": 24,
+              "type": "img"
+            },
+            {
+              "name": "index-CBNH3dye.css",
+              "kb": 17,
+              "type": "link"
+            },
+            {
+              "name": "el-select-CIYZUxwb.js",
+              "kb": 11,
+              "type": "script"
+            },
+            {
+              "name": "el-pagination-DM8CeRdE.js",
+              "kb": 4,
+              "type": "script"
+            },
+            {
+              "name": "SearchView-BThKV99I.js",
+              "kb": 3,
+              "type": "script"
+            }
+          ]
+        },
+        {
+          "path": "/search?q=Java",
+          "fcp": 1444,
+          "lcp": 2984,
+          "lcpEl": "P.mt-1.5 text-note text-ink-meta",
+          "cls": 0,
+          "tbt": 498,
+          "longtasks": 2,
+          "dcl": 1411,
+          "load": 1886,
+          "requests": 24,
+          "jsKb": 141,
+          "cssKb": 25,
+          "imgKb": 26,
+          "fontKb": 0,
+          "totalKb": 192,
+          "top": [
+            {
+              "name": "index-DDF2UmMY.js",
+              "kb": 111,
+              "type": "script"
+            },
+            {
+              "name": "wordmark.png",
+              "kb": 24,
+              "type": "img"
+            },
+            {
+              "name": "index-CBNH3dye.css",
+              "kb": 17,
+              "type": "link"
+            },
+            {
+              "name": "el-select-CIYZUxwb.js",
+              "kb": 11,
+              "type": "script"
+            },
+            {
+              "name": "el-pagination-DM8CeRdE.js",
+              "kb": 4,
+              "type": "script"
+            },
+            {
+              "name": "SearchView-BThKV99I.js",
+              "kb": 3,
+              "type": "script"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/teams",
+      "fcp": 1408,
+      "lcp": 2784,
+      "tbt": 448,
+      "cls": 0,
+      "dcl": 1381,
+      "load": 1857,
+      "requests": 26,
+      "jsKb": 141,
+      "cssKb": 26,
+      "imgKb": 26,
+      "fontKb": 0,
+      "totalKb": 193,
+      "lcpEl": "P.mt-1.5 text-note text-ink-meta",
+      "top": [
+        {
+          "name": "index-DDF2UmMY.js",
+          "kb": 111,
+          "type": "script"
+        },
+        {
+          "name": "wordmark.png",
+          "kb": 24,
+          "type": "img"
+        },
+        {
+          "name": "index-CBNH3dye.css",
+          "kb": 17,
+          "type": "link"
+        },
+        {
+          "name": "el-select-CIYZUxwb.js",
+          "kb": 11,
+          "type": "script"
+        },
+        {
+          "name": "el-pagination-DM8CeRdE.js",
+          "kb": 4,
+          "type": "script"
+        },
+        {
+          "name": "TeamsView-LNCR_Xg6.js",
+          "kb": 3,
+          "type": "script"
+        }
+      ],
+      "runs": [
+        {
+          "path": "/teams",
+          "fcp": 1408,
+          "lcp": 2784,
+          "lcpEl": "P.mt-1.5 text-note text-ink-meta",
+          "cls": 0,
+          "tbt": 448,
+          "longtasks": 2,
+          "dcl": 1383,
+          "load": 1858,
+          "requests": 26,
+          "jsKb": 141,
+          "cssKb": 26,
+          "imgKb": 26,
+          "fontKb": 0,
+          "totalKb": 193,
+          "top": [
+            {
+              "name": "index-DDF2UmMY.js",
+              "kb": 111,
+              "type": "script"
+            },
+            {
+              "name": "wordmark.png",
+              "kb": 24,
+              "type": "img"
+            },
+            {
+              "name": "index-CBNH3dye.css",
+              "kb": 17,
+              "type": "link"
+            },
+            {
+              "name": "el-select-CIYZUxwb.js",
+              "kb": 11,
+              "type": "script"
+            },
+            {
+              "name": "el-pagination-DM8CeRdE.js",
+              "kb": 4,
+              "type": "script"
+            },
+            {
+              "name": "TeamsView-LNCR_Xg6.js",
+              "kb": 3,
+              "type": "script"
+            }
+          ]
+        },
+        {
+          "path": "/teams",
+          "fcp": 1376,
+          "lcp": 2816,
+          "lcpEl": "P.mt-1.5 text-note text-ink-meta",
+          "cls": 0,
+          "tbt": 497,
+          "longtasks": 2,
+          "dcl": 1345,
+          "load": 1826,
+          "requests": 26,
+          "jsKb": 141,
+          "cssKb": 26,
+          "imgKb": 26,
+          "fontKb": 0,
+          "totalKb": 193,
+          "top": [
+            {
+              "name": "index-DDF2UmMY.js",
+              "kb": 111,
+              "type": "script"
+            },
+            {
+              "name": "wordmark.png",
+              "kb": 24,
+              "type": "img"
+            },
+            {
+              "name": "index-CBNH3dye.css",
+              "kb": 17,
+              "type": "link"
+            },
+            {
+              "name": "el-select-CIYZUxwb.js",
+              "kb": 11,
+              "type": "script"
+            },
+            {
+              "name": "el-pagination-DM8CeRdE.js",
+              "kb": 4,
+              "type": "script"
+            },
+            {
+              "name": "TeamsView-LNCR_Xg6.js",
+              "kb": 3,
+              "type": "script"
+            }
+          ]
+        },
+        {
+          "path": "/teams",
+          "fcp": 1412,
+          "lcp": 2752,
+          "lcpEl": "P.mt-1.5 text-note text-ink-meta",
+          "cls": 0,
+          "tbt": 436,
+          "longtasks": 2,
+          "dcl": 1381,
+          "load": 1857,
+          "requests": 26,
+          "jsKb": 141,
+          "cssKb": 26,
+          "imgKb": 26,
+          "fontKb": 0,
+          "totalKb": 193,
+          "top": [
+            {
+              "name": "index-DDF2UmMY.js",
+              "kb": 111,
+              "type": "script"
+            },
+            {
+              "name": "wordmark.png",
+              "kb": 24,
+              "type": "img"
+            },
+            {
+              "name": "index-CBNH3dye.css",
+              "kb": 17,
+              "type": "link"
+            },
+            {
+              "name": "el-select-CIYZUxwb.js",
+              "kb": 11,
+              "type": "script"
+            },
+            {
+              "name": "el-pagination-DM8CeRdE.js",
+              "kb": 4,
+              "type": "script"
+            },
+            {
+              "name": "TeamsView-LNCR_Xg6.js",
+              "kb": 3,
+              "type": "script"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/login",
+      "fcp": 1380,
+      "lcp": 2536,
+      "tbt": 403,
+      "cls": 0.0425,
+      "dcl": 1353,
+      "load": 1752,
+      "requests": 17,
+      "jsKb": 137,
+      "cssKb": 24,
+      "imgKb": 26,
+      "fontKb": 0,
+      "totalKb": 187,
+      "lcpEl": "P.mt-3 text-note leading-body text-ink-reg",
+      "top": [
+        {
+          "name": "index-DDF2UmMY.js",
+          "kb": 111,
+          "type": "script"
+        },
+        {
+          "name": "wordmark.png",
+          "kb": 24,
+          "type": "img"
+        },
+        {
+          "name": "index-CBNH3dye.css",
+          "kb": 17,
+          "type": "link"
+        },
+        {
+          "name": "el-form-item-5uoVhg65.js",
+          "kb": 10,
+          "type": "script"
+        },
+        {
+          "name": "LoginView-B_xrmK4D.js",
+          "kb": 5,
+          "type": "script"
+        },
+        {
+          "name": "el-tab-pane-CpONDHt6.js",
+          "kb": 5,
+          "type": "script"
+        }
+      ],
+      "runs": [
+        {
+          "path": "/login",
+          "fcp": 1424,
+          "lcp": 2556,
+          "lcpEl": "P.mt-3 text-note leading-body text-ink-reg",
+          "cls": 0.0425,
+          "tbt": 459,
+          "longtasks": 2,
+          "dcl": 1396,
+          "load": 1788,
+          "requests": 17,
+          "jsKb": 137,
+          "cssKb": 24,
+          "imgKb": 26,
+          "fontKb": 0,
+          "totalKb": 187,
+          "top": [
+            {
+              "name": "index-DDF2UmMY.js",
+              "kb": 111,
+              "type": "script"
+            },
+            {
+              "name": "wordmark.png",
+              "kb": 24,
+              "type": "img"
+            },
+            {
+              "name": "index-CBNH3dye.css",
+              "kb": 17,
+              "type": "link"
+            },
+            {
+              "name": "el-form-item-5uoVhg65.js",
+              "kb": 10,
+              "type": "script"
+            },
+            {
+              "name": "LoginView-B_xrmK4D.js",
+              "kb": 5,
+              "type": "script"
+            },
+            {
+              "name": "el-tab-pane-CpONDHt6.js",
+              "kb": 5,
+              "type": "script"
+            }
+          ]
+        },
+        {
+          "path": "/login",
+          "fcp": 1380,
+          "lcp": 2536,
+          "lcpEl": "P.mt-3 text-note leading-body text-ink-reg",
+          "cls": 0.0425,
+          "tbt": 402,
+          "longtasks": 2,
+          "dcl": 1352,
+          "load": 1752,
+          "requests": 17,
+          "jsKb": 137,
+          "cssKb": 24,
+          "imgKb": 26,
+          "fontKb": 0,
+          "totalKb": 187,
+          "top": [
+            {
+              "name": "index-DDF2UmMY.js",
+              "kb": 111,
+              "type": "script"
+            },
+            {
+              "name": "wordmark.png",
+              "kb": 24,
+              "type": "img"
+            },
+            {
+              "name": "index-CBNH3dye.css",
+              "kb": 17,
+              "type": "link"
+            },
+            {
+              "name": "el-form-item-5uoVhg65.js",
+              "kb": 10,
+              "type": "script"
+            },
+            {
+              "name": "LoginView-B_xrmK4D.js",
+              "kb": 5,
+              "type": "script"
+            },
+            {
+              "name": "el-tab-pane-CpONDHt6.js",
+              "kb": 5,
+              "type": "script"
+            }
+          ]
+        },
+        {
+          "path": "/login",
+          "fcp": 1380,
+          "lcp": 2472,
+          "lcpEl": "P.mt-3 text-note leading-body text-ink-reg",
+          "cls": 0.0425,
+          "tbt": 403,
+          "longtasks": 2,
+          "dcl": 1353,
+          "load": 1746,
+          "requests": 17,
+          "jsKb": 137,
+          "cssKb": 24,
+          "imgKb": 26,
+          "fontKb": 0,
+          "totalKb": 187,
+          "top": [
+            {
+              "name": "index-DDF2UmMY.js",
+              "kb": 111,
+              "type": "script"
+            },
+            {
+              "name": "wordmark.png",
+              "kb": 24,
+              "type": "img"
+            },
+            {
+              "name": "index-CBNH3dye.css",
+              "kb": 17,
+              "type": "link"
+            },
+            {
+              "name": "el-form-item-5uoVhg65.js",
+              "kb": 10,
+              "type": "script"
+            },
+            {
+              "name": "LoginView-B_xrmK4D.js",
+              "kb": 5,
+              "type": "script"
+            },
+            {
+              "name": "el-tab-pane-CpONDHt6.js",
+              "kb": 5,
+              "type": "script"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
