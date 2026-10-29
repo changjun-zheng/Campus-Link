@@ -276,6 +276,13 @@ html {
   color: var(--cl-text-meta);
 }
 
+/* Tabs 选中态文字（CR-170）：EP 用主色 #409eff，落在页面灰底 #f5f6f8 上仅 2.57:1
+   （管理后台移动端实测）；只换文字色，下划线仍用主色。 */
+.el-tabs__item.el-tabs__item.is-active,
+.el-tabs__item.el-tabs__item:hover {
+  color: var(--cl-color-primary-strong);
+}
+
 /* light 标签文字 AA（CR-169）：EP 四种语义色在各自浅底上只有 2.04~2.80；
    dark 变体是白字实底，不动（:not 排除，选择器 (0,3,0) 稳过 EP 的 (0,2,0)）。 */
 .el-tag.el-tag--success:not(.el-tag--dark) {

@@ -204,4 +204,15 @@ function onSearchSubmit() {
 .el-main {
   overflow: visible;
 }
+
+/* 移动端首屏高度基线（CR-170）：路由组件是懒加载 chunk，App 壳（页头 + 页脚）先绘制，
+   chunk 到达后内容长高会把首屏底部的页脚顶出视口——实测设置页 CLS 0.089（Good 但非 0）。
+   让主区在 <768 至少占「视口 − 页头」，页脚从首帧起就在折线以下，内容增长不再移动可见元素；
+   桌面不改（CLS 0.009）。取 60px 是页头最小高度，宁可把页脚多推下去也不留可见缝隙。 */
+@media (max-width: 767px) {
+  .el-main {
+    min-height: calc(100vh - 60px);
+    min-height: calc(100svh - 60px);
+  }
+}
 </style>
