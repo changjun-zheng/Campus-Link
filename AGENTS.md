@@ -77,6 +77,7 @@ SPRING_PROFILES_ACTIVE=prod JWT_SECRET=… APP_HASH_KEY=… APP_CRYPT_KEY=… DB
 npm install
 npm run dev           # 5173，/api 代理到 8088（VITE_API_TARGET 可覆盖）
 npm run build
+npm run typecheck     # vue-tsc 类型检查（CR-167）；CI 在 Build 之后跑——build 会生成被 gitignore 的 auto-import d.ts
 npm run lint          # ESLint 静态扫描（flat config，见 eslint.config.js）；合码前必须 exit 0
 
 # 文档一致性（CR-146 / 问题清单 E-016）：仓库根目录执行，只报告不改文件；改完文档先跑它

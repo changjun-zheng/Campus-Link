@@ -34,3 +34,7 @@ jobs:
         run: npm run lint
       - name: Build
         run: npm run build
+      # 类型检查（CR-167）：build 先生成 auto-imports.d.ts / components.d.ts（被 gitignore），
+      # 故顺序必须在 Build 之后；vite build 本身只转译、不检查类型。
+      - name: Typecheck
+        run: npm run typecheck

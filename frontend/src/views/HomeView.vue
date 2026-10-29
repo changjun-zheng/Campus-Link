@@ -6,6 +6,7 @@ import { useAuthStore } from '../stores/auth'
 import { formatTime } from '../utils/time'
 import PostListItem from '../components/PostListItem.vue'
 import SvgIcon from '../components/SvgIcon.vue'
+import type { IconName } from '../assets/icons'
 
 const auth = useAuthStore()
 
@@ -172,7 +173,7 @@ onMounted(() => {
   loadUnanswered()
 })
 
-const myEntries = [
+const myEntries: { label: string; to: string; icon: IconName }[] = [
   { label: '我的收藏', to: '/favorites', icon: 'bookmark' },
   { label: '我的帖子', to: '/me/posts', icon: 'article' },
 ]

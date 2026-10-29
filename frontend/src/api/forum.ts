@@ -82,6 +82,8 @@ export interface ReplyVo {
   authorNickname: string
   /** 默认头像（CR-162）：未回填 / 查不到时 null，前端回落昵称首字 */
   authorAvatarUrl: string | null
+  /** 楼层点赞数（后端 ReplyVo 一直下发；CR-167 类型检查补齐） */
+  likeCount: number
   /** 最佳答案（F-QA-001）；楼层列表按 is_accepted DESC 排序，最佳答案自然置顶 */
   accepted: boolean
   /** 当前登录用户是否已点赞该楼层（F-FORUM-005）；匿名请求恒 false */

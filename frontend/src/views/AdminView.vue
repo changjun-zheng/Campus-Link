@@ -776,14 +776,14 @@ function goLogin() {
                 type="danger"
                 link
                 :loading="moderating"
-                @click="moderateContent(row, 'REMOVED')"
+                @click="moderateContent(row as AdminContentItemVo, 'REMOVED')"
               >下架</el-button>
               <el-button
                 v-else
                 type="success"
                 link
                 :loading="moderating"
-                @click="moderateContent(row, 'PUBLISHED')"
+                @click="moderateContent(row as AdminContentItemVo, 'PUBLISHED')"
               >恢复</el-button>
             </template>
           </el-table-column>
