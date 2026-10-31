@@ -105,8 +105,13 @@ async function onLike() {
 
 <template>
   <li
-    class="border-b-[0.5px] border-divider px-5 py-4 transition-colors duration-fast ease-standard last:border-b-0 hover:bg-bg-hover"
+    class="group relative border-b-[0.5px] border-divider px-5 py-4 transition-colors duration-fast ease-standard last:border-b-0 hover:bg-bg-hover"
   >
+    <!-- hover 左侧主色指示条（CR-161）：2px 绝对定位，不占布局、不位移 -->
+    <span
+      aria-hidden="true"
+      class="absolute inset-y-0 left-0 w-0.5 bg-primary-strong opacity-0 transition-opacity duration-fast ease-standard group-hover:opacity-100"
+    />
     <div class="flex gap-3">
       <div class="min-w-0 flex-1">
         <!-- 作者行（CSDN / 掘金式）：头像 + 昵称 + 时间在标题上方（CR-085） -->

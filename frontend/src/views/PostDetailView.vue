@@ -485,16 +485,22 @@ watch(
               :loading="togglingLike"
               @click="toggleLike"
             >
-              点赞{{ post.likeCount > 0 ? ` ${post.likeCount}` : '' }}
+              <span class="inline-flex items-center gap-1 tabular-nums">
+                <SvgIcon name="thumb-up" :size="16" />
+                点赞{{ post.likeCount > 0 ? ` ${post.likeCount}` : '' }}
+              </span>
             </el-button>
             <el-button
               size="small"
-              :type="post.favoritedByMe ? 'warning' : 'default'"
+              :type="post.favoritedByMe ? 'primary' : 'default'"
               :plain="!post.favoritedByMe"
               :loading="togglingFavorite"
               @click="toggleFavorite"
             >
-              {{ post.favoritedByMe ? '已收藏' : '收藏' }}
+              <span class="inline-flex items-center gap-1">
+                <SvgIcon name="bookmark" :size="16" />
+                {{ post.favoritedByMe ? '已收藏' : '收藏' }}
+              </span>
             </el-button>
             <el-button
               v-if="isAuthor"

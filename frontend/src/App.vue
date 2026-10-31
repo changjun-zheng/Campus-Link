@@ -160,7 +160,7 @@ function onSearchSubmit() {
             </template>
           </el-dropdown>
           <RouterLink v-else to="/login">
-            <el-button type="primary" size="small">登录 / 注册</el-button>
+            <el-button size="small">登录 / 注册</el-button>
           </RouterLink>
         </div>
         <!-- 窄屏整行铺满并出血到页头边缘：-mx-4 / +2rem 对应 tokens.css 窄屏下的 --el-header-padding: 0 16px
