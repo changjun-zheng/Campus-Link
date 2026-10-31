@@ -34,6 +34,9 @@ const { saveDraft, loadDraft, clearDraft } = useDraft()
 const boards = ref<BoardVo[]>([])
 const submitting = ref(false)
 const contentEl = ref<HTMLTextAreaElement | null>(null)
+/** 校验失败时的焦点落点（CR-173）：标题是原生 input，版块 / 标签是 EP 组件（暴露 focus()） */
+const titleEl = ref<HTMLInputElement | null>(null)
+const boardEl = ref<{ focus: () => void } | null>(null)
 const form = reactive({
   boardCode: '',
   title: '',
@@ -320,14 +323,17 @@ function wrap(before: string, after = '', placeholder = '') {
 async function submit() {
   if (!form.boardCode) {
     ElMessage.warning('请选择版块')
+    boardEl.value?.focus()
     return
   }
   if (!form.title.trim()) {
     ElMessage.warning('请填写标题')
+    titleEl.value?.focus()
     return
   }
   if (!form.contentMd.trim()) {
     ElMessage.warning('请填写正文')
+    contentEl.value?.focus()
     return
   }
   if (form.tags.length > 5) {
@@ -372,6 +378,7 @@ async function submit() {
     <div class="flex items-center gap-3 border-b-[0.5px] border-line px-5 py-3">
       <el-select
         v-if="!editing"
+        ref="boardEl"
         v-model="form.boardCode"
         aria-label="选择版块"
         placeholder="选择版块"
@@ -401,6 +408,7 @@ async function submit() {
     <div class="mx-auto max-w-reading px-6 max-md:px-4">
       <!-- 标题：超大无边框输入（CSDN / 掘金式） -->
       <input
+        ref="titleEl"
         v-model="form.title"
         aria-label="帖子标题"
         maxlength="100"

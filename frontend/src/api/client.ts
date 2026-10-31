@@ -51,7 +51,17 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
   } catch {
     throw new ApiError(-1, '网络异常，请检查后端服务是否已启动')
   }
-  const body = (await res.json()) as ApiResponse<T>
+  // 非 JSON 响应（网关 / CORS 403 / 代理错误页）不能把解析器的原始错误抛给用户（CR-173）
+  const text = await res.text()
+  let body: ApiResponse<T> | null = null
+  try {
+    body = text ? (JSON.parse(text) as ApiResponse<T>) : null
+  } catch {
+    body = null
+  }
+  if (!body || typeof body.code !== 'number') {
+    throw new ApiError(res.status, httpStatusMessage(res.status))
+  }
   if (body.code !== 0) {
     // 未认证：先触发全局退出处理器（清会话 + 跳登录），再按既有语义抛错，调用方的 catch 不受影响
     if (body.code === UNAUTHORIZED_CODE) {
@@ -60,6 +70,14 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
     throw new ApiError(body.code, body.message || `请求失败（${body.code}）`, body.traceId)
   }
   return body.data
+}
+
+/** 非业务错误（响应不是 ApiResponse 外壳）时的可达文案；不暴露网关 / 解析器原文 */
+function httpStatusMessage(status: number): string {
+  if (status === 403) return '请求被服务器拒绝（HTTP 403），请稍后重试'
+  if (status === 429) return '请求过于频繁（HTTP 429），请稍后重试'
+  if (status >= 500) return '服务暂时不可用（HTTP 5xx），请稍后重试'
+  return `请求失败（HTTP ${status}）`
 }
 
 export const get = <T>(path: string): Promise<T> => request<T>(path)

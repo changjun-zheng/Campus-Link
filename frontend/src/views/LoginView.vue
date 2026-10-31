@@ -13,14 +13,17 @@ const auth = useAuthStore()
 
 const tab = ref<'login' | 'register'>('login')
 
-/** 左侧品牌区价值主张（CR-052 品牌化；CR-097 去掉破折号后的解释文案）；icon 显式标注类型，否则推成 string 传不进 SvgIcon */
+/** 左侧品牌区事实（CR-161：原为与标题重复的三个卖点，改为可核验事实）；icon 显式标注类型，否则推成 string 传不进 SvgIcon */
 const values: { icon: IconName; title: string }[] = [
-  { icon: 'message-2', title: '问有所答' },
-  { icon: 'book-2', title: '学有同伴' },
-  { icon: 'briefcase', title: '求职有路' },
+  { icon: 'school', title: '仅限本校学生' },
+  { icon: 'circle-check', title: '学籍核验注册' },
+  { icon: 'list', title: '6 个固定版块' },
 ]
 
 const loginForm = reactive({ account: '', code: '' })
+/** 校验失败时把焦点送回字段（CR-173）：只弹 toast 不移动焦点，键盘 / 读屏用户不知道落在哪 */
+const accountRef = ref<{ focus: () => void } | null>(null)
+const codeRef = ref<{ focus: () => void } | null>(null)
 const reg = reactive({
   step: 1 as 1 | 2,
   ticket: '',
@@ -42,8 +45,19 @@ function errorMessage(e: unknown, fallback: string) {
 }
 
 async function doLogin() {
+  const account = loginForm.account.trim()
+  if (!account) {
+    ElMessage.warning('请输入邮箱或手机号')
+    accountRef.value?.focus()
+    return
+  }
+  if (!/^\d{6}$/.test(loginForm.code.trim())) {
+    ElMessage.warning('请输入 6 位验证码')
+    codeRef.value?.focus()
+    return
+  }
   try {
-    await auth.login(loginForm.account, loginForm.code)
+    await auth.login(account, loginForm.code.trim())
     ElMessage.success('登录成功')
     router.push(String(route.query.redirect || '/'))
   } catch (e) {
@@ -78,9 +92,10 @@ async function doRegister() {
   <div
     class="mx-auto flex w-full max-w-[960px] flex-col gap-5 py-8 md:flex-row md:items-stretch md:gap-9 md:py-20"
   >
-    <!-- 品牌区（CR-052：桌面左栏，窄屏折叠为顶部品牌条；复用 hero 渐变令牌） -->
+    <!-- 品牌区（CR-052：桌面左栏，窄屏折叠为顶部品牌条；CR-161：去渐变改纯色浅底，
+         收敛为「渐变仅首页 hero 一处」） -->
     <section
-      class="cl-hero-bg flex flex-col justify-center rounded-lg border-[0.5px] border-line p-6 md:w-[360px] md:flex-none md:p-10"
+      class="bg-primary-soft flex flex-col justify-center rounded-lg border-[0.5px] border-line p-6 md:w-[360px] md:flex-none md:p-10"
     >
       <div class="flex items-center gap-2.5">
         <img src="/logo.svg" alt="Campus-Link" class="h-9 w-auto" width="36" height="36" />
@@ -111,11 +126,11 @@ async function doRegister() {
           <el-tab-pane label="登录" name="login">
             <el-form label-position="top" @submit.prevent>
               <el-form-item :label="contactLabel">
-                <el-input v-model="loginForm.account" placeholder="注册时使用的邮箱或手机号" />
+                <el-input ref="accountRef" v-model="loginForm.account" placeholder="注册时使用的邮箱或手机号" />
               </el-form-item>
               <el-form-item label="验证码">
                 <div class="flex w-full gap-2">
-                  <el-input v-model="loginForm.code" placeholder="6 位验证码" maxlength="6" />
+                  <el-input ref="codeRef" v-model="loginForm.code" placeholder="6 位验证码" maxlength="6" />
                   <el-button
                     :disabled="loginCaptcha.remaining.value > 0 || loginCaptcha.sending.value"
                     @click="loginCaptcha.run(() => sendCaptcha(loginForm.account))"

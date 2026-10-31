@@ -307,6 +307,40 @@ html {
   --el-tag-text-color: var(--cl-text-meta);
 }
 
+/* 校验错误与提示类文案 AA（CR-173）：EP 表单错误 12px #f56c6c 白底 3.0:1；
+   alert / message 的 light 变体用语义原色落在浅底上（2.0~2.8:1）。统一换深色。 */
+:root:root .el-form-item__error {
+  color: var(--cl-color-danger-strong);
+}
+.el-alert.el-alert--error.is-light,
+.el-alert.el-alert--error.is-light .el-alert__description {
+  color: var(--cl-color-danger-strong);
+}
+.el-alert.el-alert--warning.is-light,
+.el-alert.el-alert--warning.is-light .el-alert__description {
+  color: var(--cl-color-warning-strong);
+}
+.el-alert.el-alert--success.is-light,
+.el-alert.el-alert--success.is-light .el-alert__description {
+  color: var(--cl-color-success-strong);
+}
+.el-alert.el-alert--info.is-light,
+.el-alert.el-alert--info.is-light .el-alert__description {
+  color: var(--cl-text-meta);
+}
+.el-message.el-message--error {
+  --el-message-text-color: var(--cl-color-danger-strong);
+}
+.el-message.el-message--warning {
+  --el-message-text-color: var(--cl-color-warning-strong);
+}
+.el-message.el-message--success {
+  --el-message-text-color: var(--cl-color-success-strong);
+}
+.el-message.el-message--info {
+  --el-message-text-color: var(--cl-text-meta);
+}
+
 /* sticky 全局顶栏（CR-052）：滚动后吸附并转半透明毛玻璃——定点偏离④，毛玻璃全站仅此一处。
    规则刻意留在 @layer 外：滚动态半透明底要压过 App.vue 顶栏根上的 Tailwind bg-card（无层胜有层） */
 .cl-app-header {

@@ -28,6 +28,8 @@ const BIO_MAX = 200
 
 const form = reactive({ nickname: '', major: '', bio: '' })
 const saving = ref(false)
+/** 昵称校验失败时把焦点送回输入框（CR-173）：按钮不再因非法昵称禁用，错误必须有落点 */
+const nicknameRef = ref<{ focus: () => void } | null>(null)
 const saveError = ref('')
 
 const user = computed(() => auth.user)
@@ -84,6 +86,7 @@ async function save() {
   saveError.value = ''
   if (!nicknameValid.value) {
     saveError.value = `昵称需 ${NICKNAME_MIN}~${NICKNAME_MAX} 个字符，且不能只有空格`
+    nicknameRef.value?.focus()
     return
   }
   saving.value = true
@@ -223,6 +226,7 @@ async function onDeactivate() {
             <span class="ml-1 text-caption text-ink-meta">必填，{{ NICKNAME_MIN }}~{{ NICKNAME_MAX }} 字</span>
           </template>
           <el-input
+            ref="nicknameRef"
             v-model="form.nickname"
             :maxlength="NICKNAME_MAX"
             show-word-limit
@@ -281,7 +285,7 @@ async function onDeactivate() {
           <el-button
             type="primary"
             :loading="saving"
-            :disabled="!dirty || !nicknameValid"
+            :disabled="!dirty"
             @click="save"
           >
             保存
