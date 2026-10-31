@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { searchPosts, type PostSummaryVo } from '../api/forum'
 import { BOARDS } from '../constants/boards'
@@ -19,6 +19,43 @@ const page = ref(Number(route.query.page) || 1)
 const size = 20
 
 const posts = ref<PostSummaryVo[]>([])
+/**
+ * 首屏分批渲染（CR-178）：20 条卡片一次挂载在移动端 4× CPU 下 TBT 实测 562ms；
+ * 先渲染 6 条，其余每 60ms 追加 6 条，把长任务拆开。
+ */
+const RENDER_FIRST = 6
+const RENDER_BATCH = 6
+const renderedCount = ref(0)
+const renderedPosts = computed(() => posts.value.slice(0, renderedCount.value))
+let renderTimer: ReturnType<typeof setTimeout> | undefined
+
+function clearRenderTimer() {
+  if (renderTimer) {
+    clearTimeout(renderTimer)
+    renderTimer = undefined
+  }
+}
+
+function scheduleProgressiveRender() {
+  clearRenderTimer()
+  renderedCount.value = Math.min(posts.value.length, RENDER_FIRST)
+  let next = renderedCount.value
+  const step = () => {
+    next = Math.min(posts.value.length, next + RENDER_BATCH)
+    renderedCount.value = next
+    if (next < posts.value.length) {
+      renderTimer = setTimeout(step, 60)
+    } else {
+      renderTimer = undefined
+    }
+  }
+  if (next < posts.value.length) {
+    renderTimer = setTimeout(step, 80)
+  }
+}
+
+onBeforeUnmount(clearRenderTimer)
+
 const total = ref(0)
 const loading = ref(false)
 const loadError = ref('')
@@ -58,9 +95,11 @@ async function runSearch(nextPage = 1) {
     posts.value = res.list
     total.value = res.total
     searched.value = true
+    scheduleProgressiveRender()
   } catch (e) {
     posts.value = []
     total.value = 0
+    renderedCount.value = 0
     searched.value = true
     loadError.value = e instanceof Error ? e.message : '搜索失败'
   } finally {
@@ -181,7 +220,7 @@ onMounted(async () => {
         共 {{ total }} 条结果
       </div>
       <ul>
-        <PostListItem v-for="p in posts" :key="p.id" :post="p" show-board :highlight="effectiveKeyword" />
+        <PostListItem v-for="p in renderedPosts" :key="p.id" :post="p" show-board :highlight="effectiveKeyword" />
       </ul>
       <div v-if="total > size" class="flex justify-center px-5 py-4">
         <el-pagination

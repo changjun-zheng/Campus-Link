@@ -1,0 +1,209 @@
+{
+  "base": "http://[::1]:4173",
+  "viewport": "375x812@2x",
+  "cpu": 4,
+  "network": {
+    "latency": 150,
+    "downMbps": 1.6,
+    "upMbps": 0.75
+  },
+  "pages": [
+    {
+      "path": "/search?keyword=CR",
+      "fcp": 1056,
+      "lcp": 3032,
+      "tbt": 427,
+      "cls": 0,
+      "dcl": 1031,
+      "load": 1529,
+      "requests": 35,
+      "jsKb": 140,
+      "cssKb": 26,
+      "imgKb": 35,
+      "fontKb": 0,
+      "totalKb": 214,
+      "lcpEl": "P.mt-1.5 text-note text-ink-meta",
+      "top": [
+        {
+          "name": "index-oI4BGHnB.js",
+          "kb": 77,
+          "type": "script"
+        },
+        {
+          "name": "el-select-DqFv0QG6.js",
+          "kb": 26,
+          "type": "script"
+        },
+        {
+          "name": "wordmark.png",
+          "kb": 24,
+          "type": "img"
+        },
+        {
+          "name": "index-CJqBaIjF.css",
+          "kb": 13,
+          "type": "link"
+        },
+        {
+          "name": "el-button-BBFhBk-j.js",
+          "kb": 8,
+          "type": "script"
+        },
+        {
+          "name": "el-input-LCFYW_nU.js",
+          "kb": 6,
+          "type": "script"
+        }
+      ],
+      "runs": [
+        {
+          "path": "/search?keyword=CR",
+          "fcp": 1072,
+          "lcp": 2964,
+          "lcpEl": "P.mt-1.5 text-note text-ink-meta",
+          "cls": 0,
+          "tbt": 427,
+          "longtasks": 3,
+          "dcl": 1044,
+          "load": 1529,
+          "requests": 35,
+          "jsKb": 140,
+          "cssKb": 26,
+          "imgKb": 35,
+          "fontKb": 0,
+          "totalKb": 214,
+          "top": [
+            {
+              "name": "index-oI4BGHnB.js",
+              "kb": 77,
+              "type": "script"
+            },
+            {
+              "name": "el-select-DqFv0QG6.js",
+              "kb": 26,
+              "type": "script"
+            },
+            {
+              "name": "wordmark.png",
+              "kb": 24,
+              "type": "img"
+            },
+            {
+              "name": "index-CJqBaIjF.css",
+              "kb": 13,
+              "type": "link"
+            },
+            {
+              "name": "el-button-BBFhBk-j.js",
+              "kb": 8,
+              "type": "script"
+            },
+            {
+              "name": "el-input-LCFYW_nU.js",
+              "kb": 6,
+              "type": "script"
+            }
+          ]
+        },
+        {
+          "path": "/search?keyword=CR",
+          "fcp": 1056,
+          "lcp": 3032,
+          "lcpEl": "P.mt-1.5 text-note text-ink-meta",
+          "cls": 0,
+          "tbt": 456,
+          "longtasks": 3,
+          "dcl": 1031,
+          "load": 1548,
+          "requests": 35,
+          "jsKb": 140,
+          "cssKb": 26,
+          "imgKb": 35,
+          "fontKb": 0,
+          "totalKb": 214,
+          "top": [
+            {
+              "name": "index-oI4BGHnB.js",
+              "kb": 77,
+              "type": "script"
+            },
+            {
+              "name": "el-select-DqFv0QG6.js",
+              "kb": 26,
+              "type": "script"
+            },
+            {
+              "name": "wordmark.png",
+              "kb": 24,
+              "type": "img"
+            },
+            {
+              "name": "index-CJqBaIjF.css",
+              "kb": 13,
+              "type": "link"
+            },
+            {
+              "name": "el-button-BBFhBk-j.js",
+              "kb": 8,
+              "type": "script"
+            },
+            {
+              "name": "el-input-LCFYW_nU.js",
+              "kb": 6,
+              "type": "script"
+            }
+          ]
+        },
+        {
+          "path": "/search?keyword=CR",
+          "fcp": 1048,
+          "lcp": 3100,
+          "lcpEl": "P.mt-1.5 text-note text-ink-meta",
+          "cls": 0,
+          "tbt": 402,
+          "longtasks": 3,
+          "dcl": 1024,
+          "load": 1512,
+          "requests": 35,
+          "jsKb": 140,
+          "cssKb": 26,
+          "imgKb": 35,
+          "fontKb": 0,
+          "totalKb": 214,
+          "top": [
+            {
+              "name": "index-oI4BGHnB.js",
+              "kb": 77,
+              "type": "script"
+            },
+            {
+              "name": "el-select-DqFv0QG6.js",
+              "kb": 26,
+              "type": "script"
+            },
+            {
+              "name": "wordmark.png",
+              "kb": 24,
+              "type": "img"
+            },
+            {
+              "name": "index-CJqBaIjF.css",
+              "kb": 13,
+              "type": "link"
+            },
+            {
+              "name": "el-button-BBFhBk-j.js",
+              "kb": 8,
+              "type": "script"
+            },
+            {
+              "name": "el-input-LCFYW_nU.js",
+              "kb": 6,
+              "type": "script"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
