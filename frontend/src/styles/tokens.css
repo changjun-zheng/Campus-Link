@@ -341,6 +341,14 @@ html {
   --el-message-text-color: var(--cl-text-meta);
 }
 
+/* 提示条内的行内链接（CR-174 审计）：链接色 #1a6fc4 与周围 #606266 对比只有 1.19:1，
+   必须给非颜色线索（WCAG 1.4.1 link-in-text-block）。 */
+.el-alert__title a,
+.el-alert__description a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 /* sticky 全局顶栏（CR-052）：滚动后吸附并转半透明毛玻璃——定点偏离④，毛玻璃全站仅此一处。
    规则刻意留在 @layer 外：滚动态半透明底要压过 App.vue 顶栏根上的 Tailwind bg-card（无层胜有层） */
 .cl-app-header {

@@ -5,7 +5,7 @@ import { useAuthStore } from './stores/auth'
 import { useUnreadNotifications } from './composables/useUnreadNotifications'
 import { useUnreadMessages } from './composables/useUnreadMessages'
 import { BOARDS } from './constants/boards'
-import UserAvatar from './components/UserAvatar.vue'
+import UserMenu from './components/UserMenu.vue'
 import SvgIcon from './components/SvgIcon.vue'
 
 const route = useRoute()
@@ -140,25 +140,13 @@ function onSearchSubmit() {
               <SvgIcon name="mail" :size="20" />
             </el-badge>
           </RouterLink>
-          <el-dropdown v-if="isLoggedIn">
-            <span class="flex cursor-pointer items-center gap-1.5">
-              <UserAvatar :src="auth.user?.avatarUrl" :name="nickname" :size="28" />
-              <span class="hidden max-w-[100px] truncate text-body text-ink md:inline">{{ nickname }}</span>
-              <SvgIcon name="chevron-down" :size="12" class="text-ink-meta" />
-            </span>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item @click="router.push('/notifications')">通知中心</el-dropdown-item>
-                <el-dropdown-item @click="router.push('/messages')">私信</el-dropdown-item>
-                  <el-dropdown-item v-if="auth.user?.role === 'SUPERADMIN'" divided @click="router.push('/admin')">管理后台</el-dropdown-item>
-                <el-dropdown-item @click="router.push('/me/posts')">我的帖子</el-dropdown-item>
-                <el-dropdown-item @click="router.push('/me/replies')">我的回帖</el-dropdown-item>
-                <el-dropdown-item @click="router.push('/favorites')">我的收藏</el-dropdown-item>
-                <el-dropdown-item divided @click="router.push('/settings')">设置</el-dropdown-item>
-                <el-dropdown-item divided @click="logout">退出登录</el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
+          <UserMenu
+            v-if="isLoggedIn"
+            :nickname="nickname"
+            :avatar-url="auth.user?.avatarUrl"
+            :is-admin="auth.user?.role === 'SUPERADMIN'"
+            @logout="logout"
+          />
           <RouterLink v-else to="/login">
             <el-button size="small">登录 / 注册</el-button>
           </RouterLink>

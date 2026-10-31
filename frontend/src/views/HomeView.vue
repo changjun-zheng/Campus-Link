@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { listFollowingPosts, listPosts, type PostSort, type PostSummaryVo } from '../api/forum'
 import { BOARDS } from '../constants/boards'
 import { useAuthStore } from '../stores/auth'
@@ -114,9 +114,22 @@ function maybeLoadMore() {
   if (loading.value || loadingMore.value || moreError.value || !hasMore.value) return
   const el = listWrapRef.value
   if (!el) return
-  const distance = el.scrollHeight - el.scrollTop - el.clientHeight
+  // 窄屏（<lg）没有固定高度，列表容器与内容等高、自身不可滚：触底要按窗口滚动算，
+  // 否则 distance 恒为 0，首屏会一口气把所有分页拉完（CR-174 实测拉 4 页 / 24 条）。
+  const containerScrollable = el.scrollHeight > el.clientHeight + 1
+  const distance = containerScrollable
+    ? el.scrollHeight - el.scrollTop - el.clientHeight
+    : document.documentElement.scrollHeight - window.scrollY - window.innerHeight
   if (distance > 320 || (distance > 0 && !userScrolled)) return
   void loadMore()
+}
+
+/** 窄屏整页滚动时驱动触底加载（容器可滚时由 onListScroll 负责，本监听自动跳过） */
+function onWindowScroll() {
+  const el = listWrapRef.value
+  if (!el || el.scrollHeight > el.clientHeight + 1) return
+  userScrolled = true
+  maybeLoadMore()
 }
 
 /** 列表容器滚动（模板 @scroll）：滚过即开门、跟踪位置驱动回到顶部、做触底判定 */
@@ -171,7 +184,10 @@ onMounted(() => {
   loadHotTop()
   loadLatest()
   loadUnanswered()
+  window.addEventListener('scroll', onWindowScroll, { passive: true })
 })
+
+onBeforeUnmount(() => window.removeEventListener('scroll', onWindowScroll))
 
 const myEntries: { label: string; to: string; icon: IconName }[] = [
   { label: '我的收藏', to: '/favorites', icon: 'bookmark' },
