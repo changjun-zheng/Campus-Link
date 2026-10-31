@@ -17,12 +17,6 @@ on:
       - 'AGENTS.md'
       - '.github/workflows/docs-ci.yml'
   pull_request:
-    paths:
-      - 'docs/**'
-      - 'backend/scripts/check_docs_consistency.py'
-      - 'frontend/src/router/index.ts'
-      - 'AGENTS.md'
-      - '.github/workflows/docs-ci.yml'
 
 jobs:
   consistency:
