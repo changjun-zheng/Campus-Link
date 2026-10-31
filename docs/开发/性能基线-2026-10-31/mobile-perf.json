@@ -1,0 +1,997 @@
+{
+  "base": "http://[::1]:4173",
+  "viewport": "375x812@2x",
+  "cpu": 4,
+  "network": {
+    "latency": 150,
+    "downMbps": 1.6,
+    "upMbps": 0.75
+  },
+  "pages": [
+    {
+      "path": "/",
+      "fcp": 1060,
+      "lcp": 2284,
+      "tbt": 246,
+      "cls": 0,
+      "dcl": 1038,
+      "load": 1532,
+      "requests": 29,
+      "jsKb": 101,
+      "cssKb": 21,
+      "imgKb": 33,
+      "fontKb": 0,
+      "totalKb": 165,
+      "lcpEl": "A.min-w-0 flex-1 truncate text-title font-",
+      "top": [
+        {
+          "name": "index-Daps8Rgd.js",
+          "kb": 77,
+          "type": "script"
+        },
+        {
+          "name": "wordmark.png",
+          "kb": 24,
+          "type": "img"
+        },
+        {
+          "name": "index-CJqBaIjF.css",
+          "kb": 13,
+          "type": "link"
+        },
+        {
+          "name": "el-button-u7rTt11q.js",
+          "kb": 8,
+          "type": "script"
+        },
+        {
+          "name": "HomeView-BYYNLMHO.js",
+          "kb": 5,
+          "type": "script"
+        },
+        {
+          "name": "avatar-11-owl.png",
+          "kb": 4,
+          "type": "img"
+        }
+      ],
+      "runs": [
+        {
+          "path": "/",
+          "fcp": 1068,
+          "lcp": 2288,
+          "lcpEl": "A.min-w-0 flex-1 truncate text-title font-",
+          "cls": 0,
+          "tbt": 259,
+          "longtasks": 3,
+          "dcl": 1039,
+          "load": 1540,
+          "requests": 29,
+          "jsKb": 101,
+          "cssKb": 21,
+          "imgKb": 33,
+          "fontKb": 0,
+          "totalKb": 165,
+          "top": [
+            {
+              "name": "index-Daps8Rgd.js",
+              "kb": 77,
+              "type": "script"
+            },
+            {
+              "name": "wordmark.png",
+              "kb": 24,
+              "type": "img"
+            },
+            {
+              "name": "index-CJqBaIjF.css",
+              "kb": 13,
+              "type": "link"
+            },
+            {
+              "name": "el-button-u7rTt11q.js",
+              "kb": 8,
+              "type": "script"
+            },
+            {
+              "name": "HomeView-BYYNLMHO.js",
+              "kb": 5,
+              "type": "script"
+            },
+            {
+              "name": "avatar-11-owl.png",
+              "kb": 4,
+              "type": "img"
+            }
+          ]
+        },
+        {
+          "path": "/",
+          "fcp": 1060,
+          "lcp": 2236,
+          "lcpEl": "A.min-w-0 flex-1 truncate text-title font-",
+          "cls": 0,
+          "tbt": 246,
+          "longtasks": 3,
+          "dcl": 1038,
+          "load": 1532,
+          "requests": 29,
+          "jsKb": 101,
+          "cssKb": 21,
+          "imgKb": 33,
+          "fontKb": 0,
+          "totalKb": 165,
+          "top": [
+            {
+              "name": "index-Daps8Rgd.js",
+              "kb": 77,
+              "type": "script"
+            },
+            {
+              "name": "wordmark.png",
+              "kb": 24,
+              "type": "img"
+            },
+            {
+              "name": "index-CJqBaIjF.css",
+              "kb": 13,
+              "type": "link"
+            },
+            {
+              "name": "el-button-u7rTt11q.js",
+              "kb": 8,
+              "type": "script"
+            },
+            {
+              "name": "HomeView-BYYNLMHO.js",
+              "kb": 5,
+              "type": "script"
+            },
+            {
+              "name": "avatar-11-owl.png",
+              "kb": 4,
+              "type": "img"
+            }
+          ]
+        },
+        {
+          "path": "/",
+          "fcp": 1044,
+          "lcp": 2284,
+          "lcpEl": "A.min-w-0 flex-1 truncate text-title font-",
+          "cls": 0,
+          "tbt": 176,
+          "longtasks": 3,
+          "dcl": 1017,
+          "load": 1519,
+          "requests": 29,
+          "jsKb": 101,
+          "cssKb": 21,
+          "imgKb": 33,
+          "fontKb": 0,
+          "totalKb": 165,
+          "top": [
+            {
+              "name": "index-Daps8Rgd.js",
+              "kb": 77,
+              "type": "script"
+            },
+            {
+              "name": "wordmark.png",
+              "kb": 24,
+              "type": "img"
+            },
+            {
+              "name": "index-CJqBaIjF.css",
+              "kb": 13,
+              "type": "link"
+            },
+            {
+              "name": "el-button-u7rTt11q.js",
+              "kb": 8,
+              "type": "script"
+            },
+            {
+              "name": "HomeView-BYYNLMHO.js",
+              "kb": 5,
+              "type": "script"
+            },
+            {
+              "name": "avatar-11-owl.png",
+              "kb": 4,
+              "type": "img"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/post/51",
+      "fcp": 1056,
+      "lcp": 2752,
+      "tbt": 196,
+      "cls": 0,
+      "dcl": 1029,
+      "load": 1626,
+      "requests": 42,
+      "jsKb": 153,
+      "cssKb": 31,
+      "imgKb": 32,
+      "fontKb": 0,
+      "totalKb": 217,
+      "lcpEl": "H1.my-2.5 text-h1 font-medium leading-snug ",
+      "top": [
+        {
+          "name": "index-Daps8Rgd.js",
+          "kb": 77,
+          "type": "script"
+        },
+        {
+          "name": "el-select-DUbl_J37.js",
+          "kb": 26,
+          "type": "script"
+        },
+        {
+          "name": "wordmark.png",
+          "kb": 24,
+          "type": "img"
+        },
+        {
+          "name": "index-CJqBaIjF.css",
+          "kb": 13,
+          "type": "link"
+        },
+        {
+          "name": "PostDetailView-SRC981uH.js",
+          "kb": 8,
+          "type": "script"
+        },
+        {
+          "name": "el-button-u7rTt11q.js",
+          "kb": 8,
+          "type": "script"
+        }
+      ],
+      "runs": [
+        {
+          "path": "/post/51",
+          "fcp": 1056,
+          "lcp": 2764,
+          "lcpEl": "H1.my-2.5 text-h1 font-medium leading-snug ",
+          "cls": 0,
+          "tbt": 212,
+          "longtasks": 3,
+          "dcl": 1029,
+          "load": 1626,
+          "requests": 42,
+          "jsKb": 153,
+          "cssKb": 31,
+          "imgKb": 32,
+          "fontKb": 0,
+          "totalKb": 217,
+          "top": [
+            {
+              "name": "index-Daps8Rgd.js",
+              "kb": 77,
+              "type": "script"
+            },
+            {
+              "name": "el-select-DUbl_J37.js",
+              "kb": 26,
+              "type": "script"
+            },
+            {
+              "name": "wordmark.png",
+              "kb": 24,
+              "type": "img"
+            },
+            {
+              "name": "index-CJqBaIjF.css",
+              "kb": 13,
+              "type": "link"
+            },
+            {
+              "name": "PostDetailView-SRC981uH.js",
+              "kb": 8,
+              "type": "script"
+            },
+            {
+              "name": "el-button-u7rTt11q.js",
+              "kb": 8,
+              "type": "script"
+            }
+          ]
+        },
+        {
+          "path": "/post/51",
+          "fcp": 1092,
+          "lcp": 2752,
+          "lcpEl": "H1.my-2.5 text-h1 font-medium leading-snug ",
+          "cls": 0,
+          "tbt": 189,
+          "longtasks": 2,
+          "dcl": 1068,
+          "load": 1666,
+          "requests": 42,
+          "jsKb": 153,
+          "cssKb": 31,
+          "imgKb": 32,
+          "fontKb": 0,
+          "totalKb": 217,
+          "top": [
+            {
+              "name": "index-Daps8Rgd.js",
+              "kb": 77,
+              "type": "script"
+            },
+            {
+              "name": "el-select-DUbl_J37.js",
+              "kb": 26,
+              "type": "script"
+            },
+            {
+              "name": "wordmark.png",
+              "kb": 24,
+              "type": "img"
+            },
+            {
+              "name": "index-CJqBaIjF.css",
+              "kb": 13,
+              "type": "link"
+            },
+            {
+              "name": "PostDetailView-SRC981uH.js",
+              "kb": 8,
+              "type": "script"
+            },
+            {
+              "name": "el-button-u7rTt11q.js",
+              "kb": 8,
+              "type": "script"
+            }
+          ]
+        },
+        {
+          "path": "/post/51",
+          "fcp": 1048,
+          "lcp": 2700,
+          "lcpEl": "H1.my-2.5 text-h1 font-medium leading-snug ",
+          "cls": 0,
+          "tbt": 196,
+          "longtasks": 2,
+          "dcl": 1025,
+          "load": 1610,
+          "requests": 42,
+          "jsKb": 153,
+          "cssKb": 31,
+          "imgKb": 32,
+          "fontKb": 0,
+          "totalKb": 217,
+          "top": [
+            {
+              "name": "index-Daps8Rgd.js",
+              "kb": 77,
+              "type": "script"
+            },
+            {
+              "name": "el-select-DUbl_J37.js",
+              "kb": 26,
+              "type": "script"
+            },
+            {
+              "name": "wordmark.png",
+              "kb": 24,
+              "type": "img"
+            },
+            {
+              "name": "index-CJqBaIjF.css",
+              "kb": 13,
+              "type": "link"
+            },
+            {
+              "name": "PostDetailView-SRC981uH.js",
+              "kb": 8,
+              "type": "script"
+            },
+            {
+              "name": "el-button-u7rTt11q.js",
+              "kb": 8,
+              "type": "script"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/search?keyword=CR",
+      "fcp": 1072,
+      "lcp": 3128,
+      "tbt": 562,
+      "cls": 0,
+      "dcl": 1045,
+      "load": 1524,
+      "requests": 35,
+      "jsKb": 140,
+      "cssKb": 26,
+      "imgKb": 35,
+      "fontKb": 0,
+      "totalKb": 214,
+      "lcpEl": "P.mt-1.5 text-note text-ink-meta",
+      "top": [
+        {
+          "name": "index-Daps8Rgd.js",
+          "kb": 77,
+          "type": "script"
+        },
+        {
+          "name": "el-select-DUbl_J37.js",
+          "kb": 26,
+          "type": "script"
+        },
+        {
+          "name": "wordmark.png",
+          "kb": 24,
+          "type": "img"
+        },
+        {
+          "name": "index-CJqBaIjF.css",
+          "kb": 13,
+          "type": "link"
+        },
+        {
+          "name": "el-button-u7rTt11q.js",
+          "kb": 8,
+          "type": "script"
+        },
+        {
+          "name": "el-input-CDvi_CcE.js",
+          "kb": 6,
+          "type": "script"
+        }
+      ],
+      "runs": [
+        {
+          "path": "/search?keyword=CR",
+          "fcp": 1044,
+          "lcp": 3128,
+          "lcpEl": "P.mt-1.5 text-note text-ink-meta",
+          "cls": 0,
+          "tbt": 512,
+          "longtasks": 5,
+          "dcl": 1015,
+          "load": 1522,
+          "requests": 35,
+          "jsKb": 140,
+          "cssKb": 26,
+          "imgKb": 35,
+          "fontKb": 0,
+          "totalKb": 214,
+          "top": [
+            {
+              "name": "index-Daps8Rgd.js",
+              "kb": 77,
+              "type": "script"
+            },
+            {
+              "name": "el-select-DUbl_J37.js",
+              "kb": 26,
+              "type": "script"
+            },
+            {
+              "name": "wordmark.png",
+              "kb": 24,
+              "type": "img"
+            },
+            {
+              "name": "index-CJqBaIjF.css",
+              "kb": 13,
+              "type": "link"
+            },
+            {
+              "name": "el-button-u7rTt11q.js",
+              "kb": 8,
+              "type": "script"
+            },
+            {
+              "name": "el-input-CDvi_CcE.js",
+              "kb": 6,
+              "type": "script"
+            }
+          ]
+        },
+        {
+          "path": "/search?keyword=CR",
+          "fcp": 1072,
+          "lcp": 3040,
+          "lcpEl": "P.mt-1.5 text-note text-ink-meta",
+          "cls": 0,
+          "tbt": 579,
+          "longtasks": 5,
+          "dcl": 1045,
+          "load": 1544,
+          "requests": 35,
+          "jsKb": 140,
+          "cssKb": 26,
+          "imgKb": 35,
+          "fontKb": 0,
+          "totalKb": 214,
+          "top": [
+            {
+              "name": "index-Daps8Rgd.js",
+              "kb": 77,
+              "type": "script"
+            },
+            {
+              "name": "el-select-DUbl_J37.js",
+              "kb": 26,
+              "type": "script"
+            },
+            {
+              "name": "wordmark.png",
+              "kb": 24,
+              "type": "img"
+            },
+            {
+              "name": "index-CJqBaIjF.css",
+              "kb": 13,
+              "type": "link"
+            },
+            {
+              "name": "el-button-u7rTt11q.js",
+              "kb": 8,
+              "type": "script"
+            },
+            {
+              "name": "el-input-CDvi_CcE.js",
+              "kb": 6,
+              "type": "script"
+            }
+          ]
+        },
+        {
+          "path": "/search?keyword=CR",
+          "fcp": 1072,
+          "lcp": 3212,
+          "lcpEl": "P.mt-1.5 text-note text-ink-meta",
+          "cls": 0,
+          "tbt": 562,
+          "longtasks": 5,
+          "dcl": 1048,
+          "load": 1524,
+          "requests": 35,
+          "jsKb": 140,
+          "cssKb": 26,
+          "imgKb": 35,
+          "fontKb": 0,
+          "totalKb": 214,
+          "top": [
+            {
+              "name": "index-Daps8Rgd.js",
+              "kb": 77,
+              "type": "script"
+            },
+            {
+              "name": "el-select-DUbl_J37.js",
+              "kb": 26,
+              "type": "script"
+            },
+            {
+              "name": "wordmark.png",
+              "kb": 24,
+              "type": "img"
+            },
+            {
+              "name": "index-CJqBaIjF.css",
+              "kb": 13,
+              "type": "link"
+            },
+            {
+              "name": "el-button-u7rTt11q.js",
+              "kb": 8,
+              "type": "script"
+            },
+            {
+              "name": "el-input-CDvi_CcE.js",
+              "kb": 6,
+              "type": "script"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/teams",
+      "fcp": 1080,
+      "lcp": 2696,
+      "tbt": 309,
+      "cls": 0,
+      "dcl": 1051,
+      "load": 1567,
+      "requests": 32,
+      "jsKb": 140,
+      "cssKb": 27,
+      "imgKb": 26,
+      "fontKb": 0,
+      "totalKb": 193,
+      "lcpEl": "P.mt-1.5 text-note text-ink-meta",
+      "top": [
+        {
+          "name": "index-Daps8Rgd.js",
+          "kb": 77,
+          "type": "script"
+        },
+        {
+          "name": "el-select-DUbl_J37.js",
+          "kb": 26,
+          "type": "script"
+        },
+        {
+          "name": "wordmark.png",
+          "kb": 24,
+          "type": "img"
+        },
+        {
+          "name": "index-CJqBaIjF.css",
+          "kb": 13,
+          "type": "link"
+        },
+        {
+          "name": "el-button-u7rTt11q.js",
+          "kb": 8,
+          "type": "script"
+        },
+        {
+          "name": "el-input-CDvi_CcE.js",
+          "kb": 6,
+          "type": "script"
+        }
+      ],
+      "runs": [
+        {
+          "path": "/teams",
+          "fcp": 1088,
+          "lcp": 2696,
+          "lcpEl": "P.mt-1.5 text-note text-ink-meta",
+          "cls": 0,
+          "tbt": 339,
+          "longtasks": 3,
+          "dcl": 1059,
+          "load": 1567,
+          "requests": 32,
+          "jsKb": 140,
+          "cssKb": 27,
+          "imgKb": 26,
+          "fontKb": 0,
+          "totalKb": 193,
+          "top": [
+            {
+              "name": "index-Daps8Rgd.js",
+              "kb": 77,
+              "type": "script"
+            },
+            {
+              "name": "el-select-DUbl_J37.js",
+              "kb": 26,
+              "type": "script"
+            },
+            {
+              "name": "wordmark.png",
+              "kb": 24,
+              "type": "img"
+            },
+            {
+              "name": "index-CJqBaIjF.css",
+              "kb": 13,
+              "type": "link"
+            },
+            {
+              "name": "el-button-u7rTt11q.js",
+              "kb": 8,
+              "type": "script"
+            },
+            {
+              "name": "el-input-CDvi_CcE.js",
+              "kb": 6,
+              "type": "script"
+            }
+          ]
+        },
+        {
+          "path": "/teams",
+          "fcp": 1080,
+          "lcp": 2688,
+          "lcpEl": "P.mt-1.5 text-note text-ink-meta",
+          "cls": 0,
+          "tbt": 309,
+          "longtasks": 2,
+          "dcl": 1051,
+          "load": 1556,
+          "requests": 32,
+          "jsKb": 140,
+          "cssKb": 27,
+          "imgKb": 26,
+          "fontKb": 0,
+          "totalKb": 193,
+          "top": [
+            {
+              "name": "index-Daps8Rgd.js",
+              "kb": 77,
+              "type": "script"
+            },
+            {
+              "name": "el-select-DUbl_J37.js",
+              "kb": 26,
+              "type": "script"
+            },
+            {
+              "name": "wordmark.png",
+              "kb": 24,
+              "type": "img"
+            },
+            {
+              "name": "index-CJqBaIjF.css",
+              "kb": 13,
+              "type": "link"
+            },
+            {
+              "name": "el-button-u7rTt11q.js",
+              "kb": 8,
+              "type": "script"
+            },
+            {
+              "name": "el-input-CDvi_CcE.js",
+              "kb": 6,
+              "type": "script"
+            }
+          ]
+        },
+        {
+          "path": "/teams",
+          "fcp": 1056,
+          "lcp": 2908,
+          "lcpEl": "P.mt-1.5 text-note text-ink-meta",
+          "cls": 0,
+          "tbt": 303,
+          "longtasks": 2,
+          "dcl": 1034,
+          "load": 1805,
+          "requests": 32,
+          "jsKb": 140,
+          "cssKb": 27,
+          "imgKb": 26,
+          "fontKb": 0,
+          "totalKb": 193,
+          "top": [
+            {
+              "name": "index-Daps8Rgd.js",
+              "kb": 77,
+              "type": "script"
+            },
+            {
+              "name": "el-select-DUbl_J37.js",
+              "kb": 26,
+              "type": "script"
+            },
+            {
+              "name": "wordmark.png",
+              "kb": 24,
+              "type": "img"
+            },
+            {
+              "name": "index-CJqBaIjF.css",
+              "kb": 13,
+              "type": "link"
+            },
+            {
+              "name": "el-button-u7rTt11q.js",
+              "kb": 8,
+              "type": "script"
+            },
+            {
+              "name": "el-input-CDvi_CcE.js",
+              "kb": 6,
+              "type": "script"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/login",
+      "fcp": 1060,
+      "lcp": 2552,
+      "tbt": 286,
+      "cls": 0.0471,
+      "dcl": 1032,
+      "load": 1535,
+      "requests": 23,
+      "jsKb": 119,
+      "cssKb": 24,
+      "imgKb": 26,
+      "fontKb": 0,
+      "totalKb": 169,
+      "lcpEl": "P.mt-3 text-note leading-body text-ink-reg",
+      "top": [
+        {
+          "name": "index-Daps8Rgd.js",
+          "kb": 77,
+          "type": "script"
+        },
+        {
+          "name": "wordmark.png",
+          "kb": 24,
+          "type": "img"
+        },
+        {
+          "name": "index-CJqBaIjF.css",
+          "kb": 13,
+          "type": "link"
+        },
+        {
+          "name": "el-form-item-qY_ismR9.js",
+          "kb": 10,
+          "type": "script"
+        },
+        {
+          "name": "el-button-u7rTt11q.js",
+          "kb": 8,
+          "type": "script"
+        },
+        {
+          "name": "el-input-CDvi_CcE.js",
+          "kb": 6,
+          "type": "script"
+        }
+      ],
+      "runs": [
+        {
+          "path": "/login",
+          "fcp": 1036,
+          "lcp": 2584,
+          "lcpEl": "P.mt-3 text-note leading-body text-ink-reg",
+          "cls": 0.0471,
+          "tbt": 286,
+          "longtasks": 2,
+          "dcl": 1007,
+          "load": 1519,
+          "requests": 23,
+          "jsKb": 119,
+          "cssKb": 24,
+          "imgKb": 26,
+          "fontKb": 0,
+          "totalKb": 169,
+          "top": [
+            {
+              "name": "index-Daps8Rgd.js",
+              "kb": 77,
+              "type": "script"
+            },
+            {
+              "name": "wordmark.png",
+              "kb": 24,
+              "type": "img"
+            },
+            {
+              "name": "index-CJqBaIjF.css",
+              "kb": 13,
+              "type": "link"
+            },
+            {
+              "name": "el-form-item-qY_ismR9.js",
+              "kb": 10,
+              "type": "script"
+            },
+            {
+              "name": "el-button-u7rTt11q.js",
+              "kb": 8,
+              "type": "script"
+            },
+            {
+              "name": "el-input-CDvi_CcE.js",
+              "kb": 6,
+              "type": "script"
+            }
+          ]
+        },
+        {
+          "path": "/login",
+          "fcp": 1080,
+          "lcp": 2452,
+          "lcpEl": "P.mt-3 text-note leading-body text-ink-reg",
+          "cls": 0.0471,
+          "tbt": 291,
+          "longtasks": 2,
+          "dcl": 1053,
+          "load": 1565,
+          "requests": 23,
+          "jsKb": 119,
+          "cssKb": 24,
+          "imgKb": 26,
+          "fontKb": 0,
+          "totalKb": 169,
+          "top": [
+            {
+              "name": "index-Daps8Rgd.js",
+              "kb": 77,
+              "type": "script"
+            },
+            {
+              "name": "wordmark.png",
+              "kb": 24,
+              "type": "img"
+            },
+            {
+              "name": "index-CJqBaIjF.css",
+              "kb": 13,
+              "type": "link"
+            },
+            {
+              "name": "el-form-item-qY_ismR9.js",
+              "kb": 10,
+              "type": "script"
+            },
+            {
+              "name": "el-button-u7rTt11q.js",
+              "kb": 8,
+              "type": "script"
+            },
+            {
+              "name": "el-input-CDvi_CcE.js",
+              "kb": 6,
+              "type": "script"
+            }
+          ]
+        },
+        {
+          "path": "/login",
+          "fcp": 1060,
+          "lcp": 2552,
+          "lcpEl": "P.mt-3 text-note leading-body text-ink-reg",
+          "cls": 0.0471,
+          "tbt": 286,
+          "longtasks": 2,
+          "dcl": 1032,
+          "load": 1535,
+          "requests": 23,
+          "jsKb": 119,
+          "cssKb": 24,
+          "imgKb": 26,
+          "fontKb": 0,
+          "totalKb": 169,
+          "top": [
+            {
+              "name": "index-Daps8Rgd.js",
+              "kb": 77,
+              "type": "script"
+            },
+            {
+              "name": "wordmark.png",
+              "kb": 24,
+              "type": "img"
+            },
+            {
+              "name": "index-CJqBaIjF.css",
+              "kb": 13,
+              "type": "link"
+            },
+            {
+              "name": "el-form-item-qY_ismR9.js",
+              "kb": 10,
+              "type": "script"
+            },
+            {
+              "name": "el-button-u7rTt11q.js",
+              "kb": 8,
+              "type": "script"
+            },
+            {
+              "name": "el-input-CDvi_CcE.js",
+              "kb": 6,
+              "type": "script"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
