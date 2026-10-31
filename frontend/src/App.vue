@@ -6,6 +6,7 @@ import { useUnreadNotifications } from './composables/useUnreadNotifications'
 import { useUnreadMessages } from './composables/useUnreadMessages'
 import { BOARDS } from './constants/boards'
 import UserMenu from './components/UserMenu.vue'
+import BackToTop from './components/BackToTop.vue'
 import SvgIcon from './components/SvgIcon.vue'
 
 const route = useRoute()
@@ -57,10 +58,10 @@ function onSearchSubmit() {
 </script>
 
 <template>
-  <el-container class="min-h-screen">
+  <div class="flex min-h-screen flex-col">
     <!-- 键盘用户跳过顶栏与版块导航（CR-171）：首 Tab 可见，激活后把焦点送到主区 -->
     <a href="#main-content" class="cl-skip-link" @click.prevent="skipToMain">跳到主内容</a>
-    <el-header
+    <header
       v-if="bare"
       class="cl-app-header border-b-[0.5px] border-line bg-card"
       :class="{ 'is-scrolled': scrolled }"
@@ -77,8 +78,8 @@ function onSearchSubmit() {
           返回首页
         </RouterLink>
       </div>
-    </el-header>
-    <el-header
+    </header>
+    <header
       v-else
       class="cl-app-header border-b-[0.5px] border-line bg-card"
       :class="{ 'is-scrolled': scrolled }"
@@ -95,17 +96,29 @@ function onSearchSubmit() {
           <div
             class="hidden w-[320px] min-w-0 transition-[width] duration-fast ease-standard md:block md:ml-auto md:mr-auto md:focus-within:w-[380px] xl:min-w-[200px]"
           >
-            <el-input
+            <SvgIcon
+              name="search"
+              :size="16"
+              class="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-meta"
+            />
+            <input
               v-model="searchKeyword"
-              placeholder="搜索帖子标题 / 正文 / 标签"
+              type="text"
               maxlength="50"
-              clearable
+              aria-label="搜索帖子标题 / 正文 / 标签"
+              placeholder="搜索帖子标题 / 正文 / 标签"
+              class="cl-header-search"
               @keyup.enter="onSearchSubmit"
+            />
+            <button
+              v-if="searchKeyword"
+              type="button"
+              class="cl-header-search-clear"
+              aria-label="清空搜索"
+              @click="searchKeyword = ''"
             >
-              <template #prefix>
-                <SvgIcon name="search" :size="16" />
-              </template>
-            </el-input>
+              ×
+            </button>
           </div>
           <!-- 窄屏折叠为图标（ui-guideline §7）：进搜索页，该页输入框自动聚焦 -->
           <button
@@ -116,29 +129,29 @@ function onSearchSubmit() {
           >
             <SvgIcon name="search" :size="20" />
           </button>
-          <RouterLink to="/publish" class="hidden md:block">
-            <el-button type="primary" size="small">
-              <SvgIcon name="pencil" :size="16" class="mr-1" />
-              提问
-            </el-button>
+          <RouterLink to="/publish" class="cl-header-cta hidden md:inline-flex">
+            <SvgIcon name="pencil" :size="16" />
+            提问
           </RouterLink>
           <RouterLink
             to="/notifications"
             class="-mx-1 -my-1 inline-flex h-7 w-7 items-center justify-center text-ink-regular hover:text-link"
             :aria-label="unreadCount ? `通知中心，${unreadLabel} 条未读` : '通知中心'"
           >
-            <el-badge :value="unreadCount" :max="99" :hidden="!unreadCount">
+            <span class="relative inline-flex">
               <SvgIcon name="bell" :size="20" />
-            </el-badge>
+              <span v-if="unreadCount" class="cl-header-badge" aria-hidden="true">{{ unreadLabel }}</span>
+            </span>
           </RouterLink>
           <RouterLink
             to="/messages"
             class="-mx-1 -my-1 inline-flex h-7 w-7 items-center justify-center text-ink-regular hover:text-link"
             :aria-label="unreadMessages ? `私信，${unreadMessageLabel} 条未读` : '私信'"
           >
-            <el-badge :value="unreadMessages" :max="99" :hidden="!unreadMessages">
+            <span class="relative inline-flex">
               <SvgIcon name="mail" :size="20" />
-            </el-badge>
+              <span v-if="unreadMessages" class="cl-header-badge" aria-hidden="true">{{ unreadMessageLabel }}</span>
+            </span>
           </RouterLink>
           <UserMenu
             v-if="isLoggedIn"
@@ -147,9 +160,7 @@ function onSearchSubmit() {
             :is-admin="auth.user?.role === 'SUPERADMIN'"
             @logout="logout"
           />
-          <RouterLink v-else to="/login">
-            <el-button size="small">登录 / 注册</el-button>
-          </RouterLink>
+          <RouterLink v-else to="/login" class="cl-header-login">登录 / 注册</RouterLink>
         </div>
         <!-- 窄屏整行铺满并出血到页头边缘：-mx-4 / +2rem 对应 tokens.css 窄屏下的 --el-header-padding: 0 16px
              ≥1280 改为按内容定宽（xl:flex-none）：导航不再被右侧搜索框挤压，空间不足时由搜索框收缩（xl:min-w-[200px]） -->
@@ -173,8 +184,8 @@ function onSearchSubmit() {
           </RouterLink>
         </nav>
       </div>
-    </el-header>
-    <el-main id="main-content" tabindex="-1" class="mx-auto w-full max-w-page">
+    </header>
+    <main id="main-content" tabindex="-1" class="cl-main mx-auto w-full max-w-page">
       <!-- key 用 fullPath：同组件换参（如 /board/qna → /board/chat）也要触发淡入；
            外包一层 div 保证 Transition 子节点恒为单元素（部分视图是多根 fragment，直接动画会告警且淡入失效） -->
       <RouterView v-slot="{ Component: viewComponent, route: viewRoute }">
@@ -184,14 +195,14 @@ function onSearchSubmit() {
           </div>
         </transition>
       </RouterView>
-    </el-main>
-    <el-footer v-if="!bare" class="text-center">
+    </main>
+    <footer v-if="!bare" class="cl-footer text-center">
       <p class="text-note text-ink-regular">问有所答 · 学有同伴 · 求职有路</p>
       <p class="mt-1 text-caption text-ink-meta">Campus-Link · 重庆工程学院计算机专业学生社区</p>
-    </el-footer>
+    </footer>
     <!-- 返回顶部（CR-091，参考站通用交互）：全局窗口滚动，长列表页共用 -->
-    <el-backtop :right="24" :bottom="32" />
-  </el-container>
+    <BackToTop />
+  </div>
 </template>
 
 <style scoped>
@@ -199,7 +210,10 @@ function onSearchSubmit() {
    内部滚动，非 visible 溢出也会使其成为 sticky 的定位参照（规范行为），导致 HomeView 两栏、
    详情页 TOC 等所有 sticky 侧栏永不吸附、表现为"跟着页面滚走"（CR-091 修复）。
    scoped 的属性选择器特异性高于 EP 的同名单类规则，可稳定覆盖。 */
-.el-main {
+.cl-main {
+  flex: 1 1 auto;
+  box-sizing: border-box;
+  padding: 20px;
   overflow: visible;
 }
 
@@ -208,7 +222,7 @@ function onSearchSubmit() {
    让主区在 <768 至少占「视口 − 页头」，页脚从首帧起就在折线以下，内容增长不再移动可见元素；
    桌面不改（CLS 0.009）。取 60px 是页头最小高度，宁可把页脚多推下去也不留可见缝隙。 */
 @media (max-width: 767px) {
-  .el-main {
+  .cl-main {
     min-height: calc(100vh - 60px);
     min-height: calc(100svh - 60px);
   }
@@ -231,5 +245,92 @@ function onSearchSubmit() {
 }
 #main-content {
   scroll-margin-top: 68px;
+}
+</style>
+
+<style scoped>
+/* 顶栏原生控件（CR-175）：去掉 EP input / button / badge，避免把组件与图标链带进主包 */
+.cl-header-search {
+  width: 100%;
+  height: 32px;
+  padding: 0 28px 0 32px;
+  border: var(--cl-hairline) solid var(--cl-border-base);
+  border-radius: var(--cl-radius-md);
+  background: var(--cl-bg-card);
+  color: var(--cl-text-primary);
+  font-size: var(--cl-font-body);
+  font-family: var(--cl-font-family);
+}
+.cl-header-search::placeholder {
+  color: var(--cl-text-meta);
+}
+.cl-header-search:focus-visible {
+  outline: 2px solid var(--cl-color-primary-strong);
+  outline-offset: 2px;
+  border-color: transparent;
+}
+.cl-header-search-clear {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 9999px;
+  background: transparent;
+  color: var(--cl-text-meta);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+.cl-header-search-clear:hover {
+  background: var(--cl-bg-hover);
+  color: var(--cl-text-primary);
+}
+.cl-header-cta {
+  height: 28px;
+  align-items: center;
+  gap: 4px;
+  padding: 0 10px;
+  border-radius: var(--cl-radius-md);
+  background: var(--cl-color-primary-strong);
+  color: #fff;
+  font-size: var(--cl-font-body);
+  white-space: nowrap;
+}
+.cl-header-cta:hover {
+  background: var(--cl-color-primary-strong-hover);
+}
+.cl-header-login {
+  display: inline-flex;
+  height: 28px;
+  align-items: center;
+  padding: 0 10px;
+  border: var(--cl-hairline) solid var(--cl-border-base);
+  border-radius: var(--cl-radius-md);
+  background: var(--cl-bg-card);
+  color: var(--cl-text-primary);
+  font-size: var(--cl-font-body);
+  white-space: nowrap;
+}
+.cl-header-login:hover {
+  border-color: var(--cl-color-primary-strong);
+  color: var(--cl-color-primary-strong);
+}
+.cl-header-badge {
+  position: absolute;
+  top: -4px;
+  right: -6px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 9999px;
+  background: var(--cl-color-danger-strong);
+  color: #fff;
+  font-size: var(--cl-font-caption);
+  line-height: 16px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 </style>

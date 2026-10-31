@@ -197,9 +197,9 @@ html {
    所以必须用 `.el-header.el-header` 直接压组件规则，`:root` 覆写在这里无效。
    左右收窄到 16px，App.vue 版块胶囊带的出血量（-mx-4 / +2rem）与此对应。 */
 @media (max-width: 767px) {
-  .el-header.el-header {
-    --el-header-height: auto;
-    --el-header-padding: 0 var(--cl-space-4);
+  .cl-app-header.cl-app-header {
+    height: auto;
+    padding: 0 var(--cl-space-4);
   }
 }
 
@@ -249,6 +249,41 @@ html {
   --el-button-hover-link-text-color: var(--cl-color-danger-strong);
   --el-button-active-color: var(--cl-color-danger-strong);
 }
+
+/* 成功 / 警告色按钮（CR-175 审计补全）：EP 实心 success 白字只有 2.24:1（「采纳」实测），
+   文字 / 链接 / plain 变体同色系还要更低；统一走 CR-169 的 success-strong / warning-strong。 */
+.el-button.el-button--success:not(.is-plain):not(.is-text):not(.is-link) {
+  --el-button-bg-color: var(--cl-color-success-strong);
+  --el-button-border-color: var(--cl-color-success-strong);
+  --el-button-hover-bg-color: color-mix(in srgb, var(--cl-color-success-strong) 88%, #000);
+  --el-button-hover-border-color: color-mix(in srgb, var(--cl-color-success-strong) 88%, #000);
+  --el-button-active-bg-color: color-mix(in srgb, var(--cl-color-success-strong) 76%, #000);
+  --el-button-active-border-color: color-mix(in srgb, var(--cl-color-success-strong) 76%, #000);
+}
+.el-button.el-button--warning:not(.is-plain):not(.is-text):not(.is-link) {
+  --el-button-bg-color: var(--cl-color-warning-strong);
+  --el-button-border-color: var(--cl-color-warning-strong);
+  --el-button-hover-bg-color: color-mix(in srgb, var(--cl-color-warning-strong) 88%, #000);
+  --el-button-hover-border-color: color-mix(in srgb, var(--cl-color-warning-strong) 88%, #000);
+  --el-button-active-bg-color: color-mix(in srgb, var(--cl-color-warning-strong) 76%, #000);
+  --el-button-active-border-color: color-mix(in srgb, var(--cl-color-warning-strong) 76%, #000);
+}
+.el-button.el-button--success.is-plain,
+.el-button.el-button--success.is-text,
+.el-button.el-button--success.is-link {
+  --el-button-text-color: var(--cl-color-success-strong);
+  --el-button-hover-text-color: var(--cl-color-success-strong);
+  --el-button-hover-link-text-color: var(--cl-color-success-strong);
+  --el-button-active-color: var(--cl-color-success-strong);
+}
+.el-button.el-button--warning.is-plain,
+.el-button.el-button--warning.is-text,
+.el-button.el-button--warning.is-link {
+  --el-button-text-color: var(--cl-color-warning-strong);
+  --el-button-hover-text-color: var(--cl-color-warning-strong);
+  --el-button-hover-link-text-color: var(--cl-color-warning-strong);
+  --el-button-active-color: var(--cl-color-warning-strong);
+}
 .el-badge__content.el-badge__content--danger {
   background-color: var(--cl-color-danger-strong);
 }
@@ -280,8 +315,9 @@ html {
 }
 
 /* 输入框字数统计（CR-169）：EP 用 --el-text-color-secondary（#909399），12px 白底仅 3.07:1。 */
-.el-textarea .el-input__count,
-.el-input .el-input__count {
+/* 选择器比 EP 的 `.el-textarea .el-input__count`(0,2,0) 多一层 :root:root，防运行时注入反超 */
+:root:root .el-textarea .el-input__count,
+:root:root .el-input .el-input__count {
   color: var(--cl-text-meta);
 }
 
@@ -355,6 +391,10 @@ html {
   position: sticky;
   top: 0;
   z-index: 100;
+  box-sizing: border-box;
+  height: 60px;
+  padding: 0 var(--cl-space-5);
+  flex-shrink: 0;
 }
 
 .cl-app-header.is-scrolled {
@@ -363,8 +403,9 @@ html {
   -webkit-backdrop-filter: saturate(180%) blur(8px);
 }
 
-/* 全局页脚两行文案（CR-052）：EP footer 默认 height 60px / 零上下内边距，撑不开两行 */
-.el-footer.el-footer {
+/* 全局页脚两行文案（CR-052）：原生 footer 保持两行所需的内边距 */
+.cl-footer {
+  flex-shrink: 0;
   height: auto;
   padding: var(--cl-space-5) var(--cl-space-4);
 }

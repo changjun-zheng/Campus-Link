@@ -85,7 +85,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocumentClick, tru
       class="flex cursor-pointer items-center gap-1.5 border-0 bg-transparent p-0"
       aria-haspopup="menu"
       :aria-expanded="open"
-      aria-label="账号菜单"
+      :aria-label="`账号菜单，${nickname}`"
       @click.stop="toggleMenu"
       @keydown="onTriggerKeydown"
     >
