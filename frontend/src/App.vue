@@ -67,7 +67,7 @@ function onSearchSubmit() {
       :class="{ 'is-scrolled': scrolled }"
     >
       <!-- 窄屏下 --el-header-height 为 auto（tokens.css），补上下内边距撑回约 56px -->
-      <div class="mx-auto flex h-full max-w-page items-center justify-between max-md:py-4">
+      <div class="mx-auto flex h-full max-w-page items-center justify-between max-xl:py-4">
         <!-- 品牌字样用主色：WCAG 对 logo / 品牌名的文字不计对比度要求 -->
         <RouterLink to="/" class="flex shrink-0 items-center gap-2 py-1 -my-1 text-title font-medium text-primary">
           <img src="/logo.svg" alt="" class="h-[22px] w-auto" width="64" height="64" />
@@ -86,15 +86,15 @@ function onSearchSubmit() {
     >
       <!-- 窄屏折成两行（设计稿 page-09）：第一行 logo + 图标，第二行版块胶囊带；
            行高由 tokens.css 的窄屏媒体查询把 --el-header-height 放开为 auto -->
-      <div class="mx-auto flex h-full max-w-page flex-wrap items-center gap-x-5 gap-y-1 max-md:py-2 xl:flex-nowrap">
+      <div class="mx-auto flex h-full max-w-page flex-wrap items-center gap-x-5 gap-y-1 max-xl:py-2 xl:flex-nowrap">
         <!-- 品牌字样用主色：WCAG 对 logo / 品牌名的文字不计对比度要求 -->
         <RouterLink to="/" class="order-1 flex shrink-0 items-center gap-2 py-1 -my-1 text-title font-medium text-primary">
           <img src="/logo.svg" alt="" class="h-[22px] w-auto" width="64" height="64" />
           <img src="/wordmark.png" alt="Campus-Link" class="h-[20px] w-auto" width="565" height="98" />
         </RouterLink>
-        <div class="order-2 ml-auto flex shrink-0 items-center gap-4 max-md:gap-2 md:order-3 md:ml-0 xl:min-w-0 xl:shrink">
+        <div class="order-2 ml-auto flex shrink-0 items-center gap-4 max-xl:gap-2 xl:order-3 xl:ml-0 xl:min-w-0 xl:shrink">
           <div
-            class="hidden w-[320px] min-w-0 transition-[width] duration-fast ease-standard md:block md:ml-auto md:mr-auto md:focus-within:w-[380px] xl:min-w-[200px]"
+            class="hidden w-[320px] min-w-0 transition-[width] duration-fast ease-standard xl:block xl:ml-auto xl:mr-auto xl:focus-within:w-[380px] xl:min-w-[200px]"
           >
             <SvgIcon
               name="search"
@@ -123,7 +123,7 @@ function onSearchSubmit() {
           <!-- 窄屏折叠为图标（ui-guideline §7）：进搜索页，该页输入框自动聚焦 -->
           <button
             type="button"
-            class="-mx-1 -my-1 inline-flex h-7 w-7 cursor-pointer items-center justify-center text-ink-regular hover:text-link md:hidden"
+            class="-mx-1 -my-1 inline-flex h-7 w-7 cursor-pointer items-center justify-center text-ink-regular hover:text-link xl:hidden"
             aria-label="搜索"
             @click="onSearchSubmit"
           >
@@ -165,7 +165,7 @@ function onSearchSubmit() {
         <!-- 窄屏整行铺满并出血到页头边缘：-mx-4 / +2rem 对应 tokens.css 窄屏下的 --el-header-padding: 0 16px
              ≥1280 改为按内容定宽（xl:flex-none）：导航不再被右侧搜索框挤压，空间不足时由搜索框收缩（xl:min-w-[200px]） -->
         <nav
-          class="order-3 -mx-4 flex w-[calc(100%+2rem)] gap-2 overflow-x-auto bg-page px-4 py-2 [scrollbar-width:none] md:order-2 md:mx-0 md:w-auto md:flex-1 md:gap-0.5 md:bg-transparent md:px-0 md:py-0 xl:flex-none [&::-webkit-scrollbar]:hidden"
+          class="order-3 -mx-4 flex w-[calc(100%+2rem)] gap-2 overflow-x-auto bg-page px-4 py-2 [scrollbar-width:none] xl:order-2 xl:mx-0 xl:w-auto xl:flex-none xl:gap-0.5 xl:bg-transparent xl:px-0 xl:py-0 [&::-webkit-scrollbar]:hidden"
         >
           <RouterLink
             v-for="b in BOARDS"

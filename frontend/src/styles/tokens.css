@@ -196,7 +196,7 @@ html {
    注意与顶部全局桥接的差别：EP 把这两个变量声明在 `.el-header` 自身（不是 `:root`），
    所以必须用 `.el-header.el-header` 直接压组件规则，`:root` 覆写在这里无效。
    左右收窄到 16px，App.vue 版块胶囊带的出血量（-mx-4 / +2rem）与此对应。 */
-@media (max-width: 767px) {
+@media (max-width: 1279px) {
   .cl-app-header.cl-app-header {
     height: auto;
     padding: 0 var(--cl-space-4);
