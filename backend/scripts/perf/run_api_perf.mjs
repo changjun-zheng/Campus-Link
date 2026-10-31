@@ -20,6 +20,9 @@ const pick = (name, fallback) => {
 }
 const BASE = pick('base', 'http://localhost:8088')
 const TOKEN = process.env.PERF_TOKEN || ''
+const READ_POST_ID = process.env.PERF_POST_ID || '41'
+const READ_KEYWORD = process.env.PERF_KEYWORD || 'Redis'
+const READ_REPLY_PAGE = process.env.PERF_REPLY_PAGE || ''
 const READS = Number(pick('reads', '200'))
 const WRITES = Number(pick('writes', '20'))
 const OUT = pick('out', '')
@@ -101,13 +104,16 @@ async function main() {
   const readEndpoints = [
     ['list-latest', '/api/v1/posts?page=1&size=20&sort=latest'],
     ['list-hot', '/api/v1/posts?page=1&size=20&sort=hot'],
-    ['post-detail', '/api/v1/posts/41'],
-    ['post-replies', '/api/v1/posts/41/replies?page=1&size=20'],
-    ['search', '/api/v1/posts/search?keyword=Redis&page=1&size=20'],
+    ['post-detail', `/api/v1/posts/${READ_POST_ID}`],
+    ['post-replies', `/api/v1/posts/${READ_POST_ID}/replies?page=1&size=20`],
+    ['search', `/api/v1/posts/search?keyword=${encodeURIComponent(READ_KEYWORD)}&page=1&size=20`],
     // 不压测 GET /users/{id}：它按 IP 限流 10 次/小时（防名册批量枚举，F-ACC-002），
     // 并发压测只会得到 429；其单次延迟由手工 10 样本另行记录（见性能基线文档）。
     ['teams-list', '/api/v1/teams?page=1&size=12'],
   ]
+  if (READ_REPLY_PAGE) {
+    readEndpoints.push(['post-replies-deep', `/api/v1/posts/${READ_POST_ID}/replies?page=${READ_REPLY_PAGE}&size=20`])
+  }
   const results = { base: BASE, startedAt: new Date().toISOString(), reads: READS, writes: WRITES, endpoints: {}, writesCreated: 0, cleanup: { deleted: 0, failed: [] } }
 
   for (const [name, path] of readEndpoints) {
