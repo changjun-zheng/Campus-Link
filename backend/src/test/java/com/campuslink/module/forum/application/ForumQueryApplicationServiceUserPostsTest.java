@@ -60,6 +60,8 @@ class ForumQueryApplicationServiceUserPostsTest {
     @Mock
     private PostRepository postRepository;
     @Mock
+    private com.campuslink.module.forum.domain.gateway.PostSearchGateway postSearchGateway;
+    @Mock
     private ReplyRepository replyRepository;
     @Mock
     private LikeRepository likeRepository;
@@ -79,7 +81,7 @@ class ForumQueryApplicationServiceUserPostsTest {
 
     @BeforeEach
     void setUp() {
-        service = new ForumQueryApplicationService(boardRepository, postRepository, replyRepository,
+        service = new ForumQueryApplicationService(boardRepository, postRepository, postSearchGateway, replyRepository,
                 likeRepository, favoriteRepository, accountApplicationService, userBlockApplicationService,
                 followApplicationService, reportRepository, new MarkdownRenderer(), new AppProperties());
         lenient().when(reportRepository.findPendingTargetsByReporter(anyLong()))

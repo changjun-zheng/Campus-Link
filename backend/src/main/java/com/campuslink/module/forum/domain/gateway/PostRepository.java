@@ -3,6 +3,7 @@ package com.campuslink.module.forum.domain.gateway;
 import com.campuslink.module.forum.domain.model.HotScoreInput;
 import com.campuslink.module.forum.domain.model.Post;
 import com.campuslink.module.forum.domain.model.PostListFilter;
+import com.campuslink.module.forum.domain.model.PostSearchDocument;
 import com.campuslink.module.forum.domain.model.PostSortOrder;
 import com.campuslink.module.forum.domain.model.PostStatus;
 import com.campuslink.module.forum.domain.model.SimilarPostRow;
@@ -71,6 +72,16 @@ public interface PostRepository {
      */
     PageResult<Post> search(String keyword, Long boardId, Integer days, Collection<Long> excludedAuthorIds,
                             Collection<Long> excludedPostIds, int page, int size);
+
+    /**
+     * 搜索索引增量同步（CR-181）：按 {@code (updated_at, id)} 游标取**发生变化**的窄文档，
+     * 包含已删除 / 已下架行（{@link PostSearchDocument#visible()} 为 false，调用方据此从索引删除）。
+     * 无 status / is_deleted 过滤——否则删帖那一次变化会被自身过滤掉，索引永远残留旧文档。
+     */
+    List<PostSearchDocument> findSearchDocumentsChangedSince(Instant updatedAt, long id, int limit);
+
+    /** 全量重建（CR-181）：按 id 游标只取可见帖子的窄文档，避免 10 万帖一次读进内存 */
+    List<PostSearchDocument> findSearchDocumentsAfterId(long afterId, int limit);
 
     /**
      * 按 id 查**未删除**的帖子（{@code is_deleted=1} 视为不存在，属仓储读侧约定：软删是行级墓碑，

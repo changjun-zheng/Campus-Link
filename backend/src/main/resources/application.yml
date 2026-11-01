@@ -108,6 +108,20 @@ campuslink:
       enabled: true
       min-title-length: 6
       max-results: 3
+  search:
+    # 搜索实现（ADR-004 / CR-181）：mysql = 现行 MySQL ngram FULLTEXT（缺省）；meilisearch = 规模升级。
+    # 切 meilisearch 后接口路径 / 参数 / 响应外壳不变，total 改由 Meili estimatedTotalHits 提供（估算值）。
+    engine: ${SEARCH_ENGINE:mysql}
+    meili:
+      url: ${MEILI_URL:http://127.0.0.1:7700}
+      # 开发期本机 Meili 可不开 master key（仅绑定 127.0.0.1）；生产必须注入，守卫强制。
+      api-key: ${MEILI_API_KEY:}
+      index: ${MEILI_INDEX:posts_v1}
+    batch-size: 1000
+    lock-ttl-seconds: 30
+    # 下面两项只被 SearchIndexScheduler 的 @Scheduled 占位符消费，不绑定 AppProperties（避免两个事实源）
+    sync-interval-ms: ${SEARCH_SYNC_INTERVAL_MS:30000}
+    sync-initial-delay-ms: ${SEARCH_SYNC_INITIAL_DELAY_MS:15000}
   hot:
     # 热榜（ADR-006，CR-058）。互动分 = reply-weight×回复 + like-weight×赞 + favorite-weight×收藏，
     # hot_score = 互动分 × exp(-decay-per-hour × 小时龄)。

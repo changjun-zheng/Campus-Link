@@ -23,6 +23,8 @@ const nickname = computed(() => auth.user?.nickname || '')
 const isLoggedIn = computed(() => auth.isLoggedIn)
 /** 登录页用独立极简页头（设计稿 page-05），不渲染全局顶栏与页脚 */
 const bare = computed(() => Boolean(route.meta.bare))
+/** 首页 lg+ 已有左侧版块导航，顶栏只保留全站操作；其他页面仍展示版块入口。 */
+const isHome = computed(() => route.name === 'home')
 
 const searchKeyword = ref('')
 
@@ -82,19 +84,19 @@ function onSearchSubmit() {
     <header
       v-else
       class="cl-app-header border-b-[0.5px] border-line bg-card"
-      :class="{ 'is-scrolled': scrolled }"
+      :class="{ 'is-scrolled': scrolled, 'is-home': isHome }"
     >
       <!-- 窄屏折成两行（设计稿 page-09）：第一行 logo + 图标，第二行版块胶囊带；
            行高由 tokens.css 的窄屏媒体查询把 --el-header-height 放开为 auto -->
-      <div class="mx-auto flex h-full max-w-page flex-wrap items-center gap-x-5 gap-y-1 max-xl:py-2 xl:flex-nowrap">
+      <div class="cl-header-inner mx-auto flex h-full max-w-page flex-wrap items-center gap-x-5 gap-y-1 max-sm:gap-x-2 max-xl:py-2 xl:flex-nowrap">
         <!-- 品牌字样用主色：WCAG 对 logo / 品牌名的文字不计对比度要求 -->
         <RouterLink to="/" class="order-1 flex shrink-0 items-center gap-2 py-1 -my-1 text-title font-medium text-primary">
           <img src="/logo.svg" alt="" class="h-[22px] w-auto" width="64" height="64" />
           <img src="/wordmark.png" alt="Campus-Link" class="h-[20px] w-auto" width="565" height="98" />
         </RouterLink>
-        <div class="order-2 ml-auto flex shrink-0 items-center gap-4 max-xl:gap-2 xl:order-3 xl:ml-0 xl:min-w-0 xl:shrink">
+        <div class="cl-header-actions order-2 ml-auto flex shrink-0 items-center gap-4 max-xl:gap-2 xl:order-3 xl:ml-0 xl:min-w-0 xl:shrink">
           <div
-            class="hidden w-[320px] min-w-0 transition-[width] duration-fast ease-standard xl:block xl:ml-auto xl:mr-auto xl:focus-within:w-[380px] xl:min-w-[200px]"
+            class="relative hidden w-[320px] min-w-0 transition-[width] duration-fast ease-standard xl:block xl:ml-auto xl:mr-auto xl:focus-within:w-[380px] xl:min-w-[200px]"
           >
             <SvgIcon
               name="search"
@@ -129,6 +131,11 @@ function onSearchSubmit() {
           >
             <SvgIcon name="search" :size="20" />
           </button>
+          <RouterLink
+            v-if="isHome"
+            to="/teams"
+            class="hidden whitespace-nowrap py-1.5 text-body text-ink-regular hover:text-link lg:inline-flex"
+          >组队</RouterLink>
           <RouterLink to="/publish" class="cl-header-cta hidden md:inline-flex">
             <SvgIcon name="pencil" :size="16" />
             提问
@@ -165,7 +172,9 @@ function onSearchSubmit() {
         <!-- 窄屏整行铺满并出血到页头边缘：-mx-4 / +2rem 对应 tokens.css 窄屏下的 --el-header-padding: 0 16px
              ≥1280 改为按内容定宽（xl:flex-none）：导航不再被右侧搜索框挤压，空间不足时由搜索框收缩（xl:min-w-[200px]） -->
         <nav
+          aria-label="版块与组队导航"
           class="order-3 -mx-4 flex w-[calc(100%+2rem)] gap-2 overflow-x-auto bg-page px-4 py-2 [scrollbar-width:none] xl:order-2 xl:mx-0 xl:w-auto xl:flex-none xl:gap-0.5 xl:bg-transparent xl:px-0 xl:py-0 [&::-webkit-scrollbar]:hidden"
+          :class="{ 'lg:hidden': isHome }"
         >
           <RouterLink
             v-for="b in BOARDS"
@@ -215,6 +224,23 @@ function onSearchSubmit() {
   box-sizing: border-box;
   padding: 20px;
   overflow: visible;
+}
+
+/* 首页左栏从 1024px 起接管版块导航，页头同步收成单行 60px。
+   其他路由仍沿用 1280px 的两行阈值，避免重现中间断点导航裁切。 */
+@media (min-width: 1024px) {
+  .cl-app-header.is-home {
+    height: var(--cl-header-h);
+  }
+  .is-home .cl-header-inner {
+    flex-wrap: nowrap;
+    padding-block: 0;
+  }
+  .is-home .cl-header-actions {
+    flex: 1;
+    justify-content: flex-end;
+    margin-left: auto;
+  }
 }
 
 /* 移动端首屏高度基线（CR-170）：路由组件是懒加载 chunk，App 壳（页头 + 页脚）先绘制，

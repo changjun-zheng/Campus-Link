@@ -97,9 +97,9 @@ public class ProductionSafetyGuard implements BeanFactoryPostProcessor, Environm
                 fingerprint(value("campuslink.crypto.crypt-key")));
     }
 
-    /** 校验项数写出来是为了让日志能证明"它真的跑过、且不是一条空规则" */
+    /** 校验项数写出来是为了让日志能证明"它真的跑过、且不是一条空规则"；Meili 开关打开时多一项 */
     private int checkedItemCount() {
-        return 8;
+        return "meilisearch".equalsIgnoreCase(value("campuslink.search.engine")) ? 9 : 8;
     }
 
     /** 供测试直接断言，不经 Spring 生命周期 */
@@ -113,7 +113,22 @@ public class ProductionSafetyGuard implements BeanFactoryPostProcessor, Environm
         checkRosterBypass(violations);
         checkCodeSenderMode(violations);
         checkDatasourceDefaults(violations);
+        checkSearchEngine(violations);
         return violations;
+    }
+
+    /**
+     * 搜索切到 MeiliSearch 时强制要求 API key（CR-181 / ADR-004）：本机开发可以不开 master key，
+     * 但生产实例若直接暴露无鉴权的搜索服务，任何人都能读写索引。engine=mysql（缺省）时本项不生效。
+     */
+    private void checkSearchEngine(List<String> violations) {
+        if (!"meilisearch".equalsIgnoreCase(value("campuslink.search.engine"))) {
+            return;
+        }
+        String apiKey = value("campuslink.search.meili.api-key");
+        if (!StringUtils.hasText(apiKey) || isUnresolved(apiKey)) {
+            violations.add("campuslink.search.engine=meilisearch 但 MEILI_API_KEY 未配置：搜索服务对任意调用者开放");
+        }
     }
 
     private void checkKey(List<String> violations, String property, String label) {

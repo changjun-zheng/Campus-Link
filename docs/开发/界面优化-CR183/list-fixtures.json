@@ -1,0 +1,283 @@
+[
+  {
+    "case": "A-01",
+    "post": {
+      "id": 900001,
+      "boardCode": "qna",
+      "boardName": "技术问答",
+      "title": "Java 遍历 ArrayList 时出现 ConcurrentModificationException，使用 Iterator.remove 后仍报错，应该从哪里排查？",
+      "summary": "代码：for (String item : list) { list.remove(item); }；附异常堆栈与复现条件。",
+      "tags": [
+        "Java",
+        "集合与迭代器",
+        "异常排查"
+      ],
+      "authorNickname": "合成同学01",
+      "authorAvatarUrl": null,
+      "replyCount": 0,
+      "likeCount": 0,
+      "viewCount": 0,
+      "coverUrl": null,
+      "createdAt": "2026-10-30T09:00:00Z",
+      "accepted": false,
+      "likedByMe": false,
+      "anonymous": false
+    }
+  },
+  {
+    "case": "A-02",
+    "post": {
+      "id": 900002,
+      "boardCode": "qna",
+      "boardName": "技术问答",
+      "title": "MyBatis-Plus 分页 total 为 0，Spring Boot 4 下如何配置？",
+      "summary": "已找到分页插件配置原因，回复中有完整示例。",
+      "tags": [
+        "MyBatis-Plus",
+        "分页"
+      ],
+      "authorNickname": "合成同学02",
+      "authorAvatarUrl": null,
+      "replyCount": 8,
+      "likeCount": 24,
+      "viewCount": 274,
+      "coverUrl": null,
+      "createdAt": "2026-10-30T09:00:00Z",
+      "accepted": true,
+      "likedByMe": true,
+      "anonymous": false
+    }
+  },
+  {
+    "case": "A-03",
+    "post": {
+      "id": 900003,
+      "boardCode": "resources",
+      "boardName": "学习资源",
+      "title": "操作系统期末复习笔记：进程、内存管理与文件系统",
+      "summary": "整理了三章知识结构、典型练习和易错点。",
+      "tags": [
+        "操作系统",
+        "期末复习"
+      ],
+      "authorNickname": "合成同学03",
+      "authorAvatarUrl": null,
+      "replyCount": 3,
+      "likeCount": 0,
+      "viewCount": 411,
+      "coverUrl": "/logo.png",
+      "createdAt": "2026-10-30T09:00:00Z",
+      "accepted": false,
+      "likedByMe": false,
+      "anonymous": false
+    }
+  },
+  {
+    "case": "A-04",
+    "post": {
+      "id": 900004,
+      "boardCode": "resources",
+      "boardName": "学习资源",
+      "title": "分享一份数据库 SQL 练习清单",
+      "summary": "覆盖连接、分组、子查询与索引，附本地运行方法。",
+      "tags": [],
+      "authorNickname": "合成同学04",
+      "authorAvatarUrl": null,
+      "replyCount": 0,
+      "likeCount": 48,
+      "viewCount": 548,
+      "coverUrl": null,
+      "createdAt": "2026-10-30T09:00:00Z",
+      "accepted": false,
+      "likedByMe": false,
+      "anonymous": false
+    }
+  },
+  {
+    "case": "A-05",
+    "post": {
+      "id": 900005,
+      "boardCode": "interview",
+      "boardName": "面经求职",
+      "title": "实习一面复盘：从 Java 线程池追问到项目中的接口幂等设计",
+      "summary": "记录面试官的追问路径和自己答得不够清楚的部分。",
+      "tags": [
+        "Java",
+        "实习面经",
+        "项目复盘",
+        "接口设计",
+        "幂等"
+      ],
+      "authorNickname": "合成同学05",
+      "authorAvatarUrl": null,
+      "replyCount": 12,
+      "likeCount": 0,
+      "viewCount": 685,
+      "coverUrl": null,
+      "createdAt": "2026-10-30T09:00:00Z",
+      "accepted": false,
+      "likedByMe": false,
+      "anonymous": false
+    }
+  },
+  {
+    "case": "A-06",
+    "post": {
+      "id": 900006,
+      "boardCode": "interview",
+      "boardName": "面经求职",
+      "title": "简历里的课程项目该怎么写？",
+      "summary": "第一次投实习，想听听同学的建议。",
+      "tags": [
+        "简历"
+      ],
+      "authorNickname": "匿名用户",
+      "authorAvatarUrl": null,
+      "replyCount": 0,
+      "likeCount": 72,
+      "viewCount": 822,
+      "coverUrl": null,
+      "createdAt": "2026-10-30T09:00:00Z",
+      "accepted": false,
+      "likedByMe": false,
+      "anonymous": true
+    }
+  },
+  {
+    "case": "A-07",
+    "post": {
+      "id": 900007,
+      "boardCode": "contest",
+      "boardName": "竞赛交流",
+      "title": "程序设计竞赛找队友：希望每周一起训练两次",
+      "summary": "计划从基础图论和动态规划开始，欢迎不同方向同学交流。",
+      "tags": [
+        "程序设计竞赛",
+        "动态规划与图论专题练习讨论"
+      ],
+      "authorNickname": "合成同学07",
+      "authorAvatarUrl": null,
+      "replyCount": 4,
+      "likeCount": 0,
+      "viewCount": 959,
+      "coverUrl": null,
+      "createdAt": "2026-10-30T09:00:00Z",
+      "accepted": false,
+      "likedByMe": false,
+      "anonymous": false
+    }
+  },
+  {
+    "case": "A-08",
+    "post": {
+      "id": 900008,
+      "boardCode": "contest",
+      "boardName": "竞赛交流",
+      "title": "比赛复盘",
+      "summary": "整理这次训练赛的时间分配和配合问题。",
+      "tags": [],
+      "authorNickname": "合成同学08",
+      "authorAvatarUrl": null,
+      "replyCount": 0,
+      "likeCount": 96,
+      "viewCount": 1096,
+      "coverUrl": null,
+      "createdAt": "2026-10-30T09:00:00Z",
+      "accepted": false,
+      "likedByMe": false,
+      "anonymous": false
+    }
+  },
+  {
+    "case": "A-09",
+    "post": {
+      "id": 900009,
+      "boardCode": "course",
+      "boardName": "课程交流",
+      "title": "数据库实验：同样的查询在本机与实验室电脑得到不同结果",
+      "summary": "复现条件包含排序、字符集和测试数据，代码块较长。",
+      "tags": [
+        "数据库",
+        "课程实验"
+      ],
+      "authorNickname": "合成同学09",
+      "authorAvatarUrl": null,
+      "replyCount": 2,
+      "likeCount": 0,
+      "viewCount": 1233,
+      "coverUrl": "/logo.png",
+      "createdAt": "2026-10-30T09:00:00Z",
+      "accepted": false,
+      "likedByMe": false,
+      "anonymous": false
+    }
+  },
+  {
+    "case": "A-10",
+    "post": {
+      "id": 900010,
+      "boardCode": "course",
+      "boardName": "课程交流",
+      "title": "课程小组展示的分工建议",
+      "summary": "将资料整理、实现和演示拆成可检查的小任务。",
+      "tags": [
+        "团队协作"
+      ],
+      "authorNickname": "合成同学10",
+      "authorAvatarUrl": null,
+      "replyCount": 1,
+      "likeCount": 120,
+      "viewCount": 1370,
+      "coverUrl": null,
+      "createdAt": "2026-10-30T09:00:00Z",
+      "accepted": false,
+      "likedByMe": false,
+      "anonymous": false
+    }
+  },
+  {
+    "case": "A-11",
+    "post": {
+      "id": 900011,
+      "boardCode": "chat",
+      "boardName": "闲聊灌水",
+      "title": "校园晚自习交流",
+      "summary": "分享自己最近的学习节奏。",
+      "tags": [],
+      "authorNickname": "匿名用户",
+      "authorAvatarUrl": null,
+      "replyCount": 6,
+      "likeCount": 0,
+      "viewCount": 1507,
+      "coverUrl": null,
+      "createdAt": "2026-10-30T09:00:00Z",
+      "accepted": false,
+      "likedByMe": false,
+      "anonymous": true
+    }
+  },
+  {
+    "case": "A-12",
+    "post": {
+      "id": 900012,
+      "boardCode": "chat",
+      "boardName": "闲聊灌水",
+      "title": "HowToUnderstandAReallyLongUnbrokenIdentifierWithoutBreakingThePostListLayoutOnMobileDevicesAndSmallScreens",
+      "summary": "测试不带空格的英文标题与长昵称，确保页面不横向溢出。",
+      "tags": [
+        "阅读交流",
+        "移动端长文本"
+      ],
+      "authorNickname": "一位正在认真准备课程实验和程序设计比赛的同学",
+      "authorAvatarUrl": null,
+      "replyCount": 0,
+      "likeCount": 144,
+      "viewCount": 1644,
+      "coverUrl": null,
+      "createdAt": "2026-10-30T09:00:00Z",
+      "accepted": false,
+      "likedByMe": false,
+      "anonymous": false
+    }
+  }
+]

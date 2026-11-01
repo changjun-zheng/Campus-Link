@@ -24,7 +24,7 @@ const props = withDefaults(
     post: PostSummaryVo
     /** 是否显示版块入口（版块页不显示自己；首页 / 搜索 / 收藏显示） */
     showBoard?: boolean
-    /** 是否显示摘要（默认显示，两行截断） */
+    /** 是否显示摘要（默认显示，单行截断） */
     showSummary?: boolean
     /** 搜索页关键词：标题与摘要里的命中片段用 <mark> 高亮（分段渲染，不使用 v-html） */
     highlight?: string
@@ -115,22 +115,22 @@ async function onLike() {
     <div class="flex gap-3">
       <div class="min-w-0 flex-1">
         <!-- 作者行（CSDN / 掘金式）：头像 + 昵称 + 时间在标题上方（CR-085） -->
-        <div class="flex items-center gap-1.5 text-caption text-ink-meta">
+        <div class="flex min-w-0 items-center gap-1.5 text-caption text-ink-meta">
           <UserAvatar :src="post.authorAvatarUrl ?? ''" :name="post.authorNickname" :size="20" />
-          <span class="text-ink-regular">{{ post.authorNickname }}</span>
+          <span class="min-w-0 truncate text-ink-regular">{{ post.authorNickname }}</span>
           <!-- 匿名帖（F-FORUM-010 / CR-139）：昵称已由服务端掩为「匿名用户」，这里只加一枚标记 -->
           <el-tag v-if="post.anonymous" size="small" effect="plain" class="flex-none">匿名</el-tag>
-          <span aria-hidden="true">·</span>
-          <span>{{ formatRelativeTime(post.createdAt) }}</span>
+          <span aria-hidden="true" class="flex-none">·</span>
+          <time :datetime="post.createdAt" class="flex-none">{{ formatRelativeTime(post.createdAt) }}</time>
         </div>
 
-        <div class="mt-1 flex items-center gap-2">
+        <div class="mt-1 flex items-start gap-2">
           <el-tag v-if="post.accepted" type="success" effect="light" size="small" class="flex-none">
             已采纳
           </el-tag>
           <RouterLink
             :to="`/post/${post.id}`"
-            class="min-w-0 flex-1 truncate text-title font-medium text-ink hover:text-link"
+            class="min-w-0 flex-1 line-clamp-2 break-words text-title font-medium leading-tight text-ink [overflow-wrap:anywhere] hover:text-link"
           >
             <template v-for="(part, i) in titleParts" :key="i">
               <mark v-if="part.hit" class="bg-primary-soft text-ink">{{ part.text }}</mark>
@@ -150,21 +150,21 @@ async function onLike() {
           </template>
         </p>
 
-        <!-- 元信息行（CR-091，参考 CSDN）：计数改"图标 + 文字 + 数字"并拉宽间距，去点分隔；
-             tabular-nums（CR-102）让数字等宽，点赞数变化时不抖动 -->
-        <div class="mt-2 flex flex-wrap items-center gap-x-3.5 gap-y-1 text-caption text-ink-meta tabular-nums">
+        <!-- CR-183：版块与回复优先，阅读数后置；标签独立限宽，长文本不挤压计数。
+             数字保留 tabular-nums，点赞仍就地更新。 -->
+        <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-ink-meta tabular-nums">
           <template v-if="showBoard">
             <RouterLink
               :to="`/board/${post.boardCode}`"
-              class="inline-flex items-center gap-1.5 text-link hover:underline"
+              class="inline-flex flex-none items-center gap-1.5 text-link hover:underline"
             >
               <span v-if="boardDotClass" :class="boardDotClass" aria-hidden="true" />
               {{ post.boardName || boardNameOf(post.boardCode) }}
             </RouterLink>
           </template>
-          <span class="inline-flex items-center gap-1" title="阅读数（同一账号每天只计一次）">
-            <SvgIcon name="eye" :size="12" />
-            阅读 {{ formatCount(post.viewCount) }}
+          <span class="inline-flex flex-none items-center gap-1" :title="`${post.replyCount} 条回复`">
+            <SvgIcon name="message-2" :size="12" />
+            回复 {{ formatCount(post.replyCount) }}
           </span>
           <!--
             就地点赞（CR-080）：用真 button 而非 span+click——键盘可聚焦、aria-pressed 可读出状态。
@@ -172,7 +172,7 @@ async function onLike() {
           -->
           <button
             type="button"
-            class="-mx-1 -my-2 inline-flex cursor-pointer items-center gap-1 border-0 bg-transparent px-1 py-2 font-inherit text-caption transition-colors duration-fast ease-standard"
+            class="-mx-1 -my-2 inline-flex flex-none cursor-pointer items-center gap-1 border-0 bg-transparent px-1 py-2 font-inherit text-caption transition-colors duration-fast ease-standard"
             :class="post.likedByMe ? 'font-medium text-primary-strong' : 'text-ink-meta hover:text-link'"
             :aria-pressed="post.likedByMe"
             :title="post.likedByMe ? '取消点赞' : '点赞'"
@@ -182,15 +182,23 @@ async function onLike() {
             <SvgIcon name="thumb-up" :size="12" />
             赞 {{ formatCount(post.likeCount) }}
           </button>
-          <span class="inline-flex items-center gap-1" :title="`${post.replyCount} 条回复`">
-            <SvgIcon name="message-2" :size="12" />
-            回复 {{ formatCount(post.replyCount) }}
+          <span class="inline-flex flex-none items-center gap-1" title="阅读数（同一账号每天只计一次）">
+            <SvgIcon name="eye" :size="12" />
+            {{ formatCount(post.viewCount) }} 阅读
           </span>
-          <template v-if="post.tags?.length">
-            <el-tag v-for="t in post.tags.slice(0, 3)" :key="t" size="small" effect="plain" class="flex-none">
-              {{ t }}
-            </el-tag>
-          </template>
+        </div>
+        <div v-if="post.tags?.length" class="mt-2 flex min-w-0 flex-wrap gap-1.5 text-caption text-ink-regular">
+          <span
+            v-for="t in post.tags.slice(0, 3)"
+            :key="t"
+            :title="t"
+            class="max-w-[8rem] truncate rounded-sm bg-code px-2 py-0.5"
+          >
+            {{ t }}
+          </span>
+          <span v-if="post.tags.length > 3" class="py-0.5" :title="post.tags.slice(3).join('、')">
+            +{{ post.tags.length - 3 }}
+          </span>
         </div>
       </div>
       <!-- 封面缩略图（CR-074）：无图帖不占位；仅 https 外链（服务端提取时已限定）；

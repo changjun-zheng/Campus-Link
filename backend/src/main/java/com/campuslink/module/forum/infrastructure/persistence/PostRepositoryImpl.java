@@ -10,6 +10,7 @@ import com.campuslink.module.forum.domain.model.BoardType;
 import com.campuslink.module.forum.domain.model.HotScoreInput;
 import com.campuslink.module.forum.domain.model.Post;
 import com.campuslink.module.forum.domain.model.PostListFilter;
+import com.campuslink.module.forum.domain.model.PostSearchDocument;
 import com.campuslink.module.forum.domain.model.PostSortOrder;
 import com.campuslink.module.forum.domain.model.PostStatus;
 import com.campuslink.module.forum.domain.model.SimilarPostRow;
@@ -18,8 +19,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 /** 适配器：PostRepository 端口的 MyBatis-Plus 实现 */
@@ -139,6 +142,60 @@ public class PostRepositoryImpl implements PostRepository {
                 excludedAuthorIds, excludedPostIds);
         return new PageResult<>(result.getRecords().stream().map(PostConverter::toDomain).toList(),
                 result.getTotal(), page, size);
+    }
+
+    @Override
+    public List<PostSearchDocument> findSearchDocumentsChangedSince(Instant updatedAt, long id, int limit) {
+        LambdaQueryWrapper<PostDO> query = searchDocumentColumns()
+                .and(w -> w.gt(PostDO::getUpdatedAt, updatedAt)
+                        .or()
+                        .eq(PostDO::getUpdatedAt, updatedAt)
+                        .gt(PostDO::getId, id))
+                .orderByAsc(PostDO::getUpdatedAt)
+                .orderByAsc(PostDO::getId);
+        // searchCount=false：索引同步只关心这一批数据，推进由"取满即继续"决定
+        return postMapper.selectPage(new Page<>(1, limit, false), query).getRecords().stream()
+                .map(PostRepositoryImpl::toSearchDocument)
+                .toList();
+    }
+
+    @Override
+    public List<PostSearchDocument> findSearchDocumentsAfterId(long afterId, int limit) {
+        LambdaQueryWrapper<PostDO> query = searchDocumentColumns()
+                .eq(PostDO::getStatus, PostStatus.PUBLISHED.name())
+                .eq(PostDO::getIsDeleted, false)
+                .gt(PostDO::getId, afterId)
+                .orderByAsc(PostDO::getId);
+        return postMapper.selectPage(new Page<>(1, limit, false), query).getRecords().stream()
+                .map(PostRepositoryImpl::toSearchDocument)
+                .toList();
+    }
+
+    /** 索引只读窄列：不含 contentHtml / 计数 / 封面，10 万帖全量重建时避免把大字段搬进内存 */
+    private static LambdaQueryWrapper<PostDO> searchDocumentColumns() {
+        return new LambdaQueryWrapper<PostDO>().select(PostDO::getId, PostDO::getTitle, PostDO::getContentMd,
+                PostDO::getTags, PostDO::getBoardId, PostDO::getAuthorId, PostDO::getIsAnonymous,
+                PostDO::getStatus, PostDO::getIsDeleted, PostDO::getCreatedAt, PostDO::getUpdatedAt);
+    }
+
+    private static PostSearchDocument toSearchDocument(PostDO row) {
+        boolean visible = PostStatus.PUBLISHED.name().equals(row.getStatus())
+                && Boolean.FALSE.equals(row.getIsDeleted());
+        return new PostSearchDocument(row.getId(), row.getTitle(), row.getContentMd(), splitTags(row.getTags()),
+                Objects.requireNonNullElse(row.getBoardId(), 0L), Objects.requireNonNullElse(row.getAuthorId(), 0L),
+                Boolean.TRUE.equals(row.getIsAnonymous()), row.getCreatedAt(), row.getUpdatedAt(), visible);
+    }
+
+    /** posts.tags 是逗号分隔的冗余列（CR-083）；空值 / 空白返回空列表，索引里不出现空白标签 */
+    private static List<String> splitTags(String tags) {
+        if (tags == null || tags.isBlank()) {
+            return List.of();
+        }
+        return Arrays.stream(tags.split(","))
+                .map(String::trim)
+                .filter(tag -> !tag.isEmpty())
+                .distinct()
+                .toList();
     }
 
     @Override

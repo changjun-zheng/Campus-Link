@@ -34,6 +34,11 @@
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.application.AdminTagApplicationService"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.web.AdminTagController"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.team.infrastructure.persistence.TeamMemberRepositoryImpl"/></Match>
+  <!-- CR-181 搜索索引：application 服务 / 端口适配器 / 调度器与既有 DI 类同型（Spring 单例共享） -->
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.application.SearchIndexApplicationService"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.infrastructure.redis.RedisSearchSyncStateAdapter"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.infrastructure.search.MeiliPostSearchAdapter"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.infrastructure.search.SearchIndexScheduler"/></Match>
 
   <!-- ② Spring Boot 配置属性绑定（EI_EXPOSE_REP / REP2）：`@ConfigurationProperties` 的内嵌对象由 Boot
        实例化并经 setter 注入、getter 供业务读取；拷贝会切断绑定链 ⇒ 已知误报。 -->
@@ -41,6 +46,9 @@
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.config.AppProperties"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.config.AppProperties$Ai"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.config.AppProperties$Ai"/></Match>
+  <!-- CR-181 搜索配置：同型（Boot 绑定内嵌 Search / Meili，getter 供业务读取） -->
+  <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.config.AppProperties$Search"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.config.AppProperties$Search"/></Match>
 
   <!-- ③ 不可变值载体（EI_EXPOSE_REP / REP2）：web VO、application cmd、分页载体与领域聚合 Post——
        构造后不再变更，集合字段只读使用；唯一写入入口 `Post.publish` 已 `List.copyOf`。 -->
@@ -115,6 +123,11 @@
   <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.module.notification.domain.gateway.PageResult"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.notification.domain.gateway.PageResult"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.module.forum.domain.model.Post"/></Match>
+  <!-- CR-181 搜索文档 / 命中载体：record + 只读 List，构造后不再变更 -->
+  <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.module.forum.domain.model.PostSearchDocument"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.domain.model.PostSearchDocument"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.module.forum.domain.gateway.PostSearchGateway$SearchHits"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.domain.gateway.PostSearchGateway$SearchHits"/></Match>
 
   <!-- ④ 按设计接受（两条，非"误报"而是"刻意的设计选择"）：
        ④a CT_CONSTRUCTOR_THROW —— 三个类的构造器会抛异常（密钥校验 / 参数校验），规则针对的是

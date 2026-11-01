@@ -27,6 +27,7 @@ import com.campuslink.module.forum.domain.gateway.FavoriteRepository;
 import com.campuslink.module.forum.domain.gateway.LikeRepository;
 import com.campuslink.module.forum.domain.gateway.PageResult;
 import com.campuslink.module.forum.domain.gateway.PostRepository;
+import com.campuslink.module.forum.domain.gateway.PostSearchGateway;
 import com.campuslink.module.forum.domain.gateway.ReplyRepository;
 import com.campuslink.module.forum.domain.gateway.ReportRepository;
 import com.campuslink.module.forum.domain.model.Board;
@@ -40,6 +41,7 @@ import com.campuslink.module.forum.domain.model.Reply;
 import com.campuslink.module.forum.domain.model.ReportedTargets;
 import com.campuslink.module.forum.domain.model.SimilarPostRow;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.Collection;
@@ -60,6 +62,7 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ForumQueryApplicationService {
 
     private static final int DEFAULT_PAGE_SIZE = 20;
@@ -83,6 +86,7 @@ public class ForumQueryApplicationService {
 
     private final BoardRepository boardRepository;
     private final PostRepository postRepository;
+    private final PostSearchGateway postSearchGateway;
     private final ReplyRepository replyRepository;
     private final LikeRepository likeRepository;
     private final FavoriteRepository favoriteRepository;
@@ -139,9 +143,46 @@ public class ForumQueryApplicationService {
         int currentPage = normalizePage(page);
         int pageSize = normalizeSize(size);
         Long boardId = boardIdOf(boardCode);
-        PageResult<Post> found = postRepository.search(kw, boardId, days, blockedAuthorIds(viewerId),
-                reportedTargetsOf(viewerId).postIds(), currentPage, pageSize);
+        Set<Long> blocked = blockedAuthorIds(viewerId);
+        Set<Long> reported = reportedTargetsOf(viewerId).postIds();
+        PageResult<Post> found = querySearchPage(kw, boardId, days, blocked, reported, currentPage, pageSize);
         return new PageResult<>(toSearchSummaries(found.items(), viewerId, kw), found.total(), currentPage, pageSize);
+    }
+
+    /**
+     * 搜索路由（CR-181）：{@code engine=meilisearch} 走索引，任何运行时异常（连接失败 / 索引缺失 /
+     * 任务失败）都回落 MySQL 并记 WARN——搜索是公开读，不能因为可选组件故障变成 500。
+     * Meili 只回有序 id + 估算 total，帖子仍从 MySQL 读并做最终可见性 / 拉黑 / 举报过滤。
+     */
+    private PageResult<Post> querySearchPage(String keyword, Long boardId, Integer days, Set<Long> blocked,
+            Set<Long> reported, int page, int size) {
+        if (appProperties.getSearch().getEngine() == AppProperties.Search.Engine.MEILISEARCH) {
+            try {
+                PostSearchGateway.SearchHits hits = postSearchGateway.search(
+                        keyword, boardId, days, blocked, reported, page, size);
+                return new PageResult<>(loadSearchPosts(hits.ids(), blocked, reported), hits.estimatedTotal(),
+                        page, size);
+            } catch (RuntimeException e) {
+                log.warn("MeiliSearch 搜索失败，回落 MySQL：{}", e.toString());
+            }
+        }
+        return postRepository.search(keyword, boardId, days, blocked, reported, page, size);
+    }
+
+    /** 按索引返回的 id 顺序回表，并做纵深过滤：已删除 / 非 PUBLISHED / 拉黑作者（匿名例外）/ 本人待处理举报 */
+    private List<Post> loadSearchPosts(List<Long> ids, Set<Long> blocked, Set<Long> reported) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, Post> byId = postRepository.findByIds(ids).stream()
+                .filter(Post::isVisible)
+                .collect(Collectors.toMap(Post::getId, Function.identity(), (left, right) -> left));
+        return ids.stream()
+                .map(byId::get)
+                .filter(Objects::nonNull)
+                .filter(post -> post.isAnonymous() || !blocked.contains(post.getAuthorId()))
+                .filter(post -> !reported.contains(post.getId()))
+                .toList();
     }
 
     /**

@@ -3,7 +3,6 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { listFollowingPosts, listPosts, type PostSort, type PostSummaryVo } from '../api/forum'
 import { BOARDS } from '../constants/boards'
 import { useAuthStore } from '../stores/auth'
-import { formatTime } from '../utils/time'
 import PostListItem from '../components/PostListItem.vue'
 import SvgIcon from '../components/SvgIcon.vue'
 import type { IconName } from '../assets/icons'
@@ -35,6 +34,7 @@ const loadingMore = ref(false)
 const moreError = ref(false)
 /** 列表自滚容器（CR-100）：桌面端窗口不滚，触底判定与滚动门都挂在这个元素上 */
 const listWrapRef = ref<HTMLElement | null>(null)
+const sortNavRef = ref<HTMLElement | null>(null)
 /** 门（CR-091）：首屏 6 条时容器可能无溢出，必须等用户真的滚过列表才续载 */
 let userScrolled = false
 const hasMore = computed(() => posts.value.length < total.value)
@@ -147,6 +147,14 @@ function scrollListTop() {
   listWrapRef.value?.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
+/** 热榜「更多」展示全站热门，不再误跳到按最新排序的技术问答版块。 */
+async function showHotPosts() {
+  sort.value = 'hot'
+  await nextTick()
+  listWrapRef.value?.scrollTo({ top: 0 })
+  sortNavRef.value?.querySelector<HTMLButtonElement>('[aria-pressed="true"]')?.focus()
+}
+
 watch(sort, () => {
   posts.value = []
   total.value = 0
@@ -154,18 +162,6 @@ watch(sort, () => {
   moreError.value = false
   void loadFirst()
 })
-
-/** 右栏「最新发布」挂件（CR-091，参考 CSDN 滚动接力）：复用既有列表接口，仅取 5 条 */
-const latestTop5 = ref<PostSummaryVo[]>([])
-
-async function loadLatest() {
-  try {
-    const res = await listPosts(1, 5, undefined, 'latest')
-    latestTop5.value = res.list
-  } catch {
-    latestTop5.value = []
-  }
-}
 
 /** 右栏「等你来答」Top5（CR-142，N1）：问答帖且未采纳，最新在前；0 回答高亮提示最需要帮助 */
 const unansweredTop5 = ref<PostSummaryVo[]>([])
@@ -182,7 +178,6 @@ async function loadUnanswered() {
 onMounted(() => {
   void loadFirst()
   loadHotTop()
-  loadLatest()
   loadUnanswered()
   window.addEventListener('scroll', onWindowScroll, { passive: true })
 })
@@ -201,7 +196,7 @@ const myEntries: { label: string; to: string; icon: IconName }[] = [
        窄屏无固定高度，回退整页滚动 -->
   <div class="flex gap-5 lg:sticky lg:top-[60px] lg:h-[calc(100vh-60px)]">
     <!-- ─── 左栏：版块导航（lg 以上显示，栏内自滚） ─── -->
-    <aside class="hidden w-[200px] flex-none lg:block lg:overflow-y-auto">
+    <aside class="hidden w-[184px] flex-none lg:block lg:overflow-y-auto">
       <el-card shadow="never" :body-style="{ padding: '8px' }">
         <nav aria-label="版块导航">
           <RouterLink
@@ -239,7 +234,7 @@ const myEntries: { label: string; to: string; icon: IconName }[] = [
         <template #header>
           <!-- 排序 Tab（CR-091）：文字型自有 Tab，选中态主色 + 底部指示条（参考站分类 Tab 风格）；
                真按钮保留键盘可达与 aria-pressed -->
-          <nav class="flex items-center gap-1" aria-label="帖子排序">
+          <nav ref="sortNavRef" class="flex items-center gap-1" aria-label="帖子排序">
             <button
               v-for="s in sortOptions"
               :key="s.value"
@@ -328,38 +323,10 @@ const myEntries: { label: string; to: string; icon: IconName }[] = [
       </button>
     </main>
 
-    <!-- ─── 右栏：热榜 + 最新发布 + 站点卡（xl 以上显示，栏内自滚） ─── -->
-    <aside class="hidden w-[300px] flex-none xl:block xl:overflow-y-auto">
-      <el-card shadow="never" class="side-card" :body-style="{ padding: '16px' }">
-        <template #header>
-          <div class="flex items-center justify-between">
-            <span class="text-title-sm font-medium">全站热榜</span>
-            <RouterLink to="/board/qna" class="text-caption text-link hover:underline">更多</RouterLink>
-          </div>
-        </template>
-        <ol v-if="hotTop5.length">
-          <li
-            v-for="(p, i) in hotTop5"
-            :key="p.id"
-            class="-mx-2 flex items-start gap-2 rounded-md border-b-[0.5px] border-divider px-2 py-1.5 transition-colors duration-fast ease-standard last:border-b-0 hover:bg-bg-hover"
-          >
-            <!-- 前三名徽章分级（CR-102）：第 1 实心主色白字、2/3 浅底主色，其余灰字——层级一眼可读 -->
-            <span
-              class="inline-flex h-5 w-5 flex-none items-center justify-center rounded-sm text-caption tabular-nums"
-              :class="i === 0 ? 'bg-primary-strong font-medium text-white' : i < 3 ? 'bg-primary-soft font-medium text-primary-strong' : 'text-ink-meta'"
-            >
-              {{ i + 1 }}
-            </span>
-            <RouterLink :to="`/post/${p.id}`" class="min-w-0 flex-1 truncate text-note text-ink-regular hover:text-link">
-              {{ p.title }}
-            </RouterLink>
-          </li>
-        </ol>
-        <p v-else class="text-note text-ink-meta">热榜计算中，稍后再来看</p>
-      </el-card>
-
+    <!-- ─── 右栏：等你来答 + 热榜 + 站点卡（xl 以上显示，栏内自滚） ─── -->
+    <aside class="hidden w-[264px] flex-none xl:block xl:overflow-y-auto">
       <!-- 等你来答（CR-142，N1）：问答帖且未采纳，把「提问 → 回答 → 采纳」循环的供给侧亮出来 -->
-      <el-card shadow="never" class="side-card mt-4" :body-style="{ padding: '16px' }">
+      <el-card shadow="never" class="side-card" :body-style="{ padding: '16px' }">
         <template #header>
           <div class="flex items-center justify-between">
             <span class="text-title-sm font-medium">等你来答</span>
@@ -378,7 +345,7 @@ const myEntries: { label: string; to: string; icon: IconName }[] = [
             <span class="inline-flex h-5 w-5 flex-none items-center justify-center rounded-sm text-caption tabular-nums text-ink-meta">
               {{ i + 1 }}
             </span>
-            <RouterLink :to="`/post/${p.id}`" class="min-w-0 flex-1 truncate text-note text-ink-regular hover:text-link">
+            <RouterLink :to="`/post/${p.id}`" class="min-w-0 flex-1 line-clamp-2 break-words text-note leading-tight text-ink-regular hover:text-link">
               {{ p.title }}
             </RouterLink>
             <!-- 0 回答用主色：最需要帮助的排进视觉焦点；已有回答未采纳是次优先 -->
@@ -391,26 +358,32 @@ const myEntries: { label: string; to: string; icon: IconName }[] = [
         <p v-else class="text-note text-ink-meta">暂时没有待解答的问题</p>
       </el-card>
 
-      <!-- 最新发布挂件（CR-091，参考 CSDN 右栏滚动接力）：随页面滚动，与热榜形成"滚动后换内容"的节奏 -->
       <el-card shadow="never" class="side-card mt-4" :body-style="{ padding: '16px' }">
         <template #header>
           <div class="flex items-center justify-between">
-            <span class="text-title-sm font-medium">最新发布</span>
+            <span class="text-title-sm font-medium">全站热榜</span>
+            <button type="button" class="cursor-pointer text-caption text-link hover:underline" aria-label="更多全站热榜" @click="showHotPosts">更多</button>
           </div>
         </template>
-        <ol v-if="latestTop5.length">
+        <ol v-if="hotTop5.length">
           <li
-            v-for="p in latestTop5"
+            v-for="(p, i) in hotTop5"
             :key="p.id"
-            class="-mx-2 rounded-md border-b-[0.5px] border-divider px-2 py-1.5 transition-colors duration-fast ease-standard last:border-b-0 hover:bg-bg-hover"
+            class="-mx-2 flex items-start gap-2 rounded-md border-b-[0.5px] border-divider px-2 py-1.5 transition-colors duration-fast ease-standard last:border-b-0 hover:bg-bg-hover"
           >
-            <RouterLink :to="`/post/${p.id}`" class="block truncate text-note text-ink-regular hover:text-link">
+            <!-- 前三名徽章分级（CR-102）：第 1 实心主色白字、2/3 浅底主色，其余灰字——层级一眼可读 -->
+            <span
+              class="inline-flex h-5 w-5 flex-none items-center justify-center rounded-sm text-caption tabular-nums"
+              :class="i === 0 ? 'bg-primary-strong font-medium text-white' : i < 3 ? 'bg-primary-soft font-medium text-primary-strong' : 'text-ink-meta'"
+            >
+              {{ i + 1 }}
+            </span>
+            <RouterLink :to="`/post/${p.id}`" class="min-w-0 flex-1 line-clamp-2 break-words text-note leading-tight text-ink-regular hover:text-link">
               {{ p.title }}
             </RouterLink>
-            <p class="mt-0.5 text-caption text-ink-meta">{{ p.authorNickname }} · {{ formatTime(p.createdAt) }}</p>
           </li>
         </ol>
-        <p v-else class="text-note text-ink-meta">还没有帖子</p>
+        <p v-else class="text-note text-ink-meta">热榜计算中，稍后再来看</p>
       </el-card>
 
       <!-- 关于卡：整栏已 sticky 钉住（CR-098），此处回归普通排布 -->
@@ -440,7 +413,7 @@ const myEntries: { label: string; to: string; icon: IconName }[] = [
   flex: 1;
   min-height: 0;
 }
-/* 右栏三张异步卡片（CR-155）：数据回来前先把卡片体撑到成品高度，
+/* 右栏两张异步卡片（CR-183 保留 CR-155 的预留高度）：数据回来前先把卡片体撑到成品高度，
    否则「热榜计算中」等占位文本换成 5 条列表时会把下面的卡片顶下去（CLS 0.062） */
 .side-card :deep(.el-card__body) {
   min-height: 230px;

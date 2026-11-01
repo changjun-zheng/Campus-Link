@@ -18,6 +18,8 @@ import com.campuslink.module.forum.domain.gateway.FavoriteRepository;
 import com.campuslink.module.forum.domain.gateway.LikeRepository;
 import com.campuslink.module.forum.domain.gateway.PageResult;
 import com.campuslink.module.forum.domain.gateway.PostRepository;
+import com.campuslink.module.forum.domain.gateway.PostSearchGateway;
+import com.campuslink.module.forum.domain.gateway.PostSearchGateway.SearchHits;
 import com.campuslink.module.forum.domain.gateway.ReplyRepository;
 import com.campuslink.module.forum.domain.model.Board;
 import com.campuslink.module.forum.domain.model.BoardType;
@@ -69,6 +71,8 @@ class ForumQueryApplicationServiceTest {
     @Mock
     private PostRepository postRepository;
     @Mock
+    private PostSearchGateway postSearchGateway;
+    @Mock
     private ReplyRepository replyRepository;
     @Mock
     private LikeRepository likeRepository;
@@ -89,7 +93,7 @@ class ForumQueryApplicationServiceTest {
     @BeforeEach
     void setUp() {
         appProperties = new AppProperties();
-        service = new ForumQueryApplicationService(boardRepository, postRepository, replyRepository,
+        service = new ForumQueryApplicationService(boardRepository, postRepository, postSearchGateway, replyRepository,
                 likeRepository, favoriteRepository, accountApplicationService, userBlockApplicationService,
                 followApplicationService, reportRepository, new MarkdownRenderer(), appProperties);
         // 默认无待处理举报；具体用例需要非空集合时自行覆盖（lenient：匿名用例根本不查库）
@@ -530,6 +534,62 @@ class ForumQueryApplicationServiceTest {
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
 
         verify(postRepository, never()).search(any(), any(), any(), any(), any(), anyInt(), anyInt());
+    }
+
+    @Test
+    @DisplayName("搜索：engine=meilisearch 时走索引，按返回 id 顺序回表，total 用估算值（CR-181）")
+    void searchUsesMeiliWhenEnabled() {
+        appProperties.getSearch().setEngine(AppProperties.Search.Engine.MEILISEARCH);
+        when(postSearchGateway.search("Redis", null, null, java.util.Set.of(), java.util.Set.of(), 1, 20))
+                .thenReturn(new SearchHits(List.of(2L, 1L), 42));
+        when(postRepository.findByIds(List.of(2L, 1L)))
+                .thenReturn(List.of(post(1L, 100L), post(2L, 200L)));
+        when(boardRepository.findAllEnabled()).thenReturn(List.of(board(1L, "qna", "技术问答")));
+        when(accountApplicationService.authorBriefsOf(List.of(200L, 100L)))
+                .thenReturn(Map.of(200L, new AuthorBrief("乙", null), 100L, new AuthorBrief("甲", null)));
+
+        PageResult<PostSummary> page = service.searchPosts("Redis", null, null, 1, 20, null);
+
+        assertThat(page.total()).isEqualTo(42);
+        assertThat(page.items()).extracting(PostSummary::id).containsExactly(2L, 1L);
+        verify(postRepository, never()).search(any(), any(), any(), any(), any(), anyInt(), anyInt());
+    }
+
+    @Test
+    @DisplayName("搜索：Meili 异常回落 MySQL，不把 500 透给读者（CR-181）")
+    void searchFallsBackToMysqlWhenMeiliFails() {
+        appProperties.getSearch().setEngine(AppProperties.Search.Engine.MEILISEARCH);
+        when(postSearchGateway.search("Redis", null, null, java.util.Set.of(), java.util.Set.of(), 1, 20))
+                .thenThrow(new IllegalStateException("meili down"));
+        when(postRepository.search("Redis", null, null, java.util.Set.of(), java.util.Set.of(), 1, 20))
+                .thenReturn(new PageResult<>(List.of(post(1L, 100L)), 1, 1, 20));
+        when(boardRepository.findAllEnabled()).thenReturn(List.of(board(1L, "qna", "技术问答")));
+        when(accountApplicationService.authorBriefsOf(List.of(100L)))
+                .thenReturn(Map.of(100L, new AuthorBrief("甲", null)));
+
+        PageResult<PostSummary> page = service.searchPosts("Redis", null, null, 1, 20, null);
+
+        assertThat(page.items()).hasSize(1);
+        verify(postRepository).search("Redis", null, null, java.util.Set.of(), java.util.Set.of(), 1, 20);
+    }
+
+    @Test
+    @DisplayName("搜索：索引返回的已下架 / 拉黑作者帖子在回表后仍被过滤，匿名帖例外（CR-181）")
+    void searchFiltersInvisibleAndBlockedAfterMeili() {
+        appProperties.getSearch().setEngine(AppProperties.Search.Engine.MEILISEARCH);
+        when(userBlockApplicationService.blockedIdsOf(42L)).thenReturn(java.util.Set.of(200L));
+        when(postSearchGateway.search("Redis", null, null, java.util.Set.of(200L), java.util.Set.of(), 1, 20))
+                .thenReturn(new SearchHits(List.of(1L, 4L, 2L, 3L), 3));
+        when(postRepository.findByIds(List.of(1L, 4L, 2L, 3L)))
+                .thenReturn(List.of(post(1L, 100L), anonymousPost(4L, 200L), post(2L, 200L),
+                        post(3L, 300L, PostStatus.REMOVED)));
+        when(boardRepository.findAllEnabled()).thenReturn(List.of(board(1L, "qna", "技术问答")));
+        when(accountApplicationService.authorBriefsOf(List.of(100L, 200L)))
+                .thenReturn(Map.of(100L, new AuthorBrief("甲", null), 200L, new AuthorBrief("乙", null)));
+
+        PageResult<PostSummary> page = service.searchPosts("Redis", null, null, 1, 20, 42L);
+
+        assertThat(page.items()).extracting(PostSummary::id).containsExactly(1L, 4L);
     }
 
     /**

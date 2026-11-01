@@ -1,0 +1,217 @@
+[
+  {
+    "route": "favorites",
+    "header": 105,
+    "headerNavigation": true,
+    "marks": 0,
+    "navScrollWidth": 619,
+    "navWidth": 365,
+    "overflow": false,
+    "path": "/favorites",
+    "rows": 1,
+    "width": 375
+  },
+  {
+    "route": "favorites",
+    "header": 98,
+    "headerNavigation": true,
+    "marks": 0,
+    "navScrollWidth": 758,
+    "navWidth": 758,
+    "overflow": false,
+    "path": "/favorites",
+    "rows": 1,
+    "width": 768
+  },
+  {
+    "route": "favorites",
+    "header": 98,
+    "headerNavigation": true,
+    "marks": 0,
+    "navScrollWidth": 1014,
+    "navWidth": 1014,
+    "overflow": false,
+    "path": "/favorites",
+    "rows": 1,
+    "width": 1024
+  },
+  {
+    "route": "favorites",
+    "header": 60,
+    "headerNavigation": true,
+    "marks": 0,
+    "navScrollWidth": 516,
+    "navWidth": 516,
+    "overflow": false,
+    "path": "/favorites",
+    "rows": 1,
+    "width": 1280
+  },
+  {
+    "route": "favorites",
+    "header": 60,
+    "headerNavigation": true,
+    "marks": 0,
+    "navScrollWidth": 516,
+    "navWidth": 516,
+    "overflow": false,
+    "path": "/favorites",
+    "rows": 1,
+    "width": 1440
+  },
+  {
+    "route": "board",
+    "header": 105,
+    "headerNavigation": true,
+    "marks": 0,
+    "navScrollWidth": 619,
+    "navWidth": 365,
+    "overflow": false,
+    "path": "/board/qna",
+    "rows": 18,
+    "width": 375
+  },
+  {
+    "route": "board",
+    "header": 98,
+    "headerNavigation": true,
+    "marks": 0,
+    "navScrollWidth": 758,
+    "navWidth": 758,
+    "overflow": false,
+    "path": "/board/qna",
+    "rows": 18,
+    "width": 768
+  },
+  {
+    "route": "board",
+    "header": 98,
+    "headerNavigation": true,
+    "marks": 0,
+    "navScrollWidth": 1014,
+    "navWidth": 1014,
+    "overflow": false,
+    "path": "/board/qna",
+    "rows": 18,
+    "width": 1024
+  },
+  {
+    "route": "board",
+    "header": 60,
+    "headerNavigation": true,
+    "marks": 0,
+    "navScrollWidth": 516,
+    "navWidth": 516,
+    "overflow": false,
+    "path": "/board/qna",
+    "rows": 18,
+    "width": 1280
+  },
+  {
+    "route": "board",
+    "header": 60,
+    "headerNavigation": true,
+    "marks": 0,
+    "navScrollWidth": 516,
+    "navWidth": 516,
+    "overflow": false,
+    "path": "/board/qna",
+    "rows": 18,
+    "width": 1440
+  },
+  {
+    "header": 105,
+    "marks": 14,
+    "overflow": false,
+    "path": "/search",
+    "route": "search",
+    "rows": 16,
+    "width": 375
+  },
+  {
+    "header": 98,
+    "marks": 14,
+    "overflow": false,
+    "path": "/search",
+    "route": "search",
+    "rows": 16,
+    "width": 768
+  },
+  {
+    "header": 98,
+    "marks": 14,
+    "overflow": false,
+    "path": "/search",
+    "route": "search",
+    "rows": 16,
+    "width": 1024
+  },
+  {
+    "header": 60,
+    "marks": 14,
+    "overflow": false,
+    "path": "/search",
+    "route": "search",
+    "rows": 16,
+    "width": 1280
+  },
+  {
+    "header": 60,
+    "marks": 14,
+    "overflow": false,
+    "path": "/search",
+    "route": "search",
+    "rows": 16,
+    "width": 1440
+  },
+  {
+    "header": 105,
+    "headerBoards": 6,
+    "mainWidth": 325,
+    "overflow": false,
+    "route": "home",
+    "rows": 6,
+    "sidebarBoards": 0,
+    "width": 375
+  },
+  {
+    "header": 98,
+    "headerBoards": 6,
+    "mainWidth": 718,
+    "overflow": false,
+    "route": "home",
+    "rows": 6,
+    "sidebarBoards": 0,
+    "width": 768
+  },
+  {
+    "header": 60,
+    "headerBoards": 0,
+    "mainWidth": 770,
+    "overflow": false,
+    "route": "home",
+    "rows": 6,
+    "sidebarBoards": 6,
+    "width": 1024
+  },
+  {
+    "header": 60,
+    "headerBoards": 0,
+    "mainWidth": 742,
+    "overflow": false,
+    "route": "home",
+    "rows": 6,
+    "sidebarBoards": 6,
+    "width": 1280
+  },
+  {
+    "header": 60,
+    "headerBoards": 0,
+    "mainWidth": 752,
+    "overflow": false,
+    "route": "home",
+    "rows": 6,
+    "sidebarBoards": 6,
+    "width": 1440
+  }
+]

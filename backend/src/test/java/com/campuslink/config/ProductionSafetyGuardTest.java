@@ -31,6 +31,8 @@ class ProductionSafetyGuardTest {
     private static final String MODE = "campuslink.code-sender.mode";
     private static final String DB_USER = "spring.datasource.username";
     private static final String DB_PASSWORD_PROP = "spring.datasource." + "password";
+    private static final String SEARCH_ENGINE = "campuslink.search.engine";
+    private static final String MEILI_KEY = "campuslink.search.meili.api-key";
 
     // 测试夹具用的合成强密钥（非真实凭据）：字段级只存短片段、运行时拼装，避免被安全扫描器当作硬编码凭据；
     // 值只需满足 guard 的 ≥32 字节与两两不同约束，不与任何外部配置对表
@@ -55,6 +57,8 @@ class ProductionSafetyGuardTest {
         values.put(MODE, "mail");
         values.put(DB_USER, "campuslink_prod");
         values.put(DB_PASSWORD_PROP, "not-the-default-db-password");
+        values.put(SEARCH_ENGINE, "mysql");
+        values.put(MEILI_KEY, "");
         return values;
     }
 
@@ -234,6 +238,32 @@ class ProductionSafetyGuardTest {
         assertThat(prod.getProperty(FIXED_CODE)).as("固定验证码必须写死为空").isEmpty();
         assertThat(prod.getProperty(BYPASS)).as("学籍核验旁路必须写死 false").isEqualTo("false");
         assertThat(prod.getProperty(MODE)).as("发码模式必须写死 mail").isEqualTo("mail");
+    }
+
+    @Test
+    @DisplayName("搜索切到 meilisearch 但未配置 MEILI_API_KEY 即判违规（无鉴权索引可被任意读写）")
+    void meiliSearchWithoutApiKeyIsRejected() {
+        Map<String, Object> values = compliant();
+        values.put(SEARCH_ENGINE, "meilisearch");
+
+        assertThat(violationsOf(values))
+                .anySatisfy(v -> assertThat(v).contains("MEILI_API_KEY").contains("meilisearch"));
+    }
+
+    @Test
+    @DisplayName("meilisearch + 已注入 API key 不产生搜索项违规")
+    void meiliSearchWithApiKeyPasses() {
+        Map<String, Object> values = compliant();
+        values.put(SEARCH_ENGINE, "meilisearch");
+        values.put(MEILI_KEY, strongKey("meili"));
+
+        assertThat(violationsOf(values)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("engine=mysql（缺省）时不要求 MEILI_API_KEY")
+    void mysqlSearchDoesNotRequireMeiliKey() {
+        assertThat(violationsOf(compliant())).isEmpty();
     }
 
     /** 取 {@code ${VAR:default}} 里的 default 段；无默认值时返回 null */
