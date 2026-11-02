@@ -1,11 +1,11 @@
 /**
- * 图标注册表（CR-055 批次 3）
- * 素材为 Tabler Icons（MIT，许可全文见同目录 LICENSE），SVG 用 `stroke="currentColor"`，
- * 颜色由调用点的文字色令牌决定，本体不带任何色值。
+ * 图标注册表（CR-055 批次 3；CR-166 起为项目自有图标）
+ * 全量 23 枚为 24×24 / 2px 圆头线稿，`stroke="currentColor"`，颜色由调用点的文字色令牌决定，
+ * 本体不带任何色值。同目录 LICENSE 是 CR-055~CR-165 期间 Tabler 素材的许可存档，现行图标不再适用。
  *
  * `eager: true` 是**编译期内联**：本目录下每个 svg 都会进首屏包，故只放实际被引用的图标
- * （20 个 / 7250 B；全量 43 个为 16092 B）。要加新图标，先从 `D:\Workspace\TechResources\
- * 前端素材\01-图标库-tabler\` 取归一化副本放进本目录，再在下面 ICON_NAMES 里加一行。
+ * （23 个 / 8433 B）。要加新图标，按同一规格（24×24、2px 圆头、currentColor）新建 SVG
+ * 放进本目录，再在下面 ICON_NAMES 里加一行。
  */
 
 /**

@@ -1,0 +1,215 @@
+{
+  "date": "2026-11-02",
+  "sampleUrl": "http://localhost:5173/post/400135",
+  "layout": [
+    {
+      "page": "publish",
+      "editor": 325,
+      "overflow": false,
+      "panes": [
+        {
+          "display": "block",
+          "width": 292
+        },
+        {
+          "display": "none",
+          "width": 0
+        }
+      ],
+      "width": 375
+    },
+    {
+      "page": "publish",
+      "editor": 718,
+      "overflow": false,
+      "panes": [
+        {
+          "display": "block",
+          "width": 669
+        },
+        {
+          "display": "none",
+          "width": 0
+        }
+      ],
+      "width": 768
+    },
+    {
+      "page": "publish",
+      "editor": 974,
+      "overflow": false,
+      "panes": [
+        {
+          "display": "block",
+          "width": 450.5
+        },
+        {
+          "display": "block",
+          "width": 450.5
+        }
+      ],
+      "width": 1024
+    },
+    {
+      "page": "publish",
+      "editor": 1080,
+      "overflow": false,
+      "panes": [
+        {
+          "display": "block",
+          "width": 503.5
+        },
+        {
+          "display": "block",
+          "width": 503.5
+        }
+      ],
+      "width": 1280
+    },
+    {
+      "page": "publish",
+      "editor": 1080,
+      "overflow": false,
+      "panes": [
+        {
+          "display": "block",
+          "width": 503.5
+        },
+        {
+          "display": "block",
+          "width": 503.5
+        }
+      ],
+      "width": 1440
+    },
+    {
+      "page": "detail-toc",
+      "codeScrollable": true,
+      "overflow": false,
+      "tocVisible": false,
+      "width": 375
+    },
+    {
+      "page": "detail-toc",
+      "codeScrollable": true,
+      "overflow": false,
+      "tocVisible": false,
+      "width": 768
+    },
+    {
+      "page": "detail-toc",
+      "codeScrollable": true,
+      "overflow": false,
+      "tocVisible": true,
+      "width": 1024
+    },
+    {
+      "page": "detail-toc",
+      "codeScrollable": true,
+      "overflow": false,
+      "tocVisible": true,
+      "width": 1280
+    },
+    {
+      "page": "detail-toc",
+      "codeScrollable": true,
+      "overflow": false,
+      "tocVisible": true,
+      "width": 1440
+    },
+    {
+      "page": "detail-no-toc",
+      "centerOffset": 0,
+      "overflow": false,
+      "shellWidth": 325,
+      "tocCount": 0,
+      "width": 375
+    },
+    {
+      "page": "detail-no-toc",
+      "centerOffset": 0,
+      "overflow": false,
+      "shellWidth": 718,
+      "tocCount": 0,
+      "width": 768
+    },
+    {
+      "page": "detail-no-toc",
+      "centerOffset": 0,
+      "overflow": false,
+      "shellWidth": 808,
+      "tocCount": 0,
+      "width": 1024
+    },
+    {
+      "page": "detail-no-toc",
+      "centerOffset": 0,
+      "overflow": false,
+      "shellWidth": 808,
+      "tocCount": 0,
+      "width": 1280
+    },
+    {
+      "page": "detail-no-toc",
+      "centerOffset": 0,
+      "overflow": false,
+      "shellWidth": 808,
+      "tocCount": 0,
+      "width": 1440
+    },
+    {
+      "page": "edit",
+      "draftStatus": false,
+      "overflow": false,
+      "title": "CR185 阅读与发布回归样例 已编辑",
+      "width": 375
+    },
+    {
+      "page": "edit",
+      "draftStatus": false,
+      "overflow": false,
+      "title": "CR185 阅读与发布回归样例 已编辑",
+      "width": 768
+    },
+    {
+      "page": "edit",
+      "draftStatus": false,
+      "overflow": false,
+      "title": "CR185 阅读与发布回归样例 已编辑",
+      "width": 1024
+    },
+    {
+      "page": "edit",
+      "draftStatus": false,
+      "overflow": false,
+      "title": "CR185 阅读与发布回归样例 已编辑",
+      "width": 1280
+    },
+    {
+      "page": "edit",
+      "draftStatus": false,
+      "overflow": false,
+      "title": "CR185 阅读与发布回归样例 已编辑",
+      "width": 1440
+    }
+  ],
+  "flows": {
+    "publish": true,
+    "prefill": true,
+    "editRedirect": true,
+    "newTag": "vkjvkj = 1",
+    "oldTag": "qzxqzx = 0",
+    "draftRestore": true,
+    "publishedDraftNotRecreated": true,
+    "copyCode": true,
+    "tocJump": true,
+    "submitFailureKeepsContent": true,
+    "doubleClickRequests": 1,
+    "quotaFailureVisible": true,
+    "quotaRecovery": true,
+    "previewFailureVisible": true,
+    "latePreviewDiscarded": true,
+    "preview375": true,
+    "validationFocus": "帖子标题"
+  }
+}

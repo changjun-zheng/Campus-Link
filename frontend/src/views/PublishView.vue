@@ -11,7 +11,6 @@ import {
   type SimilarPostVo,
 } from '../api/forum'
 import { previewMarkdown } from '../api/markdown'
-import { useNarrowScreen } from '../composables/useNarrowScreen'
 import { useDraft } from '../composables/useDraft'
 import { vHighlight } from '../utils/highlight'
 import SvgIcon from '../components/SvgIcon.vue'
@@ -29,7 +28,10 @@ const editingBoardName = ref('')
 /** 编辑页的匿名状态（CR-139）：发布后不可切换，只读展示 */
 const editingAnonymous = ref(false)
 
-const narrow = useNarrowScreen()
+// 预览分栏以工作区宽度为准；768px 的半栏不足以编辑代码。
+const editorMedia = window.matchMedia('(min-width: 1024px)')
+const splitPreview = ref(editorMedia.matches)
+const onEditorResize = (event: MediaQueryListEvent) => { splitPreview.value = event.matches }
 const { saveDraft, loadDraft, clearDraft } = useDraft()
 const boards = ref<BoardVo[]>([])
 const submitting = ref(false)
@@ -100,7 +102,19 @@ function applyInterviewTemplate() {
 /* ─── 草稿箱状态 ─── */
 const draftRestored = ref(false)
 const draftTime = ref('')
+const draftStatus = ref<'idle' | 'pending' | 'saved' | 'failed'>('idle')
+const draftStatusText = computed(() => ({
+  idle: '草稿仅保存在此浏览器',
+  pending: '草稿待保存…',
+  saved: '草稿已保存到此浏览器',
+  failed: '草稿保存失败，请保留页面并复制正文',
+})[draftStatus.value])
 let draftTimer: ReturnType<typeof setTimeout> | null = null
+
+function persistDraft(boardCode: string, title: string, contentMd: string) {
+  const saved = saveDraft({ boardCode, title, contentMd, updatedAt: new Date().toISOString() })
+  draftStatus.value = saved ? 'saved' : 'failed'
+}
 
 /* ─── 相似帖子推荐（F-FORUM-009）：标题≥6字时防抖查询，最多触发 2 次 ─── */
 const SIMILAR_MIN_TITLE_LENGTH = 6  // 与后端 campuslink.ai.similar.min-title-length 同源
@@ -112,7 +126,7 @@ let debounceTimer: ReturnType<typeof setTimeout> | null = null
 let reqSeq = 0  // 请求序号，用于乱序保护
 
 /* ─── 实时预览（F-012 / CR-087 接线）：600ms 防抖调服务端渲染（ADR-005），移动端 Tab 切换 ─── */
-const previewMode = ref(false)          // 移动端编辑 / 预览切换；桌面端双栏并存
+const previewMode = ref(false)          // <1024px 编辑 / 预览切换；宽屏双栏并存
 const previewHtml = ref('')
 const previewLoading = ref(false)
 const previewError = ref('')
@@ -121,13 +135,15 @@ let previewSeq = 0
 
 watch(() => form.contentMd, (md) => {
   if (previewTimer) clearTimeout(previewTimer)
+  const seq = ++previewSeq
+  previewError.value = ''
   if (!md.trim()) {
     previewHtml.value = ''
+    previewLoading.value = false
     return
   }
+  previewLoading.value = true
   previewTimer = setTimeout(async () => {
-    const seq = ++previewSeq
-    previewLoading.value = true
     try {
       const res = await previewMarkdown(md)
       if (seq === previewSeq) {
@@ -174,28 +190,22 @@ watch(() => form.title, (newTitle) => {
 function handleBeforeUnload() {
   if (editing.value) return
   if (form.boardCode && (form.title.trim() || form.contentMd.trim())) {
-    saveDraft({
-      boardCode: form.boardCode,
-      title: form.title,
-      contentMd: form.contentMd,
-      updatedAt: new Date().toISOString(),
-    })
+    persistDraft(form.boardCode, form.title, form.contentMd)
   }
 }
 
 onUnmounted(() => {
   if (debounceTimer) clearTimeout(debounceTimer)
+  if (previewTimer) clearTimeout(previewTimer)
+  previewSeq++
+  reqSeq++
+  editorMedia.removeEventListener('change', onEditorResize)
   // flush 而非丢弃：2s 防抖窗口内导航走也落盘（编辑模式无草稿）
   if (draftTimer) {
     clearTimeout(draftTimer)
     draftTimer = null
     if (!editing.value && form.boardCode && (form.title.trim() || form.contentMd.trim())) {
-      saveDraft({
-        boardCode: form.boardCode,
-        title: form.title,
-        contentMd: form.contentMd,
-        updatedAt: new Date().toISOString(),
-      })
+      persistDraft(form.boardCode, form.title, form.contentMd)
     }
   }
   window.removeEventListener('beforeunload', handleBeforeUnload)
@@ -207,12 +217,17 @@ watch(
   () => {
     if (editing.value) return
     if (draftTimer) clearTimeout(draftTimer)
+    draftTimer = null
     if (!form.boardCode) return
-    if (!form.title.trim() && !form.contentMd.trim()) return
+    if (!form.title.trim() && !form.contentMd.trim()) {
+      draftStatus.value = 'idle'
+      return
+    }
+    draftStatus.value = 'pending'
     // 捕获调度时刻的快照，避免回调执行时 form 已被版块切换覆写
     const snapshot = { boardCode: form.boardCode, title: form.title, contentMd: form.contentMd }
     draftTimer = setTimeout(() => {
-      saveDraft({ ...snapshot, updatedAt: new Date().toISOString() })
+      persistDraft(snapshot.boardCode, snapshot.title, snapshot.contentMd)
       draftTimer = null
     }, 2000)
   },
@@ -239,7 +254,7 @@ function flushPendingDraft(boardCode: string) {
     draftTimer = null
     // 立刻按旧 boardCode 保存当前编辑器中的内容
     if (form.title.trim() || form.contentMd.trim()) {
-      saveDraft({ boardCode, title: form.title, contentMd: form.contentMd, updatedAt: new Date().toISOString() })
+      persistDraft(boardCode, form.title, form.contentMd)
     }
   }
 }
@@ -268,14 +283,18 @@ function formatDraftTime(iso: string): string {
 
 /** 清除草稿 + 清空表单 + 隐藏提示条 */
 function discardDraft() {
+  if (draftTimer) clearTimeout(draftTimer)
+  draftTimer = null
   clearDraft(form.boardCode)
   form.title = ''
   form.contentMd = ''
   draftRestored.value = false
   draftTime.value = ''
+  draftStatus.value = 'idle'
 }
 
 onMounted(async () => {
+  editorMedia.addEventListener('change', onEditorResize)
   window.addEventListener('beforeunload', handleBeforeUnload)
   try {
     boards.value = await listBoards()
@@ -321,6 +340,7 @@ function wrap(before: string, after = '', placeholder = '') {
 }
 
 async function submit() {
+  if (submitting.value) return
   if (!form.boardCode) {
     ElMessage.warning('请选择版块')
     boardEl.value?.focus()
@@ -359,6 +379,9 @@ async function submit() {
       tags: form.tags,
       anonymous: form.anonymous,
     })
+    // 发布完成后取消待存任务，防止卸载 flush 把已发布内容重新存成草稿。
+    if (draftTimer) clearTimeout(draftTimer)
+    draftTimer = null
     clearDraft(form.boardCode)
     draftRestored.value = false
     ElMessage.success('发布成功')
@@ -373,39 +396,39 @@ async function submit() {
 
 <template>
   <!-- 沉浸式编辑器（CR-073，参考 CSDN / 掘金）：单栏大 sheet，标题超大无边框、工具条通栏、正文大行距 -->
-  <div class="overflow-hidden rounded-lg border-[0.5px] border-line bg-card">
+  <div class="cl-publish overflow-hidden rounded-lg border-[0.5px] border-line bg-card">
     <!-- 顶栏：版块选择 + 字数 + 发布（掘金式极简头） -->
-    <div class="flex items-center gap-3 border-b-[0.5px] border-line px-5 py-3">
+    <div class="flex flex-wrap items-center gap-3 border-b-[0.5px] border-line px-5 py-3">
       <el-select
         v-if="!editing"
         ref="boardEl"
         v-model="form.boardCode"
         aria-label="选择版块"
         placeholder="选择版块"
-        class="w-[180px] max-md:w-full max-md:flex-1"
+        class="cl-board-select"
       >
         <el-option v-for="b in boards" :key="b.code" :label="b.name" :value="b.code" />
       </el-select>
       <span v-else class="shrink-0 text-note text-ink-regular">版块：{{ editingBoardName }}</span>
-      <span class="ml-auto hidden shrink-0 text-caption text-ink-meta md:inline" aria-live="polite">
-        标题 {{ form.title.length }}/100 · 正文 {{ form.contentMd.length }}/20000
+      <span v-if="!editing" role="status" class="cl-draft-status text-caption text-ink-meta" :class="{ 'cl-draft-status--failed': draftStatus === 'failed' }">
+        {{ draftStatusText }}
       </span>
-      <el-button type="primary" :loading="submitting" @click="submit">
-        {{ editing ? '保存修改' : '发 布' }}
+      <el-button class="cl-publish-submit" type="primary" :loading="submitting" @click="submit">
+        {{ editing ? '保存修改' : '发布' }}
       </el-button>
     </div>
 
     <!-- 草稿恢复提示 -->
-    <div v-if="draftRestored" class="mx-5 mb-3 flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
-      <span class="text-sm text-amber-700">
+    <div v-if="!editing && draftRestored" class="mx-5 my-3 flex items-center justify-between gap-3 rounded-sm border-[0.5px] border-line bg-primary-soft px-3 py-2">
+      <span class="text-note text-ink-regular">
         已恢复上次未发布的草稿（保存于 {{ formatDraftTime(draftTime) }}）
       </span>
-      <button type="button" class="text-xs text-amber-500 hover:text-amber-700" @click="discardDraft">
+      <button type="button" class="shrink-0 text-caption text-link hover:underline" @click="discardDraft">
         清除
       </button>
     </div>
 
-    <div class="mx-auto max-w-reading px-6 max-md:px-4">
+    <div class="px-6 max-md:px-4">
       <!-- 标题：超大无边框输入（CSDN / 掘金式） -->
       <input
         ref="titleEl"
@@ -504,34 +527,39 @@ async function submit() {
       </button>
       <span class="mx-0.5 h-4 w-px bg-line" aria-hidden="true" />
       <button
+        v-if="!splitPreview"
         type="button"
-        class="cl-md-tool text-caption font-medium"
-        :title="narrow ? (previewMode ? '返回编辑' : '预览') : '桌面端右侧实时预览'"
-        :aria-pressed="narrow ? previewMode : undefined"
-        @click="narrow ? (previewMode = !previewMode) : undefined"
+        class="cl-md-tool cl-preview-toggle text-caption font-medium"
+        :title="previewMode ? '返回编辑' : '预览正文'"
+        :aria-pressed="previewMode"
+        @click="previewMode = !previewMode"
       >
-        {{ narrow ? (previewMode ? '编辑' : '预览') : '预览' }}
+        {{ previewMode ? '返回编辑' : '预览正文' }}
       </button>
       <span class="ml-auto text-caption text-ink-meta">{{ form.title.length }}/100 · {{ form.contentMd.length }}/20000</span>
     </div>
 
-    <div class="mx-auto max-w-reading px-6 max-md:px-4">
-      <!-- 编辑 / 预览：桌面端双栏（md+ 并排），窄屏 Tab 切换（CR-091 / F-012 接线） -->
-      <div class="flex items-start gap-6 max-md:flex-col">
-        <textarea
-          ref="contentEl"
-          v-show="!previewMode || !narrow"
-          v-model="form.contentMd"
-          maxlength="20000"
-          aria-label="正文（Markdown）"
-          placeholder="正文支持 Markdown：标题 / 列表 / 代码块（```语言）/ 链接 / 引用。开始输入…"
-          class="cl-editor-body min-h-[50vh] w-full resize-none border-0 bg-transparent py-5 text-body leading-[1.9] text-ink outline-none placeholder:text-ink-meta max-md:min-h-[36vh] md:w-1/2 md:flex-none"
-        />
+    <div class="px-6 max-md:px-4">
+      <div class="cl-editor-workspace" :class="{ 'cl-editor-workspace--split': splitPreview }">
+        <section v-show="!previewMode || splitPreview" class="cl-editor-pane" aria-label="Markdown 编辑区">
+          <p class="pt-4 text-caption text-ink-meta">Markdown 编辑</p>
+          <textarea
+            ref="contentEl"
+            v-model="form.contentMd"
+            maxlength="20000"
+            aria-label="正文（Markdown）"
+            placeholder="正文支持 Markdown：标题 / 列表 / 代码块（```语言）/ 链接 / 引用。开始输入…"
+            class="cl-editor-body min-h-[50vh] w-full resize-y border-0 bg-transparent py-4 text-body leading-body text-ink outline-none placeholder:text-ink-meta max-md:min-h-[36vh]"
+          />
+        </section>
         <!-- 预览面板：服务端渲染并净化的 HTML，直接 v-html（XSS 防线在 MarkdownRenderer） -->
         <div
-          v-show="previewMode || !narrow"
-          class="min-h-[50vh] w-full py-5 max-md:min-h-[36vh] md:w-1/2 md:border-l-[0.5px] md:border-line md:pl-6"
+          v-show="previewMode || splitPreview"
+          class="cl-editor-pane cl-editor-preview min-h-[50vh] py-4 max-md:min-h-[36vh]"
+          aria-label="正文预览"
+          :aria-busy="previewLoading"
         >
+          <p class="mb-4 text-caption text-ink-meta" role="status">{{ previewLoading ? '预览更新中…' : '正文预览' }}</p>
           <p v-if="!form.contentMd.trim()" class="text-note leading-body text-ink-meta">
             开始输入正文，此处将实时展示渲染效果…
           </p>
@@ -541,14 +569,79 @@ async function submit() {
         </div>
       </div>
       <p class="pb-6 text-caption leading-body text-ink-meta">
-        <template v-if="editing">编辑只改标题 / 正文 / 标签，版块不可改 · 预览与保存后的正文同源</template>
-        <template v-else>发布内容须符合社区规范，违规内容将被下架处理 · 预览按 ADR-005 在服务端渲染并做安全净化，与发布后的正文同源</template>
+        <template v-if="editing">可修改标题、正文和标签，版块与发布身份保持不变。保存后返回帖子详情。</template>
+        <template v-else>预览与发布后的正文一致。草稿保存版块、标题和正文，仅限此浏览器。发布内容须符合社区规范。</template>
       </p>
     </div>
   </div>
 </template>
 
 <style scoped>
+.cl-publish {
+  max-width: var(--cl-editor);
+  margin-inline: auto;
+}
+
+.cl-publish-submit {
+  margin-left: auto;
+}
+
+.cl-board-select {
+  --el-select-width: 180px;
+  flex: 0 0 180px;
+}
+
+.cl-draft-status {
+  margin-left: auto;
+}
+
+.cl-draft-status + .cl-publish-submit {
+  margin-left: 0;
+}
+
+.cl-draft-status--failed {
+  color: var(--cl-color-danger-strong);
+}
+
+.cl-editor-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--cl-space-5);
+}
+
+.cl-editor-workspace--split {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.cl-editor-pane {
+  min-width: 0;
+}
+
+.cl-preview-toggle {
+  width: auto;
+  padding-inline: var(--cl-space-2);
+  white-space: nowrap;
+}
+
+.cl-editor-workspace--split .cl-editor-preview {
+  border-left: var(--cl-hairline) solid var(--cl-border-base);
+  padding-left: var(--cl-space-5);
+}
+
+@media (max-width: 767px) {
+  .cl-board-select {
+    --el-select-width: 100%;
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .cl-draft-status {
+    order: 1;
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+}
+
 /* 无边框编辑器（CR-171）：标题与正文用 outline-none 去掉了浏览器焦点环，键盘用户看不到落点。
    只补一个不占布局的内描边外轮廓，保持沉浸式外观。 */
 .cl-editor-title:focus-visible,

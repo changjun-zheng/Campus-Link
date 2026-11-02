@@ -4,6 +4,8 @@
  * 用法：
  *   PERF_TOKEN=<dev token> node backend/scripts/perf/run_api_perf.mjs \
  *     [--base http://localhost:8088] [--reads 200] [--writes 20] [--out perf.json]
+ *   PERF_TOKENS_FILE=<one-token-per-line> ... --dau-users 1000 --skip-search
+ *     —— CR-188：注册/DAU 容量验证；读请求按 token 轮询模拟不同用户，输出 distinctTokens。
  *
  * 口径：
  * - 本地真实栈（MySQL / Redis / 后端），并发池发起请求，记录**端到端**耗时（fetch 开始到响应体读完）；
@@ -20,6 +22,9 @@ const pick = (name, fallback) => {
 }
 const BASE = pick('base', 'http://localhost:8088')
 const TOKEN = process.env.PERF_TOKEN || ''
+const TOKENS_FILE = process.env.PERF_TOKENS_FILE || ''
+const DAU_USERS = Number(pick('dau-users', '0'))
+const SKIP_SEARCH = args.includes('--skip-search') || process.env.PERF_SKIP_SEARCH === '1'
 const READ_POST_ID = process.env.PERF_POST_ID || '41'
 const READ_KEYWORD = process.env.PERF_KEYWORD || 'Redis'
 const READ_REPLY_PAGE = process.env.PERF_REPLY_PAGE || ''
@@ -30,10 +35,31 @@ const READ_CONCURRENCY = 10
 const WRITE_CONCURRENCY = 5
 const WARMUP = 20
 
-if (!TOKEN) {
-  console.error('缺少 PERF_TOKEN（使用开发账号 token，勿用生产令牌）')
+// CR-188：单 token 兼容旧用法；PERF_TOKENS_FILE 支持按请求轮询不同用户（DAU 模拟）
+let TOKENS = TOKEN ? [TOKEN] : []
+if (TOKENS_FILE) {
+  TOKENS = fs.readFileSync(TOKENS_FILE, 'utf8')
+    .split(/\r?\n/)
+    .map((t) => t.trim())
+    .filter(Boolean)
+}
+if (!TOKENS.length) {
+  console.error('缺少 PERF_TOKEN 或 PERF_TOKENS_FILE（使用开发账号 token，勿用生产令牌）')
   process.exit(1)
 }
+if (DAU_USERS > 0 && TOKENS.length < DAU_USERS) {
+  console.error(`DAU 模拟需要至少 ${DAU_USERS} 个 token，文件里只有 ${TOKENS.length} 个`)
+  process.exit(1)
+}
+let tokenCursor = 0
+const usedTokens = new Set()
+const nextToken = () => {
+  const token = TOKENS[tokenCursor++ % TOKENS.length]
+  usedTokens.add(token)
+  return token
+}
+const authHeaders = () => ({ Authorization: `Bearer ${nextToken()}` })
+const writeHeaders = { Authorization: `Bearer ${TOKEN || TOKENS[0]}` }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
@@ -100,28 +126,37 @@ async function measure(name, makeTask, total, concurrency = READ_CONCURRENCY) {
 }
 
 async function main() {
-  const headers = { Authorization: `Bearer ${TOKEN}` }
   const readEndpoints = [
     ['list-latest', '/api/v1/posts?page=1&size=20&sort=latest'],
     ['list-hot', '/api/v1/posts?page=1&size=20&sort=hot'],
     ['post-detail', `/api/v1/posts/${READ_POST_ID}`],
     ['post-replies', `/api/v1/posts/${READ_POST_ID}/replies?page=1&size=20`],
-    ['search', `/api/v1/posts/search?keyword=${encodeURIComponent(READ_KEYWORD)}&page=1&size=20`],
+    ...(SKIP_SEARCH
+      ? []
+      : [['search', `/api/v1/posts/search?keyword=${encodeURIComponent(READ_KEYWORD)}&page=1&size=20`]]),
     // 不压测 GET /users/{id}：它按 IP 限流 10 次/小时（防名册批量枚举，F-ACC-002），
     // 并发压测只会得到 429；其单次延迟由手工 10 样本另行记录（见性能基线文档）。
     ['teams-list', '/api/v1/teams?page=1&size=12'],
+    ['notifications', '/api/v1/notifications?page=1&size=20'],
   ]
   if (READ_REPLY_PAGE) {
     readEndpoints.push(['post-replies-deep', `/api/v1/posts/${READ_POST_ID}/replies?page=${READ_REPLY_PAGE}&size=20`])
   }
+  if (DAU_USERS > 0 && READS * readEndpoints.length < DAU_USERS) {
+    console.warn(`⚠️ 读请求总量 ${READS * readEndpoints.length} < DAU ${DAU_USERS}，可能无法覆盖全部 token`)
+  }
   const results = { base: BASE, startedAt: new Date().toISOString(), reads: READS, writes: WRITES, endpoints: {}, writesCreated: 0, cleanup: { deleted: 0, failed: [] } }
 
   for (const [name, path] of readEndpoints) {
-    for (let i = 0; i < WARMUP; i++) await timed(BASE + path, { headers })
-    const r = await measure(name, () => timed(BASE + path, { headers }), READS)
+    for (let i = 0; i < WARMUP; i++) await timed(BASE + path, { headers: authHeaders() })
+    const r = await measure(name, () => timed(BASE + path, { headers: authHeaders() }), READS)
     results.endpoints[name] = { path, ...r }
     console.log(`${name}: p50=${r.p50} p90=${r.p90} p95=${r.p95} p99=${r.p99} errors=${r.errors.length}`)
   }
+  results.distinctTokens = usedTokens.size
+  results.tokensAvailable = TOKENS.length
+  results.dauUsers = DAU_USERS
+  results.searchSkipped = SKIP_SEARCH
 
   // 写：发帖
   const created = []
@@ -129,7 +164,7 @@ async function main() {
   const publish = await measure('publish-post', async (i) => {
     return timed(`${BASE}/api/v1/posts`, {
       method: 'POST',
-      headers: { ...headers, 'Content-Type': 'application/json' },
+      headers: { ...writeHeaders, 'Content-Type': 'application/json' },
       body: JSON.stringify({ boardCode: 'qna', title: titles[i], contentMd: 'PRD §4 写接口性能基线实测，无需保留。', tags: [] }),
     })
   }, WRITES, WRITE_CONCURRENCY)
@@ -137,7 +172,7 @@ async function main() {
   console.log(`publish-post: p50=${publish.p50} p90=${publish.p90} p95=${publish.p95} p99=${publish.p99} ok=${publish.count}`)
 
   // 写响应体里拿 id 需要重新读；改为按标题检索拿 id（受搜索索引影响），这里直接查“我的帖子”更可靠
-  const mine = await fetch(`${BASE}/api/v1/posts/mine?page=1&size=100`, { headers }).then((r) => r.json())
+  const mine = await fetch(`${BASE}/api/v1/posts/mine?page=1&size=100`, { headers: writeHeaders }).then((r) => r.json())
   const mineList = mine?.data?.list ?? mine?.data?.records ?? []
   for (const p of mineList) {
     if (typeof p.title === 'string' && p.title.startsWith('[perf] P95 基线')) created.push(p.id)
@@ -150,7 +185,7 @@ async function main() {
     const postId = replyTargets[i % Math.max(1, replyTargets.length)]
     return timed(`${BASE}/api/v1/posts/${postId}/replies`, {
       method: 'POST',
-      headers: { ...headers, 'Content-Type': 'application/json' },
+      headers: { ...writeHeaders, 'Content-Type': 'application/json' },
       body: JSON.stringify({ contentMd: 'PRD §4 写接口性能基线实测回复，无需保留。' }),
     })
   }, replyTargets.length ? WRITES : 0, WRITE_CONCURRENCY)
@@ -159,7 +194,7 @@ async function main() {
 
   // 清理：软删除本次创建的帖（回复随父帖不可见；墓碑行留在开发库，如实记录）
   for (const id of created) {
-    const r = await fetch(`${BASE}/api/v1/posts/${id}`, { method: 'DELETE', headers })
+    const r = await fetch(`${BASE}/api/v1/posts/${id}`, { method: 'DELETE', headers: writeHeaders })
     if (r.ok) results.cleanup.deleted++
     else results.cleanup.failed.push({ id, status: r.status })
   }

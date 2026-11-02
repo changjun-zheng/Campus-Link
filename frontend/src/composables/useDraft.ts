@@ -2,7 +2,7 @@
  * 草稿箱（localStorage 版）。
  *
  * 以 boardCode 为唯一标识，每版块最多保留一份草稿；全局上限 MAX_DRAFTS 条，
- * 超限时淘汰最旧。所有 localStorage 操作包在 try-catch 中（隐私模式 / 配额不足时静默降级）。
+ * 超限时淘汰最旧。localStorage 操作包在 try-catch 中；保存返回实际结果，供页面反馈失败。
  */
 
 export interface Draft {
@@ -45,7 +45,7 @@ export function useDraft() {
     }
   }
 
-  function saveDraft(draft: Draft): void {
+  function saveDraft(draft: Draft): boolean {
     let drafts = getAllDrafts()
 
     // 以 boardCode 为唯一标识：已有则替换，否则新增
@@ -67,8 +67,9 @@ export function useDraft() {
     // 写入；QuotaExceededError 时再淘汰一条重试
     if (!persist(drafts)) {
       drafts = drafts.slice(0, Math.max(1, drafts.length - 1))
-      persist(drafts)
+      return persist(drafts)
     }
+    return true
   }
 
   function loadDraft(boardCode: string): Draft | null {

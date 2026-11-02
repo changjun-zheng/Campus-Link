@@ -84,6 +84,7 @@ html {
      ⇒「竞赛交流」截半、「闲聊灌水」完全不可见（滚动条又被隐藏）。1280 下导航拿到 520px（1240 实测只到 480、还差 20，故取 1280）。 */
   --cl-container: 1280px;
   --cl-reading: 760px;
+  --cl-editor: 1080px;
   --cl-header-h: 60px;
 
   /* 中文字体走系统栈。CR-055 批次 4 曾前置自托管 webfont（Noto Sans SC Variable），

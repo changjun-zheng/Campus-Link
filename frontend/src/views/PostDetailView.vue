@@ -23,7 +23,7 @@ import { useAuthStore } from '../stores/auth'
 import { useNarrowScreen } from '../composables/useNarrowScreen'
 import { formatTime } from '../utils/time'
 import { vHighlight } from '../utils/highlight'
-import { ensureHeadingIds } from '../utils/heading'
+import { ensureHeadingIds, parseHeadingsFromHtml } from '../utils/heading'
 import { injectCopyButtons } from '../utils/copyCode'
 import UserAvatar from '../components/UserAvatar.vue'
 
@@ -34,6 +34,7 @@ const auth = useAuthStore()
 const narrow = useNarrowScreen()
 const postId = computed(() => String(route.params.id || ''))
 const post = ref<PostDetailVo | null>(null)
+const hasToc = computed(() => parseHeadingsFromHtml(post.value?.contentHtml || '').length > 0)
 const missing = ref(false)
 const postError = ref('')
 const replies = ref<ReplyVo[]>([])
@@ -388,7 +389,7 @@ watch(
     </el-alert>
 
     <template v-else-if="post">
-      <div class="cl-post-shell">
+      <div class="cl-post-shell" :class="{ 'cl-post-shell--with-toc': hasToc }">
         <div class="cl-post-main">
       <el-card shadow="never" class="mb-5">
         <!-- 标题与正文同处 760px 阅读列（ui-guideline §6），否则标题贴卡片边、正文内缩，左缘不齐 -->
@@ -679,8 +680,8 @@ watch(
       </el-card>
         </div>
 
-        <!-- 右侧目录侧栏：≥ lg 才显示，sticky 跟随滚动；无标题时 TOC 组件自行不渲染 -->
-        <aside class="cl-post-toc" aria-label="帖子目录侧栏">
+        <!-- 目录与占位同生共灭，避免无标题的短帖偏在页面左侧 -->
+        <aside v-if="hasToc" class="cl-post-toc" aria-label="帖子目录侧栏">
           <div class="cl-post-toc__inner">
             <TableOfContents :html="post.contentHtml" />
           </div>
@@ -726,6 +727,11 @@ watch(
   display: flex;
   align-items: flex-start;
   gap: 24px;
+}
+
+.cl-post-shell:not(.cl-post-shell--with-toc) {
+  max-width: calc(var(--cl-reading) + 2 * var(--cl-space-5));
+  margin-inline: auto;
 }
 
 .cl-post-main {

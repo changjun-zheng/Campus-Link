@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' ws: wss:; object-src 'none'; base-uri 'self'" />
+    <title>Campus-Link 本地回归故障夹具</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <fieldset style="position:fixed;bottom:0;left:0;z-index:3000;background:var(--cl-bg-card);padding:8px;border:1px solid var(--cl-border-base)">
+      <legend>仅本地回归：故障模拟</legend>
+      <label><input id="fail-draft" type="checkbox" />草稿存储失败</label>
+      <label><input id="fail-submit" type="checkbox" />提交失败</label>
+      <label><input id="fail-preview" type="checkbox" />预览失败</label>
+      <label><input id="delay-preview" type="checkbox" />延迟预览</label>
+      <output id="submit-count" aria-label="模拟提交次数">0</output>
+      <output id="preview-count" aria-label="预览请求次数">0</output>
+    </fieldset>
+    <script type="module" src="./ui-regression-harness.ts"></script>
+  </body>
+</html>

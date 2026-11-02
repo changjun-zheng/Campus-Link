@@ -2,14 +2,14 @@
 """D004：存量账号回填默认头像（CR-162）。
 
 背景：`users.avatar_url` 自 V1 起存在，但注册链路此前从不写入。CR-162 起注册按
-`userId % 24` 分配默认头像；本脚本对存量账号做同样映射的**一次性回填**。
+`userId % 8` 分配默认头像；本脚本对存量账号做同样映射的**一次性回填**。
 
 约定（同 _template.py / D003，CR-014）：
   1. 默认 dry-run，只有显式 --apply 才写库；
   2. 凭据只从环境变量读取；
   3. 幂等：只 UPDATE `users.avatar_url IS NULL` 的行，重复执行结果不变；
   4. DDL 不放这里（Flyway 职责），本脚本只做纯数据 UPDATE；
-  5. 映射与后端 `DefaultAvatar.forUser` 同源（userId % 24，id 为 24 的倍数 → 第 1 张）。
+  5. 映射与后端 `DefaultAvatar.forUser` 同源（userId % 8，id 为 8 的倍数 → 第 1 张）。
 
 用法：
     python data/D004__backfill_default_avatars.py            # 干跑，打印将要回填的行
@@ -34,30 +34,14 @@ DB_CONFIG = {
 
 # 顺序须与 backend/src/main/java/com/campuslink/module/account/domain/model/DefaultAvatar.java 逐项一致
 AVATARS = [
-    "/avatars/avatar-01-cat.png",
-    "/avatars/avatar-02-frog.png",
-    "/avatars/avatar-03-penguin.png",
-    "/avatars/avatar-04-bear-laptop.png",
-    "/avatars/avatar-05-shiba.png",
-    "/avatars/avatar-06-rabbit.png",
-    "/avatars/avatar-07-fox.png",
-    "/avatars/avatar-08-koala.png",
-    "/avatars/avatar-09-pig.png",
-    "/avatars/avatar-10-chick.png",
-    "/avatars/avatar-11-owl.png",
-    "/avatars/avatar-12-hedgehog.png",
-    "/avatars/avatar-13-squirrel.png",
-    "/avatars/avatar-14-dino.png",
-    "/avatars/avatar-15-octopus.png",
-    "/avatars/avatar-16-whale.png",
-    "/avatars/avatar-17-seal.png",
-    "/avatars/avatar-18-bee.png",
-    "/avatars/avatar-19-turtle.png",
-    "/avatars/avatar-20-snail.png",
-    "/avatars/avatar-21-sheep.png",
-    "/avatars/avatar-22-deer.png",
-    "/avatars/avatar-23-monkey.png",
-    "/avatars/avatar-24-crab.png",
+    "/avatars/avatar-01-link.svg",
+    "/avatars/avatar-02-network.svg",
+    "/avatars/avatar-03-diamond.svg",
+    "/avatars/avatar-04-brackets.svg",
+    "/avatars/avatar-05-orbit.svg",
+    "/avatars/avatar-06-core.svg",
+    "/avatars/avatar-07-wave.svg",
+    "/avatars/avatar-08-grid.svg",
 ]
 
 
