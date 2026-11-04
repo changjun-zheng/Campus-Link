@@ -264,6 +264,102 @@
         ]
       }
     },
+    "/api/v1/users/me/avatar/preset": {
+      "put": {
+        "tags": [
+          "user"
+        ],
+        "summary": "从预设中选择头像（需登录）：白名单外 400 / 2016；限流 10 次/小时",
+        "operationId": "selectAvatarPreset",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SelectAvatarCommand"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseUserVo"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数错误（1001）；头像格式不支持或尺寸不合法（2016）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未登录（4001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "用户不存在（2007）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "账号已被封禁（2006）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "头像修改过于频繁，请稍后再试（2017）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "系统繁忙，请稍后再试（9999）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/v1/teams/{id}/status": {
       "put": {
         "tags": [
@@ -1507,6 +1603,120 @@
           },
           "404": {
             "description": "用户不存在（2007）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "系统繁忙，请稍后再试（9999）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/users/me/avatar": {
+      "post": {
+        "tags": [
+          "user"
+        ],
+        "summary": "上传自定义头像（需登录）：JPEG / PNG，≤2MB、≤4096px；服务端裁方重编码 512px",
+        "operationId": "uploadAvatar",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                },
+                "required": [
+                  "file"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseUserVo"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数错误（1001）；头像格式不支持或尺寸不合法（2016）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未登录（4001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "用户不存在（2007）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "账号已被封禁（2006）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "文件大小超出限制（1005）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "头像修改过于频繁，请稍后再试（2017）",
             "content": {
               "application/json": {
                 "schema": {
@@ -3434,6 +3644,16 @@
               }
             }
           },
+          "503": {
+            "description": "验证码发送失败，请稍后重试（2018）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
           "500": {
             "description": "系统繁忙，请稍后再试（9999）",
             "content": {
@@ -4194,6 +4414,37 @@
             "bearerAuth": []
           }
         ]
+      }
+    },
+    "/api/v1/users/avatar-presets": {
+      "get": {
+        "tags": [
+          "user"
+        ],
+        "summary": "默认头像预设（公开）：返回 8 款默认素材路径",
+        "operationId": "avatarPresets",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseListString"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "系统繁忙，请稍后再试（9999）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/teams/{id}": {
@@ -5893,6 +6144,18 @@
           }
         }
       },
+      "SelectAvatarCommand": {
+        "type": "object",
+        "properties": {
+          "avatarUrl": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "avatarUrl"
+        ]
+      },
       "UpdateTeamStatusCommand": {
         "type": "object",
         "properties": {
@@ -7201,6 +7464,27 @@
           "size": {
             "type": "integer",
             "format": "int32"
+          }
+        }
+      },
+      "ApiResponseListString": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "traceId": {
+            "type": "string"
           }
         }
       },

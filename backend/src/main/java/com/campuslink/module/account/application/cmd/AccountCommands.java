@@ -57,6 +57,13 @@ public final class AccountCommands {
                         @Size(max = FieldRules.BIO_MAX_CHARS, message = "签名长度不超过 200") @Pattern(regexp = FieldRules.TEXT_ALLOWED_PATTERN, message = "签名含不允许的字符") @Pattern(regexp = FieldRules.CONTACT_BANNED_PATTERN, message = "签名不得包含网址或站外联系方式") String bio) {
         }
 
+        /**
+         * 预置头像选择（CR-191 / F-ACC-007h）：只接受 {@code DefaultAvatar.paths()} 里的路径，
+         * 白名单校验在应用服务（本命令只拦空值，不嵌 URL 正则——白名单的唯一事实源要在后端一处）。
+         */
+        public record SelectAvatarCommand(@NotBlank(message = "头像地址不能为空") String avatarUrl) {
+        }
+
         /** 登录（CR-093 / F-011）：account 为**邮箱或手机号**二合一（原 email 字段更名，契约破坏性变更已登记） */
         public record LoginCommand(
                         @NotBlank(message = "账号不能为空") @Pattern(regexp = "(?:^1[3-9]\\d{9}$)|(?:^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$)", message = "账号须为邮箱或手机号") String account,

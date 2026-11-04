@@ -39,6 +39,8 @@ logs/
 # ---------- 本项目特有 ----------
 # 后端重构备份压缩包（不入库）
 backend/.refactor-backup-*.zip
+# 本地上传文件目录（头像等运行期数据，CR-191；生产指向持久卷）
+backend/var/
 # 前端 unplugin 自动生成的类型声明文件（非手写，重新生成即可）
 frontend/auto-imports.d.ts
 frontend/components.d.ts

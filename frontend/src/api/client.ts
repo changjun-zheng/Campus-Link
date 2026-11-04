@@ -39,11 +39,13 @@ function authHeaders(): Record<string, string> {
 
 export async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   let res: Response
+  // FormData 由浏览器自动带 boundary；显式写 application/json 会让后端解析失败（CR-191 上传头像）
+  const isFormData = options.body instanceof FormData
   try {
     res = await fetch(BASE + path, {
       ...options,
       headers: {
-        'Content-Type': 'application/json',
+        ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
         ...authHeaders(),
         ...(options.headers as Record<string, string> | undefined),
       },
@@ -89,3 +91,7 @@ export const put = <T>(path: string, data?: unknown): Promise<T> =>
   request<T>(path, { method: 'PUT', body: data === undefined ? undefined : JSON.stringify(data) })
 
 export const del = <T>(path: string): Promise<T> => request<T>(path, { method: 'DELETE' })
+
+/** 表单上传（CR-191）：Content-Type 交给浏览器生成（含 boundary） */
+export const upload = <T>(path: string, formData: FormData): Promise<T> =>
+  request<T>(path, { method: 'POST', body: formData })

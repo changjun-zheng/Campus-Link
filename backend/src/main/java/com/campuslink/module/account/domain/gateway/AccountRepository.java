@@ -39,9 +39,15 @@ public interface AccountRepository {
 
     /**
      * 默认头像定向写入（CR-162）：只在 {@code avatar_url IS NULL} 时生效，绝不覆盖已有值
-     * （未来用户自选 / 上传头像的预留位）。与 {@link #updateProfile} 同理不整行回写。
+     * （用户自选 / 上传头像见 {@link #updateAvatar}）。与 {@link #updateProfile} 同理不整行回写。
      */
     void updateAvatarIfAbsent(Long accountId, String avatarUrl);
+
+    /**
+     * 自定义头像定向写入（CR-191）：只 SET {@code avatar_url} 一列，不整行回写。
+     * 幂等判断在聚合（{@link Account#updateAvatar}）与应用层完成，本方法只负责落库。
+     */
+    void updateAvatar(Long accountId, String avatarUrl);
 
     boolean existsByEmailHash(String emailHash);
 

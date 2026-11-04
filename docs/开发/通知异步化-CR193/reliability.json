@@ -1,0 +1,66 @@
+{
+  "outage": {
+    "outbox": [
+      {
+        "event_id": "02bde66c-1530-4cba-92b9-7338afa1b85e",
+        "status": "PENDING",
+        "attempts": 4,
+        "last_error": "AmqpConnectException"
+      }
+    ],
+    "notifications": 0,
+    "replies": 1
+  },
+  "recovered": {
+    "eventId": "02bde66c-1530-4cba-92b9-7338afa1b85e",
+    "status": "SENT",
+    "receiptCount": 1,
+    "notificationCount": 1
+  },
+  "duplicateAndExpiredLease": {
+    "afterLeaseRecovery": {
+      "status": "SENT",
+      "attempts": 6
+    },
+    "notificationCount": 1
+  },
+  "unroutableBeforeRecovery": [
+    {
+      "event_id": "25203ef2-0096-4086-aa17-fa62af5c0243",
+      "status": "PENDING",
+      "attempts": 4,
+      "last_error": "IllegalStateException"
+    }
+  ],
+  "unroutableRecovered": true,
+  "duplicateValidEvent": {
+    "eventId": "02bde66c-1530-4cba-92b9-7338afa1b85e",
+    "before": 3,
+    "after": 3,
+    "publishes": 2
+  },
+  "malformedFixture": {
+    "countRetained": 2,
+    "cause": "Probe used database lowercase type instead of wire uppercase enum; original messages retained for inspection."
+  },
+  "deadTransferFailure": {
+    "eventId": "dde3c764-9a3d-403a-9af6-58c1bcbb009c",
+    "deadCountBefore": 2,
+    "deadCountAfterFailedTransfer": 2,
+    "lockHeldSeconds": 8
+  },
+  "deadLetter": {
+    "eventId": "dde3c764-9a3d-403a-9af6-58c1bcbb009c",
+    "countBeforeReplay": 3
+  },
+  "replay": {
+    "originalEventId": "dde3c764-9a3d-403a-9af6-58c1bcbb009c",
+    "receiptCount": 1,
+    "deadCountAfterReplay": 2,
+    "unmatchedMessagesRetained": 2
+  },
+  "cancelInteractions": {
+    "outboxBefore": 3,
+    "outboxAfter": 3
+  }
+}

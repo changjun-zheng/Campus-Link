@@ -1,0 +1,27 @@
+{
+  "date": "2026-11-04",
+  "backendVerify": {
+    "tests": 817,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "jacocoPassed": true,
+  "spotbugsPassed": true,
+  "checkstylePassed": true,
+  "frontend": {
+    "build": true,
+    "typecheck": true,
+    "lint": true
+  },
+  "contract": {
+    "onlyChangeFromTaskBaseline": "/paths//api/v1/auth/captcha/post/responses/503",
+    "liveEqualsArchived": true,
+    "host": "localhost:8088"
+  },
+  "docsConsistencyPassed": true,
+  "whitespacePassed": true,
+  "dashboardBrowserPassed": true,
+  "realMailboxDelivery": "NOT_TESTED: no external SMTP credentials or authorized real recipient; user selected local acceptance",
+  "logDirectory": "D:/Workspace/cr193-runtime"
+}

@@ -14,6 +14,8 @@ public enum ResultCode {
     METHOD_NOT_ALLOWED(1002, 405, "请求方法不支持"),
     UNSUPPORTED_MEDIA_TYPE(1003, 415, "不支持的请求内容类型"),
     ENDPOINT_NOT_FOUND(1004, 404, "接口不存在"),
+    /** 上传体积超限（CR-191）：由 multipart 上限触发，HTTP 413 与 400 区分开 */
+    FILE_TOO_LARGE(1005, 413, "文件大小超出限制"),
     INTERNAL_ERROR(9999, 500, "系统繁忙，请稍后再试"),
 
     CAPTCHA_INVALID(2001, 400, "验证码错误或已过期"),
@@ -33,6 +35,12 @@ public enum ResultCode {
     ACCOUNT_DEACTIVATED(2013, 403, "账号注销中，请先撤销注销"),
     PHONE_EXISTS(2014, 409, "该手机号已注册"),
     CANNOT_MESSAGE_SELF(2015, 400, "不能给自己发私信"),
+    /** 头像格式 / 尺寸不合法（CR-191）：不复用 1001——前端需要据此提示"换一张图"而不是"参数错误" */
+    AVATAR_INVALID(2016, 400, "头像格式不支持或尺寸不合法"),
+    /** 头像更新限流（CR-191）：与资料编辑 2008 分开计数，文案也不同 */
+    AVATAR_UPDATE_TOO_FREQUENT(2017, 429, "头像修改过于频繁，请稍后再试"),
+
+    CAPTCHA_SEND_FAILED(2018, 503, "验证码发送失败，请稍后重试"),
 
     STUDENT_VERIFY_FAILED(2101, 400, "学籍信息校验未通过"),
     VERIFY_TICKET_INVALID(2102, 400, "核验票据无效或已过期，请重新核验"),

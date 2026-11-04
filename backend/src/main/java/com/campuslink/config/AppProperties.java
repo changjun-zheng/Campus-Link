@@ -17,6 +17,7 @@ public class AppProperties {
     private Hot hot = new Hot();
     private Ai ai = new Ai();
     private Search search = new Search();
+    private Avatar avatar = new Avatar();
 
     @Data
     public static class Jwt {
@@ -57,6 +58,7 @@ public class AppProperties {
     @Data
     public static class CodeSender {
         private String mode = "log";
+        private String from;
     }
 
     @Data
@@ -110,6 +112,26 @@ public class AppProperties {
             private String apiKey = "";
             private String index = "posts_v1";
         }
+    }
+
+    /**
+     * 自定义头像（CR-191 / F-ACC-007h）：本地磁盘存储与重编码参数。
+     *
+     * <p>存储目录是部署事实（生产指向持久卷，环境变量 {@code AVATAR_DIR} 覆盖）；
+     * 上传限制取保守值，前端 canvas 预缩放只是减流量，服务端校验才是防线。
+     */
+    @Data
+    public static class Avatar {
+        /** 头像落盘根目录（相对后端进程工作目录；生产用 AVATAR_DIR 指向持久卷的绝对路径） */
+        private String dir = "var/uploads/avatars";
+        /** 原始上传字节上限（2MB）：与 spring.servlet.multipart.max-file-size 共同构成两道门 */
+        private long maxBytes = 2L * 1024 * 1024;
+        /** 原始图片边长上限（解码前先看头部，防解压炸弹） */
+        private int maxDimension = 4096;
+        /** 统一输出正方形边长（512px，2× 屏下 256 显示尺寸仍清晰） */
+        private int size = 512;
+        /** JPEG 质量（0~1） */
+        private float quality = 0.9f;
     }
 
     /**

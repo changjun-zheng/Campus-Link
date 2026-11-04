@@ -1,0 +1,84 @@
+{
+  "date": "2026-11-04",
+  "backendVerify": {
+    "tests": 803,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "jacocoPassed": true,
+  "spotbugsPassed": true,
+  "checkstylePassed": true,
+  "frontend": {
+    "build": true,
+    "typecheck": true,
+    "lint": true
+  },
+  "syncWithoutRabbit": {
+    "healthStatus": 200,
+    "noConnectionAttemptLog": true
+  },
+  "flyway": [
+    {
+      "version": "1",
+      "success": 1
+    },
+    {
+      "version": "2",
+      "success": 1
+    },
+    {
+      "version": "3",
+      "success": 1
+    },
+    {
+      "version": "4",
+      "success": 1
+    },
+    {
+      "version": "5",
+      "success": 1
+    },
+    {
+      "version": "6",
+      "success": 1
+    },
+    {
+      "version": "7",
+      "success": 1
+    },
+    {
+      "version": "8",
+      "success": 1
+    },
+    {
+      "version": "9",
+      "success": 1
+    },
+    {
+      "version": "10",
+      "success": 1
+    },
+    {
+      "version": "11",
+      "success": 1
+    }
+  ],
+  "outboxFinal": [
+    {
+      "status": "SENT",
+      "n": 6
+    }
+  ],
+  "receiptCount": 8,
+  "notificationCount": 8,
+  "monitorWarningSamples": [
+    "Notification backlog: pending=0, oldestSeconds=0, dead=2",
+    "Notification backlog: pending=0, oldestSeconds=0, dead=2",
+    "Notification backlog: pending=0, oldestSeconds=0, dead=2"
+  ],
+  "logDirectory": "D:/Workspace/cr193-runtime",
+  "docsConsistencyPassed": true,
+  "changedFilesWhitespacePassed": true,
+  "dashboardScriptSyntaxPassed": true
+}

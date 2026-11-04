@@ -8,8 +8,10 @@ import com.campuslink.common.web.CurrentUser;
 import com.campuslink.common.web.IpUtil;
 import com.campuslink.common.web.PublicEndpoint;
 import com.campuslink.module.account.application.AccountApplicationService;
+import com.campuslink.module.account.application.AvatarApplicationService;
 import com.campuslink.module.account.application.ProfileApplicationService;
 import com.campuslink.module.account.application.UserProfileApplicationService;
+import com.campuslink.module.account.application.cmd.AccountCommands.SelectAvatarCommand;
 import com.campuslink.module.account.application.cmd.AccountCommands.UpdateProfileCommand;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -17,6 +19,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,7 +27,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.util.List;
 
 /**
  * 用户接口（web 层）：只经 application 服务取数。
@@ -43,6 +51,7 @@ public class UserController {
     private final AccountApplicationService accountApplicationService;
     private final ProfileApplicationService profileApplicationService;
     private final UserProfileApplicationService userProfileApplicationService;
+    private final AvatarApplicationService avatarApplicationService;
 
     @Operation(summary = "我的主页（F-ACC-002 最小版；他人主页见 GET /users/{id}）")
     @SecurityRequirement(name = ApiDocs.BEARER_AUTH)
@@ -51,6 +60,49 @@ public class UserController {
     public ApiResponse<UserVo> me(Authentication authentication) {
         long userId = CurrentUser.requireId(authentication);
         return ApiResponse.ok(UserVo.from(accountApplicationService.accountOf(userId)));
+    }
+
+    /**
+     * 默认头像预设（CR-191 / F-ACC-007h）：公开端点——未登录也要能看到 8 款素材（注册页不换头像，但
+     * 设置页在加载弹窗时无需额外鉴权判断）。素材目录由后端 {@code DefaultAvatar.paths()} 单一供给，
+     * 前端不硬编码，避免两处漂移。
+     */
+    @Operation(summary = "默认头像预设（公开）：返回 8 款默认素材路径")
+    @PublicEndpoint
+    @GetMapping("/avatar-presets")
+    public ApiResponse<List<String>> avatarPresets() {
+        return ApiResponse.ok(avatarApplicationService.presets());
+    }
+
+    /**
+     * 预置头像选择（CR-191）：只接受 {@code DefaultAvatar.paths()} 内的路径，白名单外 2016 / 400。
+     * 身份只从令牌取，请求体不带 userId。
+     */
+    @Operation(summary = "从预设中选择头像（需登录）：白名单外 400 / 2016；限流 10 次/小时")
+    @SecurityRequirement(name = ApiDocs.BEARER_AUTH)
+    @ErrorCodes({ResultCode.NOT_LOGGED_IN, ResultCode.USER_NOT_FOUND, ResultCode.USER_BANNED,
+            ResultCode.AVATAR_INVALID, ResultCode.AVATAR_UPDATE_TOO_FREQUENT})
+    @PutMapping("/me/avatar/preset")
+    public ApiResponse<UserVo> selectAvatarPreset(@Valid @RequestBody SelectAvatarCommand command,
+                                                  Authentication authentication) {
+        long userId = CurrentUser.requireId(authentication);
+        return ApiResponse.ok(UserVo.from(avatarApplicationService.selectPreset(userId, command.avatarUrl())));
+    }
+
+    /**
+     * 上传自定义头像（CR-191）：只收 JPEG / PNG，≤2MB、≤4096×4096；服务端居中裁方后统一重编码为
+     * 512×512 JPEG（前端 canvas 预缩放只是减流量，服务端校验才是防线）。体积超限由 multipart 先拦
+     * （413 / 1005），格式与像素不合法 400 / 2016。
+     */
+    @Operation(summary = "上传自定义头像（需登录）：JPEG / PNG，≤2MB、≤4096px；服务端裁方重编码 512px")
+    @SecurityRequirement(name = ApiDocs.BEARER_AUTH)
+    @ErrorCodes({ResultCode.NOT_LOGGED_IN, ResultCode.USER_NOT_FOUND, ResultCode.USER_BANNED,
+            ResultCode.AVATAR_INVALID, ResultCode.FILE_TOO_LARGE, ResultCode.AVATAR_UPDATE_TOO_FREQUENT})
+    @PostMapping(path = "/me/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<UserVo> uploadAvatar(@RequestPart("file") MultipartFile file, Authentication authentication)
+            throws IOException {
+        long userId = CurrentUser.requireId(authentication);
+        return ApiResponse.ok(UserVo.from(avatarApplicationService.upload(userId, file.getBytes())));
     }
 
     /**

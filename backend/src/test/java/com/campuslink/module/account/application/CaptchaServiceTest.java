@@ -155,4 +155,51 @@ class CaptchaServiceTest {
 
         verify(captchaStore).deleteCode(phoneKey);
     }
+    @Test
+    void smtpFailureKeepsPreviousCodeAndConsumesAttempt() {
+        props.getCodeSender().setMode("mail");
+        when(captchaStore.tryAcquireSendSlot(EMAIL_KEY, RESEND_INTERVAL)).thenReturn(true);
+        when(captchaStore.incrementDailyCount(EMAIL_KEY)).thenReturn(1L);
+        when(captchaStore.loadCode(EMAIL_KEY)).thenReturn(Optional.of("previous"));
+        org.mockito.Mockito.doThrow(new com.campuslink.module.account.domain.gateway.CodeDeliveryException())
+                .when(codeSender).send(anyString(), anyString());
+        assertThatThrownBy(() -> service.send(EMAIL)).isInstanceOfSatisfying(ApiException.class,
+                e -> assertThat(e.getCode()).isEqualTo(ResultCode.CAPTCHA_SEND_FAILED));
+        verify(captchaStore).incrementDailyCount(EMAIL_KEY);
+        verify(captchaStore, never()).saveCode(anyString(), anyString(), any());
+        verify(captchaStore, never()).deleteCode(anyString());
+        assertThat(service.verify(EMAIL, "previous")).isTrue();
+    }
+
+    @Test
+    void storeFailureAfterDeliveryIsSanitized() {
+        when(captchaStore.tryAcquireSendSlot(EMAIL_KEY, RESEND_INTERVAL)).thenReturn(true);
+        when(captchaStore.incrementDailyCount(EMAIL_KEY)).thenReturn(1L);
+        org.mockito.Mockito.doThrow(new IllegalStateException("private storage details"))
+                .when(captchaStore).saveCode(anyString(), anyString(), any());
+        assertThatThrownBy(() -> service.send(EMAIL)).isInstanceOfSatisfying(ApiException.class,
+                e -> assertThat(e.getCode()).isEqualTo(ResultCode.CAPTCHA_SEND_FAILED));
+        var order = org.mockito.Mockito.inOrder(codeSender, captchaStore);
+        order.verify(codeSender).send(EMAIL, "123456");
+        order.verify(captchaStore).saveCode(EMAIL_KEY, "123456", CODE_TTL);
+    }
+
+    @Test
+    void mailModeRejectsPhoneBeforeQuotaOrTransport() {
+        props.getCodeSender().setMode("MAIL");
+        assertThatThrownBy(() -> service.send("13800138000")).isInstanceOfSatisfying(ApiException.class,
+                e -> assertThat(e.getCode()).isEqualTo(ResultCode.CAPTCHA_SEND_FAILED));
+        verifyNoInteractions(captchaStore, codeSender);
+    }
+
+    @Test
+    void deliveryPrecedesSavingAndUsesNormalizedRecipient() {
+        when(captchaStore.tryAcquireSendSlot(EMAIL_KEY, RESEND_INTERVAL)).thenReturn(true);
+        when(captchaStore.incrementDailyCount(EMAIL_KEY)).thenReturn(1L);
+        service.send("  DEV@CAMPUSLINK.LOCAL  ");
+        var order = org.mockito.Mockito.inOrder(codeSender, captchaStore);
+        order.verify(codeSender).send(EMAIL, "123456");
+        order.verify(captchaStore).saveCode(EMAIL_KEY, "123456", CODE_TTL);
+    }
+
 }

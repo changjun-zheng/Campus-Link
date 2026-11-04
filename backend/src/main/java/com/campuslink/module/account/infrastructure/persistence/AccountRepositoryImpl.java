@@ -94,6 +94,14 @@ public class AccountRepositoryImpl implements AccountRepository {
                 .set(UserDO::getAvatarUrl, avatarUrl));
     }
 
+    /** 自定义头像（CR-191）：单列 SET，不整行回写（并发窗口内平台侧对 status / role 的改动不会被抹掉） */
+    @Override
+    public void updateAvatar(Long accountId, String avatarUrl) {
+        userMapper.update(null, new LambdaUpdateWrapper<UserDO>()
+                .eq(UserDO::getId, accountId)
+                .set(UserDO::getAvatarUrl, avatarUrl));
+    }
+
     @Override
     public boolean existsByEmailHash(String emailHash) {        return userMapper.selectCount(new LambdaQueryWrapper<UserDO>()
                 .eq(UserDO::getEmailHash, emailHash)) > 0;

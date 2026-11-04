@@ -22,6 +22,11 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.time.Instant;
+import java.util.UUID;
+import org.springframework.transaction.annotation.Transactional;
+import com.campuslink.module.notification.domain.model.NotificationRequestedV1;
+import com.campuslink.module.notification.domain.gateway.NotificationOutboxGateway;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -30,8 +35,8 @@ import java.util.stream.Collectors;
 /**
  * 通知用例（F-SOC-001）：5 个触发入口 + 我的通知 / 未读数 / 全部已读 / 单条已读。
  *
- * <p><b>触发侧</b>由 forum 的 application 服务在动作成功后直接调用本服务（同事务写入）——落库仍走直调，
- * 不把"写通知"交给事件总线。落库后额外发一个 {@link NotificationCreatedEvent}，只供实时流
+ * <p><b>触发侧</b>由 forum 的 application 服务在动作成功后直接调用本服务（同事务写入）——默认同事务写通知；CR-193 异步模式改为同事务写 Outbox。
+ * 消费提交后才推 SSE，不把实时连接当消息事实源。落库后额外发一个 {@link NotificationCreatedEvent}，只供实时流
  * （F-010）在**事务提交后**推送未读角标；写与推互不阻塞。接收人由调用方给出：forum 侧当时已握有
  * 帖子 / 楼层聚合，再查一次只是重复读。<b>自触发抑制</b>在本层兜底（自己回帖 / 自己点赞自己的内容不打扰自己）。
  *
@@ -52,12 +57,15 @@ public class NotificationApplicationService {
     private static final String CONTENT_FALLBACK = "内容已删除";
 
     private final NotificationRepository notificationRepository;
+    private final NotificationOutboxGateway outbox;
+    private final NotificationDeliverySettings deliverySettings;
     private final AccountApplicationService accountApplicationService;
     private final UserBlockApplicationService userBlockApplicationService;
     private final ForumQueryApplicationService forumQueryService;
     private final ApplicationEventPublisher eventPublisher;
 
     /** 帖子被回复：接收人是帖子作者，目标是新楼层 */
+    @Transactional
     public void postReplied(long replierId, long replyId, long postAuthorId) {
         notify(NotificationType.REPLY, replierId, NotificationTargetType.REPLY, replyId, postAuthorId);
     }
@@ -67,26 +75,31 @@ public class NotificationApplicationService {
      * 与 {@link #postReplied} 同构，通知落点永远是"发生互动的新内容"，接收人点进去看到的是引用自己的那条回复。
      * 自引用抑制沿用 {@code notify()} 既有兜底（引用自己的楼层不打扰自己）。
      */
+    @Transactional
     public void replyQuoted(long quoterId, long newReplyId, long quotedReplyAuthorId) {
         notify(NotificationType.QUOTE, quoterId, NotificationTargetType.REPLY, newReplyId, quotedReplyAuthorId);
     }
 
     /** 回复被采纳：接收人是被采纳楼层的作者，目标即该楼层 */
+    @Transactional
     public void replyAccepted(long askerId, long replyId, long replyAuthorId) {
         notify(NotificationType.ACCEPT, askerId, NotificationTargetType.REPLY, replyId, replyAuthorId);
     }
 
     /** 帖子被点赞 */
+    @Transactional
     public void postLiked(long likerId, long postId, long postAuthorId) {
         notify(NotificationType.LIKE, likerId, NotificationTargetType.POST, postId, postAuthorId);
     }
 
     /** 楼层被点赞 */
+    @Transactional
     public void replyLiked(long likerId, long replyId, long replyAuthorId) {
         notify(NotificationType.LIKE, likerId, NotificationTargetType.REPLY, replyId, replyAuthorId);
     }
 
     /** 帖子被收藏 */
+    @Transactional
     public void postFavorited(long favoriterId, long postId, long postAuthorId) {
         notify(NotificationType.FAVORITE, favoriterId, NotificationTargetType.POST, postId, postAuthorId);
     }
@@ -189,6 +202,11 @@ public class NotificationApplicationService {
         }
         // 拉黑抑制（CR-129）：接收人拉黑了触发者 → 不落库、不推送；解除后新互动恢复
         if (userBlockApplicationService.isBlocked(recipientId, actorId)) {
+            return;
+        }
+        if (deliverySettings.asynchronous() && NotificationRequestedV1.supports(type)) {
+            outbox.append(new NotificationRequestedV1(UUID.randomUUID().toString(), 1, type,
+                    actorId, recipientId, targetType, targetId, Instant.now()));
             return;
         }
         notificationRepository.save(Notification.of(type, actorId, targetType, targetId, recipientId));

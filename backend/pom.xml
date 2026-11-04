@@ -57,6 +57,10 @@
   </dependencyManagement>
 
   <dependencies>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-amqp</artifactId>
+    </dependency>
     <!-- Spring Boot 4.0 起 web starter 更名为 webmvc（模块化拆分） -->
     <dependency>
       <groupId>org.springframework.boot</groupId>

@@ -141,12 +141,31 @@ public class Account {
 
     /**
      * 默认头像分配（CR-162）：注册落库拿到自增 id 后由应用层调用。
-     * **只在空值时写入**——未来用户自选 / 上传头像落地后，重复调用不会覆盖。
+     * **只在空值时写入**——用户自选 / 上传头像（CR-191）落地后，重复调用不会覆盖。
      */
     public void assignAvatarIfAbsent(String avatarUrl) {
         if (this.avatarUrl == null && avatarUrl != null && !avatarUrl.isBlank()) {
             this.avatarUrl = avatarUrl;
         }
+    }
+
+    /**
+     * 自定义头像切换（CR-191）：预置选择与上传共用。值相同返回 {@code false}（幂等），
+     * 调用方据此不发 UPDATE、不记审计——与 {@link #updateProfile} 的"空集即幂等"同一条纪律。
+     *
+     * <p>空值由 web 侧 {@code @NotBlank} 与上传链路先行拦截；聚合只做最后一道非空断言，
+     * 不复刻 URL 白名单 / 文件格式规则（那是应用层与适配器的职责）。
+     */
+    public boolean updateAvatar(String avatarUrl) {
+        if (avatarUrl == null || avatarUrl.isBlank()) {
+            throw new ApiException(ResultCode.INVALID_PARAM);
+        }
+        String next = avatarUrl.trim();
+        if (Objects.equals(next, this.avatarUrl)) {
+            return false;
+        }
+        this.avatarUrl = next;
+        return true;
     }
 
     /** 昵称是唯一不许清空的资料列（顶栏与帖子作者位靠它认人）；空串归一后为 null，即视为"想清空" → 拒 */

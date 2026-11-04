@@ -4,6 +4,7 @@ import com.campuslink.common.exception.ApiException;
 import com.campuslink.common.result.ResultCode;
 import com.campuslink.common.web.PublicEndpoint;
 import com.campuslink.module.account.application.AccountApplicationService;
+import com.campuslink.module.account.application.AvatarApplicationService;
 import com.campuslink.module.account.application.ProfileApplicationService;
 import com.campuslink.module.account.application.UserProfileApplicationService;
 import com.campuslink.module.account.application.UserProfileApplicationService.PublicProfile;
@@ -49,7 +50,8 @@ class UserControllerPublicProfileTest {
     private final UserProfileApplicationService userProfileApplicationService =
             mock(UserProfileApplicationService.class);
     private final UserController controller = new UserController(mock(AccountApplicationService.class),
-            mock(ProfileApplicationService.class), userProfileApplicationService);
+            mock(ProfileApplicationService.class), userProfileApplicationService,
+            mock(AvatarApplicationService.class));
 
     @Test
     @DisplayName("匿名可读：方法不收 Authentication，只挂 @PublicEndpoint（不挂 @SecurityRequirement）")

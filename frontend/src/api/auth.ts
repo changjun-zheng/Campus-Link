@@ -1,4 +1,4 @@
-import { get, post, put } from './client'
+import { get, post, put, upload } from './client'
 import type { UserInfo } from '../types'
 
 export interface AuthResponse {
@@ -38,3 +38,17 @@ export const updateProfile = (payload: { nickname?: string | null; major?: strin
 
 /** 注销账号（F-ACC-003 / CR-082）：进入 7 天冷静期，期内登录即撤销注销 */
 export const deactivateAccount = () => post<void>('/users/me/deactivate')
+
+/** 默认头像预设（CR-191 / F-ACC-007h）：公开端点，8 款素材路径由后端下发 */
+export const fetchAvatarPresets = () => get<string[]>('/users/avatar-presets')
+
+/** 选用预置头像（CR-191）：白名单外 400 / 2016，限流 429 / 2017 */
+export const selectAvatarPreset = (avatarUrl: string) =>
+  put<UserInfo>('/users/me/avatar/preset', { avatarUrl })
+
+/** 上传自定义头像（CR-191）：JPEG / PNG，≤2MB、≤4096px；返回更新后的 UserInfo */
+export const uploadAvatar = (file: File) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  return upload<UserInfo>('/users/me/avatar', formData)
+}

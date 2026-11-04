@@ -5,6 +5,7 @@ import com.campuslink.common.result.ResultCode;
 import com.campuslink.config.AppProperties;
 import com.campuslink.module.account.domain.gateway.CaptchaStore;
 import com.campuslink.module.account.domain.gateway.CodeSender;
+import com.campuslink.module.account.domain.gateway.CodeDeliveryException;
 import com.campuslink.module.account.domain.gateway.SensitiveCodec;
 import com.campuslink.module.account.domain.model.Contact;
 import jakarta.annotation.PostConstruct;
@@ -43,7 +44,11 @@ public class CaptchaService {
 
     /** 发送（CR-093 / F-011）：target 为邮箱**或**手机号二合一，存取键 = 规范化 contact 的 HMAC */
     public void send(String target) {
-        String targetKey = captchaKey(target);
+        Contact contact = Contact.parse(target);
+        if ("mail".equalsIgnoreCase(props.getCodeSender().getMode()) && contact.hasPhone()) {
+            throw new ApiException(ResultCode.CAPTCHA_SEND_FAILED);
+        }
+        String targetKey = codec.hash(contact.normalized());
 
         if (!captchaStore.tryAcquireSendSlot(targetKey,
                 Duration.ofSeconds(props.getCaptcha().getResendIntervalSeconds()))) {
@@ -55,8 +60,18 @@ public class CaptchaService {
         }
 
         String code = nextCode();
-        captchaStore.saveCode(targetKey, code, Duration.ofMinutes(props.getCaptcha().getTtlMinutes()));
-        codeSender.send(target, code);
+        try {
+            codeSender.send(contact.normalized(), code);
+        } catch (CodeDeliveryException ex) {
+            log.warn("Captcha delivery failed stage=transport operationId={}", com.campuslink.common.result.TraceIds.newTraceId());
+            throw new ApiException(ResultCode.CAPTCHA_SEND_FAILED);
+        }
+        try {
+            captchaStore.saveCode(targetKey, code, Duration.ofMinutes(props.getCaptcha().getTtlMinutes()));
+        } catch (RuntimeException ex) {
+            log.warn("Captcha delivery failed stage=store operationId={}", com.campuslink.common.result.TraceIds.newTraceId());
+            throw new ApiException(ResultCode.CAPTCHA_SEND_FAILED);
+        }
     }
 
     private String nextCode() {

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onBeforeUnmount, ref, watch } from 'vue'
 import { listNotifications, markAllRead, markNotificationRead, type NotificationVo } from '../api/notifications'
-import { refreshUnreadCount } from '../composables/useUnreadNotifications'
+import { refreshUnreadCount, unreadNotificationCount } from '../composables/useUnreadNotifications'
 import { formatRelativeTime } from '../utils/time'
 import UserAvatar from '../components/UserAvatar.vue'
 
@@ -15,7 +15,12 @@ const loadError = ref('')
 const onlyUnread = ref(false)
 const marking = ref(false)
 
+let requestSeq = 0
+onBeforeUnmount(() => { requestSeq++ })
+watch(unreadNotificationCount, () => { void loadNotifications() })
+
 async function loadNotifications() {
+  const seq = ++requestSeq
   loading.value = true
   loadError.value = ''
   try {
@@ -24,14 +29,16 @@ async function loadNotifications() {
       page: page.value,
       size,
     })
+    if (seq !== requestSeq) return
     items.value = res.list
     total.value = res.total
   } catch (e) {
+    if (seq !== requestSeq) return
     items.value = []
     total.value = 0
     loadError.value = e instanceof Error ? e.message : '通知加载失败'
   } finally {
-    loading.value = false
+    if (seq === requestSeq) loading.value = false
   }
 }
 

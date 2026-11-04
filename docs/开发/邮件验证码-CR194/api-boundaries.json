@@ -1,0 +1,11 @@
+{
+  "smtpFailurePreservedPreviousCode": true,
+  "dailyQuotaStatus": 429,
+  "dailyQuotaCode": 2003,
+  "expiredCodeRejected": true,
+  "anonymousPostStatus": 401,
+  "anonymousPostCode": 4001,
+  "mailLogHasNoRecipients": true,
+  "ttlProbe": "isolated Redis DB2 targeted key expiration",
+  "quotaProbe": "isolated Redis DB2 synthetic counter set to daily limit"
+}

@@ -1,0 +1,24 @@
+{
+  "smtpUnavailable": {
+    "status": 503,
+    "code": 2018,
+    "inputPreserved": true,
+    "repeatStatus": 429,
+    "repeatCode": 2002,
+    "phoneStatus": 503
+  },
+  "randomLogin": {
+    "wrongCodeRejected": true,
+    "loginSucceeded": true,
+    "usedCodeRejected": true,
+    "countdownVisible": true,
+    "channel": "development log with random code"
+  },
+  "registration": {
+    "studentVerification": true,
+    "randomCode": true,
+    "registrationSucceeded": true,
+    "channel": "development log with random code"
+  },
+  "realMailboxDelivery": "NOT_TESTED: user chose local acceptance only"
+}

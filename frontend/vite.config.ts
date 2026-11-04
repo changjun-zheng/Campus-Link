@@ -22,6 +22,11 @@ export default defineConfig({
         target: process.env.VITE_API_TARGET || 'http://localhost:8088',
         changeOrigin: true,
       },
+      // 上传头像的静态映射（CR-191）：开发 / 预览同源，避免图片请求落到 SPA 兜底
+      '/media': {
+        target: process.env.VITE_API_TARGET || 'http://localhost:8088',
+        changeOrigin: true,
+      },
     },
   },
   // 生产产物预览也代理 /api（CR-154）：此前 preview 无代理，首屏性能只能测到空壳，
@@ -30,6 +35,10 @@ export default defineConfig({
     port: 4173,
     proxy: {
       '/api': {
+        target: process.env.VITE_API_TARGET || 'http://localhost:8088',
+        changeOrigin: true,
+      },
+      '/media': {
         target: process.env.VITE_API_TARGET || 'http://localhost:8088',
         changeOrigin: true,
       },

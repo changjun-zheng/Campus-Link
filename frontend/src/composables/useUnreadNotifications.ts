@@ -1,4 +1,4 @@
-import { onBeforeUnmount, ref, watch } from 'vue'
+import { onBeforeUnmount, readonly, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { getUnreadCount, NotificationStreamError, openUnreadStream } from '../api/notifications'
 import { useAuthStore } from '../stores/auth'
@@ -17,6 +17,8 @@ const POLL_INTERVAL_MS = 30_000
 const STREAM_RETRY_MS = 5_000
 
 const unreadCount = ref(0)
+/** Read-only view for notification pages; does not create or own another stream. */
+export const unreadNotificationCount = readonly(unreadCount)
 let pollTimer: ReturnType<typeof setInterval> | null = null
 let streamAbort: AbortController | null = null
 let streamActive = false

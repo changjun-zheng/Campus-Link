@@ -50,7 +50,7 @@ public class AccountController {
     }
 
     @Operation(summary = "发送验证码（F-011 / CR-093：target 为邮箱或手机号；60s 重发间隔，单账号日上限 10 条）")
-    @ErrorCodes({ ResultCode.CAPTCHA_TOO_FREQUENT, ResultCode.CAPTCHA_EXCEEDED })
+    @ErrorCodes({ ResultCode.CAPTCHA_TOO_FREQUENT, ResultCode.CAPTCHA_EXCEEDED, ResultCode.CAPTCHA_SEND_FAILED })
     @PublicEndpoint
     @PostMapping("/captcha")
     public ApiResponse<Void> captcha(@Valid @RequestBody CaptchaCommand command) {

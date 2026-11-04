@@ -2,10 +2,10 @@
 
 | 文档信息 | 内容 |
 |---------|------|
-| 版本 | v1.5 |
+| 版本 | v1.6 |
 | 状态 | 已归档（设计门行动项 **A3-5** 交付物，[CR-035](../变更日志/变更台账.md)） |
 | 维护人 | 技术负责人（发起人兼任） |
-| 最后更新 | 2026-10-25 |
+| 最后更新 | 2026-11-04 |
 
 > **变更记录**
 >
@@ -19,11 +19,11 @@
 ## 1. 目的、事实源与边界
 
 - **目的**：为设计门行动项 A3-5 提供两件东西——① 现有数据模型的**实体关系可视化**（文字定义在[技术方案 §4](技术方案.md)，本图为可视化对照）；② 按 PRD 容量基线的**数据量级与索引水位预估**，作为测试阶段造数规模与发布阶段容量验收的参考。
-- **事实源**：`backend/src/main/resources/db/migration/` 下的**全部迁移**（V1 基线 12 张表 + `V2__seed_boards.sql` 仅种入 6 个版块数据、无结构 + `V3__my_content_indexes.sql` 两个作者维度索引 + `V4__post_views_and_follows.sql` 给 `posts` 加两列并新建 `follows` + `V5__user_blocks.sql` 新建 `user_blocks` + `V6__direct_messages.sql` 新建 `conversations` / `messages` + `V7__post_content_fulltext.sql` 给 `posts` 加正文 FULLTEXT 索引 + `V8__teams.sql` 新建 `teams` / `team_members` + `V9__post_anonymous.sql` 给 `posts` 加 `is_anonymous`；**已执行迁移不可改**）。**表结构、字段、索引以迁移文件为准**——本文与其冲突时，以迁移文件为准并须修正本文。
+- **事实源**：`backend/src/main/resources/db/migration/` 下的**全部迁移**（V1 基线 12 张表 + `V2__seed_boards.sql` 仅种入 6 个版块数据、无结构 + `V3__my_content_indexes.sql` 两个作者维度索引 + `V4__post_views_and_follows.sql` 给 `posts` 加两列并新建 `follows` + `V5__user_blocks.sql` 新建 `user_blocks` + `V6__direct_messages.sql` 新建 `conversations` / `messages` + `V7__post_content_fulltext.sql` 给 `posts` 加正文 FULLTEXT 索引 + `V8__teams.sql` 新建 `teams` / `team_members` + `V9__post_anonymous.sql` 给 `posts` 加 `is_anonymous` + `V10__posts_hot_list_index.sql` 热榜复合索引 + `V11__notification_outbox.sql` 通知 Outbox／消费凭证两表；**已执行迁移不可改**）。**表结构、字段、索引以迁移文件为准**——本文与其冲突时，以迁移文件为准并须修正本文。
 - **边界**：本文**不引入任何表结构 / 索引变更**；量级数字均为工程估算（见 §5 口径），**非性能承诺**——性能承诺以 PRD §4 的 P90 / P95 指标为准，由测试阶段实测验收。
 - **维护约定**：后续新增 `V<n>__*.sql` 结构变更时，**该 CR 必须同步更新本文**（§2 图、§3 表清单、§4 索引清单、§5 水位），否则视为该 CR 的文档同步遗漏。
 
-## 2. ER 图（18 张表）
+## 2. ER 图（20 张表）
 
 ```mermaid
 erDiagram
@@ -189,6 +189,29 @@ erDiagram
     USERS ||--o{ TEAMS : "owner_id 发起"
     TEAMS ||--o{ TEAM_MEMBERS : "team_id 成员与申请"
     USERS ||--o{ TEAM_MEMBERS : "user_id 申请人 / 成员"
+    NOTIFICATION_OUTBOX {
+        varchar event_id PK
+        int schema_version
+        varchar type
+        bigint actor_id
+        bigint recipient_id
+        varchar target_type
+        bigint target_id
+        datetime occurred_at
+        varchar status
+        int attempts
+        datetime next_attempt_at
+        varchar lease_token
+        datetime locked_until
+        datetime sent_at
+        varchar last_error
+    }
+    NOTIFICATION_RECEIPTS {
+        varchar event_id PK
+        datetime consumed_at
+    }
+    NOTIFICATION_OUTBOX ||--o| NOTIFICATION_RECEIPTS : "event_id逻辑关联_无外键"
+
 ```
 
 **图上画不出的三处关系（如实登记）**：
@@ -197,7 +220,7 @@ erDiagram
 2. **`posts.accepted_reply_id` 与 `replies.quoted_reply_id` 无外键**：采纳与引用为弱关联（楼层被删时置空语义由应用层处理），避免外键在热路径上的级联锁；
 3. **`favorites.user_id` 无外键**（V1 原样）：与 `post_tags` 双外键风格不一致，属已知取舍——单校规模下影响可忽略，若后续加外键须新增前向迁移。
 
-## 3. 表清单与职责（18 张）
+## 3. 表清单与职责（20 张）
 
 | 表 | 职责 | 敏感字段处理 | 增长特征 |
 |----|------|-------------|---------|
@@ -219,7 +242,10 @@ erDiagram
 | `teams` | 组队招募（V8）——方向固定枚举、人数 2~20（含发起人）、状态 `RECRUITING/FULL/CLOSED`；联系方式只对发起人与已加入成员下发 | **`contact_enc`（AES-GCM）**，列表 / 匿名 / 待审批者不返回明文 | 事件驱动，估 < 1 万 |
 | `team_members` | 组队成员与申请（V8）——联合主键即"同一人对同一组队只有一条关系"；发起人 / 申请 / 成员三种状态同表 | 无 | 随组队与申请线性，估 < 5 万 |
 
-## 4. 索引清单（照录 V1~V9，新增结构时随 CR 更新）
+| `notification_outbox` | 异步通知意图与发布状态（V11） | 无展示资料，仅 ID 和类型 | 同业务事务；PENDING／INFLIGHT／SENT，租约 token 防旧发布者覆写 |
+| `notification_receipts` | 按 event_id 去重的消费凭证（V11） | 无 | 与通知落库同事务；抑制事件也留凭证，不自动过期 |
+
+## 4. 索引清单（照录 V1~V11，新增结构时随 CR 更新）
 
 | 表 | 索引 | 类型 | 支撑的查询路径 |
 |----|------|------|---------------|
@@ -249,6 +275,10 @@ erDiagram
 | `teams` | `idx_teams_status (status, created_at, id)`；`idx_teams_owner (owner_id, created_at)` | 复合 ×2 | 广场默认「招募中」列表；我发起的组队（V8 / [CR-137](../变更日志/变更台账.md#cr-137)） |
 | `team_members` | PK `(team_id, user_id)`；`idx_tm_user (user_id, status, applied_at)`；`idx_tm_team_status (team_id, status, applied_at)` | 复合主键 + 复合 ×2 | 关系去重 / 我申请的组队；发起人待审批列表（V8 / [CR-137](../变更日志/变更台账.md#cr-137)） |
 
+| `posts` | `idx_posts_hot_list (status, is_deleted, hot_score DESC, created_at DESC, id DESC)` | 复合 | 热榜列表（V10） |
+| `notification_outbox` | PK `event_id`；`idx_notification_outbox_pending (status, next_attempt_at)`；`idx_notification_outbox_lease (status, locked_until)` | 主键 + 复合 ×2 | 抢占待发／到期事件，租约恢复（V11） |
+| `notification_receipts` | PK `event_id` | 主键 | 重复消费抑制（V11） |
+
 ## 5. 量级预估（试点期 1 年，工程估算）
 
 **输入（[PRD](../需求/产品需求文档.md) §4 容量基线，均为"≥"，即验收上限）**：注册 ≥ **1 万**、日活 ≥ **1000**、帖子 ≥ **10 万**、单帖回复 ≥ **1000 楼**（分页加载）。**推导假设（本节自设，非 PRD 基线）**：单校计算机类在校生名册约 5000~8000 人；平均每帖回复 **4 楼**（10 万帖 → 40 万楼；单帖 1000 楼为需分页的极端值）；帖子平均正文 **15 KB**（md + html 双份）；互动率按日活 1000 × 日均 5 次点赞 / 收藏 / 通知类事件估算。
@@ -270,7 +300,8 @@ erDiagram
 | `users` | 1 万 | ~1 KB（三列 `*_enc` 为主） | ~10 MB | — |
 | `student_roster` | 0.5 万~0.8 万 | ~0.2 KB | < 5 MB | 一次性导入 |
 | `reports` / `audit_logs` / `boards` | < 0.5 万 / < 2 万 / 6 | — | < 50 MB | 小表 |
-| **合计** | — | — | **约 4~5 GB / 年** | 远低于单实例 MySQL 8 舒适区（数十 GB 级） |
+| `notification_outbox` / `notification_receipts` | 各 100 万～150 万（全部互动启用异步的上界估算） | ~600 B / ~100 B（含索引余量） | 合计约 1 GB | 首期不自动清理；消费凭证保留期须覆盖全部允许重放的历史 |
+| **合计** | — | — | **约 5~6 GB / 年** | 远低于单实例 MySQL 8 舒适区（数十 GB 级） |
 
 **结论**：**单校规模上限内，单实例 MySQL 8 + 现有索引设计即可承载，无需分库分表 / 归档**；试点期一年的真实瓶颈更可能出现在**全文检索的内存占用**与**热榜定时任务（ADR-006）的扫描量**，而非容量本身。
 
@@ -283,3 +314,5 @@ erDiagram
 | 全文检索 QPS / 内存成为瓶颈 | 引入 MeiliSearch（规模升级预案；正文当前已由 MySQL ngram 承担，[CR-136](../变更日志/变更台账.md#cr-136)），届时评估两条 FULLTEXT 索引下线 |
 | `notifications` 未读数查询变慢 | 未读计数上 Redis（走 `RedisKeys` 前缀约定） |
 | 单帖楼层接近 **1000 楼上限**常态化 | 楼层分页游标化（当前 `(post_id, floor_no)` 复合索引已支撑，仅需改查询形态） |
+
+通知事件与消费凭证为逻辑关联，不设置外键；Outbox 的 SENT 表示消息已被 Broker 确认接收，不表示通知已消费。详细语义见[通知投递设计](技术方案.md#231-站内通知投递)。

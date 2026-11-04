@@ -34,14 +34,14 @@ DB_CONFIG = {
 
 # 顺序须与 backend/src/main/java/com/campuslink/module/account/domain/model/DefaultAvatar.java 逐项一致
 AVATARS = [
-    "/avatars/avatar-01-link.svg",
-    "/avatars/avatar-02-network.svg",
-    "/avatars/avatar-03-diamond.svg",
-    "/avatars/avatar-04-brackets.svg",
-    "/avatars/avatar-05-orbit.svg",
-    "/avatars/avatar-06-core.svg",
-    "/avatars/avatar-07-wave.svg",
-    "/avatars/avatar-08-grid.svg",
+    "/avatars/avatar-fox-01-happy.png",
+    "/avatars/avatar-fox-02-wink.png",
+    "/avatars/avatar-fox-03-curious.png",
+    "/avatars/avatar-fox-04-shy.png",
+    "/avatars/avatar-fox-05-love.png",
+    "/avatars/avatar-fox-06-cool.png",
+    "/avatars/avatar-fox-07-sleepy.png",
+    "/avatars/avatar-fox-08-excited.png",
 ]
 
 

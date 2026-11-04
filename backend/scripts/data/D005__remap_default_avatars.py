@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-"""D005：存量账号默认头像迁移到 8 款矢量徽章（CR-187）。
+"""D005：存量账号默认头像迁移到 8 款精灵吉祥物（CR-187）。
 
 背景：默认头像自 CR-162 起为 24 张 PNG（先科技图标、CR-165 换为可爱动物），CR-187
-改为 8 款「连接结构」矢量徽章（`.svg`）。存量账号的 `users.avatar_url` 仍指向已废弃的
-24 张 PNG，本脚本按 `userId % 8` 重算，并**只迁移命中旧默认头像集合的行**——自定义头像
+改为 8 款精灵吉祥物表情变体（`.png`）。存量账号的 `users.avatar_url` 仍指向已废弃的
+头像，本脚本按 `userId % 8` 重算，并**只迁移命中旧默认头像集合的行**——自定义头像
 一律不动（当前产品未开放上传，此保护是给未来留的口子）。
 
 约定（同 D004 / _template.py，CR-014）：
@@ -36,17 +36,17 @@ DB_CONFIG = {
 
 # 顺序须与 backend/src/main/java/com/campuslink/module/account/domain/model/DefaultAvatar.java 逐项一致
 AVATARS = [
-    "/avatars/avatar-01-link.svg",
-    "/avatars/avatar-02-network.svg",
-    "/avatars/avatar-03-diamond.svg",
-    "/avatars/avatar-04-brackets.svg",
-    "/avatars/avatar-05-orbit.svg",
-    "/avatars/avatar-06-core.svg",
-    "/avatars/avatar-07-wave.svg",
-    "/avatars/avatar-08-grid.svg",
+    "/avatars/avatar-fox-01-happy.png",
+    "/avatars/avatar-fox-02-wink.png",
+    "/avatars/avatar-fox-03-curious.png",
+    "/avatars/avatar-fox-04-shy.png",
+    "/avatars/avatar-fox-05-love.png",
+    "/avatars/avatar-fox-06-cool.png",
+    "/avatars/avatar-fox-07-sleepy.png",
+    "/avatars/avatar-fox-08-excited.png",
 ]
 
-# 已废弃的默认头像：CR-162 的 24 张科技图标 + CR-165 的 24 张动物图
+# 已废弃的默认头像：CR-162 的 24 张科技图标 + CR-165 的 24 张动物图 + CR-187 的 8 张几何徽章 + 8 张精灵 PNG
 OLD_PATHS = [
     "/avatars/avatar-01-terminal.png", "/avatars/avatar-02-keyboard.png",
     "/avatars/avatar-03-gear.png", "/avatars/avatar-04-cloud.png",
@@ -72,6 +72,14 @@ OLD_PATHS = [
     "/avatars/avatar-19-turtle.png", "/avatars/avatar-20-snail.png",
     "/avatars/avatar-21-sheep.png", "/avatars/avatar-22-deer.png",
     "/avatars/avatar-23-monkey.png", "/avatars/avatar-24-crab.png",
+    "/avatars/avatar-01-link.svg", "/avatars/avatar-02-network.svg",
+    "/avatars/avatar-03-diamond.svg", "/avatars/avatar-04-brackets.svg",
+    "/avatars/avatar-05-orbit.svg", "/avatars/avatar-06-core.svg",
+    "/avatars/avatar-07-wave.svg", "/avatars/avatar-08-grid.svg",
+    "/avatars/avatar-elf-01-happy.png", "/avatars/avatar-elf-02-wink.png",
+    "/avatars/avatar-elf-03-surprised.png", "/avatars/avatar-elf-04-laugh.png",
+    "/avatars/avatar-elf-05-love.png", "/avatars/avatar-elf-06-cool.png",
+    "/avatars/avatar-elf-07-thinking.png", "/avatars/avatar-elf-08-excited.png",
 ]
 
 

@@ -4,9 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!-- 内容安全策略（E-012 ③ / CR-118）：与服务端 Markdown 白名单叠加的第二道防线。
-         style-src 放行 inline 是 Element Plus / Vite 注入样式的现实需要；connect-src 放行 ws 供 HMR。 -->
+         style-src 放行 inline 是 Element Plus / Vite 注入样式的现实需要；connect-src 放行 ws 供 HMR；
+         img-src 放行 blob 仅供头像上传的本地预览（URL.createObjectURL，页面关闭即失效，CR-191）。 -->
     <meta http-equiv="Content-Security-Policy"
-          content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' ws: wss:; object-src 'none'; base-uri 'self'" />
+          content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' ws: wss:; object-src 'none'; base-uri 'self'" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <!-- SEO（CR-157）：路由级 title 由 vue-router afterEach 覆写，静态描述在此统一声明 -->
     <meta name="description"

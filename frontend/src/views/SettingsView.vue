@@ -3,22 +3,32 @@
  * 设置页（F-ACC-007d）：基线 §5.1「我的（帖子 / 收藏 / 设置 / 注销）」那一格第一次落成结构。
  *
  * <p>三区块按增量 PRD §4.2 的骨架来，但**后端不存在的行一律不占位**：通知偏好（007f 门槛未齐）、
- * 头像（007h）、求职意向（007g）本期都不进本页——"点了没反应"就是文档在撒谎。
+ * 求职意向（007g）本期不进本页——"点了没反应"就是文档在撒谎。头像（007h）自 CR-191 起有后端，
+ * 由页头头像按钮打开弹窗（预置 8 款 + 本地上传），改一次全站生效。
  * 注销（F-ACC-003 / CR-082）：手输「注销」二次确认 → `POST /users/me/deactivate` → 7 天冷静期；
  * 期内再次登录即自动撤销，期满由匿名化定时任务清除实名与展示资料（CR-127 补齐 bio / major 等）。
  */
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, defineAsyncComponent, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { deactivateAccount, updateProfile } from '../api/auth'
 import { listBlockedUsers, unblockUser, type BlockedUserVo } from '../api/block'
 import { listMyFavorites, listMyPosts, listMyReplies } from '../api/forum'
 import type { IconName } from '../assets/icons'
+import type { UserInfo } from '../types'
 import { useAuthStore } from '../stores/auth'
 import SvgIcon from '../components/SvgIcon.vue'
 import UserAvatar from '../components/UserAvatar.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
+
+/** 头像弹窗按需加载（CR-191）：不进设置页首屏，用户点头像才拉 */
+const AvatarDialog = defineAsyncComponent(() => import('../components/AvatarDialog.vue'))
+const avatarDialogOpen = ref(false)
+
+function onAvatarUpdated(updated: UserInfo) {
+  auth.setUser(updated)
+}
 
 /** 与后端 FieldRules 同源的长度（改一侧必须改另一侧，否则前端放过、后端 1001） */
 const NICKNAME_MIN = 2
@@ -205,7 +215,17 @@ async function onDeactivate() {
   <div class="mx-auto w-full max-w-reading">
     <el-card shadow="never" class="mb-5">
       <div class="flex items-center gap-3">
-        <UserAvatar :src="user?.avatarUrl" :name="user?.nickname" :size="44" />
+        <button
+          type="button"
+          class="group relative flex-none rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-strong"
+          aria-label="更换头像"
+          @click="avatarDialogOpen = true"
+        >
+          <UserAvatar :src="user?.avatarUrl" :name="user?.nickname" :size="44" />
+          <span
+            class="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 text-caption text-white opacity-0 transition-opacity duration-fast ease-standard group-hover:opacity-100"
+          >更换</span>
+        </button>
         <div class="min-w-0">
           <h1 class="truncate text-title-lg font-medium text-ink">设置</h1>
           <p class="mt-0.5 text-note text-ink-meta">本页内容仅本人可见</p>
@@ -374,5 +394,12 @@ async function onDeactivate() {
         邮箱 / 学号等实名信息匿名化，且该账号无法再登录。
       </p>
     </el-card>
+
+    <AvatarDialog
+      v-if="avatarDialogOpen"
+      v-model="avatarDialogOpen"
+      :nickname="user?.nickname"
+      @updated="onAvatarUpdated"
+    />
   </div>
 </template>

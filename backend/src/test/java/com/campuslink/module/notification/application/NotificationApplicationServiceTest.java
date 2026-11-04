@@ -67,6 +67,11 @@ class NotificationApplicationServiceTest {
     @Mock
     private com.campuslink.module.account.application.UserBlockApplicationService userBlockApplicationService;
 
+    @Mock
+    private NotificationDeliverySettings deliverySettings;
+    @Mock
+    private com.campuslink.module.notification.domain.gateway.NotificationOutboxGateway outbox;
+
     @InjectMocks
     private NotificationApplicationService service;
 
@@ -382,5 +387,29 @@ class NotificationApplicationServiceTest {
             map.put((Long) kv[i], new AuthorBrief((String) kv[i + 1], null));
         }
         return map;
+    }
+
+    @Test
+    void asynchronousWritesOutboxOnly() {
+        when(deliverySettings.asynchronous()).thenReturn(true);
+        service.postLiked(1L, 5L, 2L);
+        verify(outbox).append(any(com.campuslink.module.notification.domain.model.NotificationRequestedV1.class));
+        verifyNoInteractions(notificationRepository, eventPublisher);
+    }
+
+    @Test
+    void outboxFailurePropagatesToBusinessTransaction() {
+        when(deliverySettings.asynchronous()).thenReturn(true);
+        org.mockito.Mockito.doThrow(new IllegalStateException("storage unavailable")).when(outbox).append(any());
+        assertThatThrownBy(() -> service.postLiked(1L, 5L, 2L)).isInstanceOf(IllegalStateException.class);
+        verifyNoInteractions(notificationRepository, eventPublisher);
+    }
+
+    @Test
+    void contentModerationRemainsSynchronous() {
+        when(deliverySettings.asynchronous()).thenReturn(true);
+        service.contentRemovedPost(1L, 5L, 2L);
+        verify(notificationRepository).save(any(Notification.class));
+        verifyNoInteractions(outbox);
     }
 }

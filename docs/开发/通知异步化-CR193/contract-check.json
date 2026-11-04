@@ -1,0 +1,6 @@
+{
+  "openapiStructuralEqual": true,
+  "host": "localhost:8088",
+  "anonymousPostStatus": 401,
+  "anonymousPostCode": 4001
+}

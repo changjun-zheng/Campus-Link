@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import type { IconName } from '../assets/icons'
 import { useAuthStore } from '../stores/auth'
 import { sendCaptcha, verifyStudent } from '../api/auth'
+import { ApiError } from '../api/client'
 import { useCountdown } from '../composables/useCountdown'
 import SvgIcon from '../components/SvgIcon.vue'
 
@@ -21,6 +22,8 @@ const values: { icon: IconName; title: string }[] = [
 ]
 
 const loginForm = reactive({ account: '', code: '' })
+/** 登录失败的持久提示：toast 消失后用户仍能看到原因（如验证码已被消费 / 已过期） */
+const loginError = ref('')
 /** 校验失败时把焦点送回字段（CR-173）：只弹 toast 不移动焦点，键盘 / 读屏用户不知道落在哪 */
 const accountRef = ref<{ focus: () => void } | null>(null)
 const codeRef = ref<{ focus: () => void } | null>(null)
@@ -44,6 +47,59 @@ function errorMessage(e: unknown, fallback: string) {
   return e instanceof Error ? e.message : fallback
 }
 
+async function sendLoginCode() {
+  const account = loginForm.account.trim()
+  if (!account) {
+    ElMessage.warning('请输入邮箱或手机号')
+    accountRef.value?.focus()
+    return
+  }
+  if (loginCaptcha.sending.value || loginCaptcha.remaining.value > 0) return
+  loginCaptcha.sending.value = true
+  loginError.value = ''
+  try {
+    await sendCaptcha(account)
+    ElMessage.success('验证码已发送')
+    loginCaptcha.start()
+  } catch (e) {
+    if (e instanceof ApiError && e.code === 2002) {
+      // 60s 重发窗口内：后台仍保留上一次的验证码，但用户需要看到倒计时而不是静默无反馈
+      ElMessage.warning('发送过于频繁，请 60 秒后重试')
+      loginCaptcha.start()
+    } else {
+      const message = errorMessage(e, '验证码发送失败')
+      loginError.value = message
+      ElMessage.error(message)
+    }
+  } finally {
+    loginCaptcha.sending.value = false
+  }
+}
+
+async function sendRegisterCode() {
+  const contact = reg.contact.trim()
+  if (!contact) {
+    ElMessage.warning('请输入邮箱或手机号')
+    return
+  }
+  if (regCaptcha.sending.value || regCaptcha.remaining.value > 0) return
+  regCaptcha.sending.value = true
+  try {
+    await sendCaptcha(contact)
+    ElMessage.success('验证码已发送')
+    regCaptcha.start()
+  } catch (e) {
+    if (e instanceof ApiError && e.code === 2002) {
+      ElMessage.warning('发送过于频繁，请 60 秒后重试')
+      regCaptcha.start()
+    } else {
+      ElMessage.error(errorMessage(e, '验证码发送失败'))
+    }
+  } finally {
+    regCaptcha.sending.value = false
+  }
+}
+
 async function doLogin() {
   const account = loginForm.account.trim()
   if (!account) {
@@ -56,12 +112,14 @@ async function doLogin() {
     codeRef.value?.focus()
     return
   }
+  loginError.value = ''
   try {
     await auth.login(account, loginForm.code.trim())
     ElMessage.success('登录成功')
     router.push(String(route.query.redirect || '/'))
   } catch (e) {
-    ElMessage.error(errorMessage(e, '登录失败'))
+    loginError.value = errorMessage(e, '登录失败')
+    ElMessage.error(loginError.value)
   }
 }
 
@@ -124,6 +182,7 @@ async function doRegister() {
 
         <el-tabs v-model="tab">
           <el-tab-pane label="登录" name="login">
+            <el-alert v-if="loginError" type="error" :closable="false" show-icon :title="loginError" class="mb-4" />
             <el-form label-position="top" @submit.prevent>
               <el-form-item :label="contactLabel">
                 <el-input ref="accountRef" v-model="loginForm.account" placeholder="注册时使用的邮箱或手机号" />
@@ -133,9 +192,9 @@ async function doRegister() {
                   <el-input ref="codeRef" v-model="loginForm.code" placeholder="6 位验证码" maxlength="6" />
                   <el-button
                     :disabled="loginCaptcha.remaining.value > 0 || loginCaptcha.sending.value"
-                    @click="loginCaptcha.run(() => sendCaptcha(loginForm.account))"
+                    @click="sendLoginCode"
                   >
-                    {{ loginCaptcha.remaining.value > 0 ? `${loginCaptcha.remaining.value}s` : '发送验证码' }}
+                    {{ loginCaptcha.sending.value ? '发送中…' : loginCaptcha.remaining.value > 0 ? `${loginCaptcha.remaining.value}s 后重发` : '发送验证码' }}
                   </el-button>
                 </div>
               </el-form-item>
@@ -179,9 +238,9 @@ async function doRegister() {
                   <el-input v-model="reg.code" placeholder="6 位验证码" maxlength="6" />
                   <el-button
                     :disabled="regCaptcha.remaining.value > 0 || regCaptcha.sending.value"
-                    @click="regCaptcha.run(() => sendCaptcha(reg.contact))"
+                    @click="sendRegisterCode"
                   >
-                    {{ regCaptcha.remaining.value > 0 ? `${regCaptcha.remaining.value}s` : '发送验证码' }}
+                    {{ regCaptcha.sending.value ? '发送中…' : regCaptcha.remaining.value > 0 ? `${regCaptcha.remaining.value}s 后重发` : '发送验证码' }}
                   </el-button>
                 </div>
               </el-form-item>

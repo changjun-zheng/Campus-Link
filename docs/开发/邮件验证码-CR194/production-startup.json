@@ -1,0 +1,15 @@
+{
+  "missing": {
+    "startupRejected": true,
+    "beforeDatasource": true
+  },
+  "tls-conflict": {
+    "startupRejected": true,
+    "beforeDatasource": true
+  },
+  "valid": {
+    "healthStatus": 200,
+    "unreachableSmtpDidNotBlockStartup": true,
+    "randomCodeGuardPassed": true
+  }
+}

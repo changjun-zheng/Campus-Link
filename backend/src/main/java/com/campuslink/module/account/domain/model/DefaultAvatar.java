@@ -3,7 +3,7 @@ package com.campuslink.module.account.domain.model;
 import java.util.List;
 
 /**
- * 默认头像目录（CR-162；CR-187 起为 8 款「连接结构」矢量徽章）：注册时按 userId 取模分配。
+ * 默认头像目录（CR-162；CR-187 起为 8 款狐狸吉祥物表情变体）：注册时按 userId 取模分配。
  *
  * <p>刻意做成**固定数组**而非运行时扫描 {@code public/avatars}：分配结果必须与部署目录无关，
  * 且同一 userId 在任何实例、任何时间都映射到同一张图。新增 / 删除素材要同时改这里与前端目录。
@@ -13,14 +13,14 @@ import java.util.List;
 public final class DefaultAvatar {
 
     private static final List<String> PATHS = List.of(
-            "/avatars/avatar-01-link.svg",
-            "/avatars/avatar-02-network.svg",
-            "/avatars/avatar-03-diamond.svg",
-            "/avatars/avatar-04-brackets.svg",
-            "/avatars/avatar-05-orbit.svg",
-            "/avatars/avatar-06-core.svg",
-            "/avatars/avatar-07-wave.svg",
-            "/avatars/avatar-08-grid.svg");
+            "/avatars/avatar-fox-01-happy.png",
+            "/avatars/avatar-fox-02-wink.png",
+            "/avatars/avatar-fox-03-curious.png",
+            "/avatars/avatar-fox-04-shy.png",
+            "/avatars/avatar-fox-05-love.png",
+            "/avatars/avatar-fox-06-cool.png",
+            "/avatars/avatar-fox-07-sleepy.png",
+            "/avatars/avatar-fox-08-excited.png");
 
     private DefaultAvatar() {
     }

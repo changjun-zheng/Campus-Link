@@ -59,6 +59,7 @@ class ProductionSafetyGuardTest {
         values.put(DB_PASSWORD_PROP, "not-the-default-db-password");
         values.put(SEARCH_ENGINE, "mysql");
         values.put(MEILI_KEY, "");
+        values.putAll(MailConfigurationGuardTest.compliant());
         return values;
     }
 

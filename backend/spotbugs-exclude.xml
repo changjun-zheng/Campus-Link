@@ -39,6 +39,14 @@
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.infrastructure.redis.RedisSearchSyncStateAdapter"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.infrastructure.search.MeiliPostSearchAdapter"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.infrastructure.search.SearchIndexScheduler"/></Match>
+  <!-- CR-191 自定义头像：application 服务 / web 控制器 / 存储适配器 / 静态资源映射与既有 DI 类同型（Spring 单例共享） -->
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.account.application.AvatarApplicationService"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.account.web.UserController"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.account.infrastructure.storage.LocalAvatarImageAdapter"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.config.MediaResourceConfig"/></Match>
+
+  <!-- CR-194: Spring injects the shared mutable mail sender and bound configuration. -->
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.account.infrastructure.notify.MailCodeSender"/></Match>
 
   <!-- ② Spring Boot 配置属性绑定（EI_EXPOSE_REP / REP2）：`@ConfigurationProperties` 的内嵌对象由 Boot
        实例化并经 setter 注入、getter 供业务读取；拷贝会切断绑定链 ⇒ 已知误报。 -->
@@ -147,4 +155,12 @@
     <Method name="acceptReply"/>
   </Match>
 
+
+  <!-- CR-193: Spring singleton constructor injection, same rationale as group 1. -->
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.notification.application.NotificationApplicationService"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.notification.application.NotificationOutboxService"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.notification.infrastructure.messaging.NotificationOutboxTrigger"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.notification.infrastructure.messaging.NotificationRabbitListener"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.notification.infrastructure.messaging.RabbitNotificationTransport"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.notification.infrastructure.persistence.JdbcNotificationOutboxAdapter"/></Match>
 </FindBugsFilter>

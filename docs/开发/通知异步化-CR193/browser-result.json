@@ -1,0 +1,19 @@
+{
+  "quoteVisibleMs": 1934,
+  "covered": [
+    "reply",
+    "quote",
+    "accept",
+    "post-like",
+    "reply-like",
+    "favorite",
+    "outage-recovery",
+    "single-read-jump",
+    "read-all",
+    "cancel-interactions"
+  ],
+  "origins": [
+    "http://localhost:5183",
+    "http://localhost:5184"
+  ]
+}

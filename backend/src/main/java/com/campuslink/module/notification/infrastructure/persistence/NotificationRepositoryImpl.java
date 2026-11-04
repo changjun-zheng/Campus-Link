@@ -81,6 +81,7 @@ public class NotificationRepositoryImpl implements NotificationRepository {
         d.setTargetType(notification.getTargetType().name());
         d.setTargetId(notification.getTargetId());
         d.setIsRead(false);
+        d.setCreatedAt(notification.getCreatedAt());
         return d;
     }
 

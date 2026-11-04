@@ -13,6 +13,8 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
@@ -51,9 +53,19 @@ public class GlobalExceptionHandler {
         return clientError(ResultCode.INVALID_PARAM, "请求体缺失或不是合法 JSON", e);
     }
 
-    @ExceptionHandler({MethodArgumentTypeMismatchException.class, MissingServletRequestParameterException.class})
+    @ExceptionHandler({MethodArgumentTypeMismatchException.class, MissingServletRequestParameterException.class,
+            MissingServletRequestPartException.class})
     public ResponseEntity<ApiError> handleBadArgument(Exception e) {
         return clientError(ResultCode.INVALID_PARAM, ResultCode.INVALID_PARAM.getMessage(), e);
+    }
+
+    /**
+     * 上传体积超限（CR-191）：multipart 解析在进入 Controller 之前就抛，故必须单独映射，
+     * 否则会落进兜底分支变成 500。WARN 档、不打全栈（客户端可控错误不污染 5xx 监控）。
+     */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiError> handleMaxUploadSize(MaxUploadSizeExceededException e) {
+        return clientError(ResultCode.FILE_TOO_LARGE, ResultCode.FILE_TOO_LARGE.getMessage(), e);
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
