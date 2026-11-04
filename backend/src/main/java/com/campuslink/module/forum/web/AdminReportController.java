@@ -26,10 +26,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 举报工单运营接口（F-ADMIN-003 / CR-082）：仅 SUPERADMIN（G9 由 requireRole 机器强制 +
+ * 举报工单运营接口（F-ADMIN-003 / CR-082）：OPS 与 SUPERADMIN 可用（G9 由 requireRole 机器强制 +
  * 「每个管理端点自带 403 用例」约定互补，见 AGENTS.md 测试约定）。
+ *
+ * <p>工单闭环中的 REMOVE 联动处置是 OPS 的正当动作（PRD F-ADMIN-003「运营可执行处置 / 驳回」），
+ * 不等于开放内容处置台——后者仍仅 SUPERADMIN。
  */
-@Tag(name = "admin-report", description = "举报工单处理（仅 SUPERADMIN）")
+@Tag(name = "admin-report", description = "举报工单处理（OPS / SUPERADMIN）")
 @RestController
 @RequestMapping("/api/v1/admin/reports")
 @RequiredArgsConstructor
@@ -52,7 +55,7 @@ public class AdminReportController {
             @Size(max = 512, message = "处理结论最长 512 字") String note) {
     }
 
-    @Operation(summary = "工单分页（仅 SUPERADMIN）：status 可选 PENDING / CLOSED，缺省全部")
+    @Operation(summary = "工单分页（OPS / SUPERADMIN）：status 可选 PENDING / CLOSED，缺省全部")
     @SecurityRequirement(name = ApiDocs.BEARER_AUTH)
     @ErrorCodes({ResultCode.NOT_LOGGED_IN, ResultCode.FORBIDDEN})
     @GetMapping
@@ -60,20 +63,20 @@ public class AdminReportController {
                                                    @RequestParam(defaultValue = "1") int page,
                                                    @RequestParam(defaultValue = "20") int size,
                                                    Authentication authentication) {
-        CurrentUser.requireRole(authentication, "ROLE_SUPERADMIN");
+        CurrentUser.requireRole(authentication, "ROLE_OPS");
         PageResult<Report> result = reportApplicationService.adminPage(status, page, size);
         return ApiResponse.ok(new PageVo<>(result.items().stream().map(AdminReportVo::from).toList(),
                 result.total(), result.page(), result.size()));
     }
 
-    @Operation(summary = "工单处理（仅 SUPERADMIN）：action=REMOVE 联动目标处置（下架 / 封禁），DISMISS 驳回；闭环 + 审计")
+    @Operation(summary = "工单处理（OPS / SUPERADMIN）：action=REMOVE 联动目标处置（下架 / 封禁），DISMISS 驳回；闭环 + 审计")
     @SecurityRequirement(name = ApiDocs.BEARER_AUTH)
     @ErrorCodes({ResultCode.NOT_LOGGED_IN, ResultCode.FORBIDDEN, ResultCode.NOT_FOUND})
     @PutMapping("/{id}")
     public ApiResponse<Void> close(@PathVariable("id") long id,
                                    @Valid @RequestBody CloseCommand command,
                                    Authentication authentication) {
-        long operatorId = CurrentUser.requireRole(authentication, "ROLE_SUPERADMIN");
+        long operatorId = CurrentUser.requireRole(authentication, "ROLE_OPS");
         reportApplicationService.close(operatorId, id, command.action(), command.note());
         return ApiResponse.ok();
     }

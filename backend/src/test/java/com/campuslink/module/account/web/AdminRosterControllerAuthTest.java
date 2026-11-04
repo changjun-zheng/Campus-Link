@@ -52,6 +52,16 @@ class AdminRosterControllerAuthTest {
     }
 
     @Test
+    @DisplayName("OPS 导入名册 → 4002（名册管理仍仅 SUPERADMIN）")
+    void opsIsForbidden() {
+        assertThatThrownBy(() -> controller.importRoster("学号,姓名\n249990001,测试甲\n", "b1", user("ROLE_OPS")))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.FORBIDDEN));
+
+        verify(rosterImportService, never()).importCsv(any(), anyString(), any());
+    }
+
+    @Test
     @DisplayName("SUPERADMIN 放行，操作人 ID 取自 principal 并透传给审计")
     void superadminIsAllowedAndOperatorIdPropagated() {
         when(rosterImportService.importCsv(any(), anyString(), any()))

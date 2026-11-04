@@ -52,6 +52,15 @@ class AdminDashboardControllerAuthTest {
     }
 
     @Test
+    @DisplayName("OPS 看板 → 4002（数据看板仍仅 SUPERADMIN）")
+    void opsDashboardIsForbidden() {
+        assertThatThrownBy(() -> controller.dashboard(user("ROLE_OPS")))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.FORBIDDEN));
+        verify(service, never()).dashboard();
+    }
+
+    @Test
     @DisplayName("SUPERADMIN 看板 → 200，15 个字段按组映射")
     void superadminDashboardMapsAllFields() {
         when(service.dashboard()).thenReturn(new AdminStatsApplicationService.Dashboard(

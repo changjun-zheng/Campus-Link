@@ -55,6 +55,20 @@ class AdminModerationControllerAuthTest {
     }
 
     @Test
+    @DisplayName("OPS 直接处置帖子 / 楼层 → 4002（工单 REMOVE 走工单链路，处置台仍仅 SUPERADMIN）")
+    void opsCannotModerateDirectly() {
+        assertThatThrownBy(() -> controller.moderatePost(9L, command(), ops()))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.FORBIDDEN));
+        assertThatThrownBy(() -> controller.moderateReply(11L, command(), ops()))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.FORBIDDEN));
+
+        verify(moderationService, never()).moderatePost(anyLong(), anyLong(), any());
+        verify(moderationService, never()).moderateReply(anyLong(), anyLong(), any());
+    }
+
+    @Test
     @DisplayName("SUPERADMIN 下架帖子 → 200，操作人 id 与目标与命令一起透传")
     void superadminPostModerationPassesThrough() {
         assertThat(controller.moderatePost(9L, command(), superadmin()).code()).isZero();
@@ -114,5 +128,10 @@ class AdminModerationControllerAuthTest {
     private static Authentication superadmin() {
         return new UsernamePasswordAuthenticationToken(
                 7L, null, List.of(new SimpleGrantedAuthority("ROLE_SUPERADMIN")));
+    }
+
+    private static Authentication ops() {
+        return new UsernamePasswordAuthenticationToken(
+                8L, null, List.of(new SimpleGrantedAuthority("ROLE_OPS")));
     }
 }

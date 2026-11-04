@@ -3,8 +3,8 @@
  * 管理后台（CR-084）：举报工单闭环 + 内容处置台。
  *
  * <p>权限口径与全仓一致：前端显隐只是体验，**真正的安全边界在后端**
- * （所有 /admin 接口仅 SUPERADMIN，requireRole = G9 机器强制）。本页对非超管
- * 渲染「无权限」占位，仍不影响安全性。
+ * （requireRole = G9 机器强制）。CR-196 起运营（OPS）可读工单 / 巡查 / 内容检索，
+ * 处置、封禁、看板、标签、角色授予仍仅 SUPERADMIN；本页对两者之外的角色渲染「无权限」占位。
  */
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -13,6 +13,7 @@ import {
   deleteAdminTag,
   getAdminDashboard,
   getReviewQueue,
+  grantOpsRole,
   listAdminTags,
   listReports,
   moderatePost,
@@ -32,6 +33,7 @@ const router = useRouter()
 const auth = useAuthStore()
 
 const isSuperadmin = computed(() => auth.user?.role === 'SUPERADMIN')
+const canAccessAdmin = computed(() => isSuperadmin.value || auth.user?.role === 'OPS')
 
 const tab = ref<'reports' | 'moderation' | 'dashboard' | 'tags' | 'review'>('reports')
 
@@ -231,6 +233,27 @@ async function doSetUserStatus(status: 'ACTIVE' | 'BANNED') {
   }
 }
 
+/* ─── 授予运营角色（F-ADMIN-001 / CR-196）：仅 SUPERADMIN；仅 USER → OPS ─── */
+const opsUserId = ref('')
+const grantingOps = ref(false)
+
+async function doGrantOps() {
+  const id = Number(opsUserId.value)
+  if (!id || id < 1) {
+    ElMessage.warning('请输入有效的用户 id（正整数）')
+    return
+  }
+  grantingOps.value = true
+  try {
+    await grantOpsRole(id)
+    ElMessage.success('已授予运营角色；目标用户需重新登录后生效')
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '授予失败')
+  } finally {
+    grantingOps.value = false
+  }
+}
+
 /* ─── 数据看板（F-ADMIN-005 / CR-131）：进入 Tab 才加载，不在首屏多打一次聚合 ─── */
 const dashboard = ref<AdminDashboardVo | null>(null)
 const dashboardLoading = ref(false)
@@ -409,13 +432,13 @@ async function onReviewModerate(item: ReviewQueueItemVo) {
 watch([reportStatus, reportPage], () => loadReports())
 watch(tab, () => {
   if (tab.value === 'reports' && !reports.value.length) loadReports()
-  if (tab.value === 'dashboard' && !dashboard.value) loadDashboard()
+  if (tab.value === 'dashboard' && isSuperadmin.value && !dashboard.value) loadDashboard()
   if (tab.value === 'moderation' && !contents.value.length) loadContents()
-  if (tab.value === 'tags' && !tags.value.length) loadTags()
+  if (tab.value === 'tags' && isSuperadmin.value && !tags.value.length) loadTags()
   if (tab.value === 'review' && !reviewItems.value.length) loadReviewQueue()
 })
 onMounted(() => {
-  if (isSuperadmin.value) loadReports()
+  if (canAccessAdmin.value) loadReports()
 })
 
 function goLogin() {
@@ -428,10 +451,10 @@ function goLogin() {
   <div>
   <!-- 非超管（含未登录）：占位与 /admin 既有口径一致，权限边界在后端 -->
   <el-result
-    v-if="!isSuperadmin"
+    v-if="!canAccessAdmin"
     icon="warning"
-    title="需要超级管理员权限"
-    sub-title="本页面仅对 SUPERADMIN 角色开放"
+    title="需要运营或超级管理员权限"
+    sub-title="本页面仅对 OPS / SUPERADMIN 角色开放"
   >
     <template #extra>
       <el-button v-if="!auth.isLoggedIn" type="primary" @click="goLogin">去登录</el-button>
@@ -444,14 +467,14 @@ function goLogin() {
   <template v-else>
     <el-tabs v-model="tab" class="mb-5">
       <el-tab-pane label="举报工单" name="reports" />
-      <el-tab-pane label="内容处置台" name="moderation" />
-      <el-tab-pane label="数据看板" name="dashboard" />
-      <el-tab-pane label="标签管理" name="tags" />
+      <el-tab-pane :label="isSuperadmin ? '内容处置台' : '内容检索'" name="moderation" />
+      <el-tab-pane v-if="isSuperadmin" label="数据看板" name="dashboard" />
+      <el-tab-pane v-if="isSuperadmin" label="标签管理" name="tags" />
       <el-tab-pane label="内容巡查" name="review" />
     </el-tabs>
 
     <!-- ─── 数据看板（F-ADMIN-005 / CR-131）：仅 SUPERADMIN；进入 Tab 才加载 ─── -->
-    <el-card v-show="tab === 'dashboard'" shadow="never" class="mb-5">
+    <el-card v-if="isSuperadmin" v-show="tab === 'dashboard'" shadow="never" class="mb-5">
       <template #header>
         <div class="flex flex-wrap items-baseline justify-between gap-2">
           <span class="font-medium">数据看板</span>
@@ -483,7 +506,7 @@ function goLogin() {
     </el-card>
 
     <!-- ─── 标签管理（F-ADMIN-004 标签侧 / CR-132）：仅 SUPERADMIN；进入 Tab 才加载 ─── -->
-    <el-card v-show="tab === 'tags'" shadow="never">
+    <el-card v-if="isSuperadmin" v-show="tab === 'tags'" shadow="never">
       <template #header>
         <div class="flex flex-wrap items-baseline justify-between gap-2">
           <span class="font-medium">标签管理</span>
@@ -552,7 +575,7 @@ function goLogin() {
         <div class="flex flex-wrap items-baseline justify-between gap-2">
           <span class="font-medium">内容巡查</span>
           <span class="text-caption text-ink-meta">
-            按发布时间倒序；只列未删内容，已下架仍列出可恢复；处置会记录审计
+            按发布时间倒序；只列未删内容，已下架仍列出可恢复{{ isSuperadmin ? '；处置会记录审计' : '；运营仅可查看，处置需超级管理员' }}
           </span>
         </div>
       </template>
@@ -591,6 +614,7 @@ function goLogin() {
                 {{ item.status === 'REMOVED' ? '已下架' : '正常' }}
               </el-tag>
               <el-button
+                v-if="isSuperadmin"
                 size="small"
                 :type="item.status === 'REMOVED' ? 'primary' : 'danger'"
                 plain
@@ -705,7 +729,12 @@ function goLogin() {
 
     <!-- ─── 内容处置台：搜索（F-ADMIN-002 / CR-141）+ 按 id 直达 ─── -->
     <el-card v-show="tab === 'moderation'" shadow="never">
-      <template #header><span class="font-medium">内容处置台</span></template>
+      <template #header>
+        <div class="flex flex-wrap items-baseline justify-between gap-2">
+          <span class="font-medium">{{ isSuperadmin ? '内容处置台' : '内容检索' }}</span>
+          <span v-if="!isSuperadmin" class="text-caption text-ink-meta">运营仅可检索与查看；下架 / 恢复 / 封禁需超级管理员</span>
+        </div>
+      </template>
 
       <div class="px-5">
         <el-form inline class="gap-y-2">
@@ -769,7 +798,7 @@ function goLogin() {
           <el-table-column label="时间" width="110">
             <template #default="{ row }">{{ formatRelativeTime(row.createdAt) }}</template>
           </el-table-column>
-          <el-table-column label="操作" width="100" fixed="right">
+          <el-table-column v-if="isSuperadmin" label="操作" width="100" fixed="right">
             <template #default="{ row }">
               <el-button
                 v-if="row.status === 'PUBLISHED'"
@@ -799,8 +828,8 @@ function goLogin() {
         </div>
       </div>
 
-      <el-divider>按 id 直达</el-divider>
-      <el-form label-width="90px" class="max-w-[560px]">
+      <el-divider v-if="isSuperadmin">按 id 直达</el-divider>
+      <el-form v-if="isSuperadmin" label-width="90px" class="max-w-[560px]">
         <el-form-item label="目标类型">
           <el-radio-group v-model="targetType">
             <el-radio-button value="POST">帖子</el-radio-button>
@@ -822,10 +851,20 @@ function goLogin() {
           <el-button type="danger" :loading="banning" @click="doSetUserStatus('BANNED')">封禁</el-button>
           <el-button :loading="banning" @click="doSetUserStatus('ACTIVE')">解封</el-button>
         </el-form-item>
+        <el-divider />
+        <el-form-item label="运营用户 id">
+          <el-input v-model="opsUserId" placeholder="用户 id（正整数）" />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" :loading="grantingOps" @click="doGrantOps">授予运营角色</el-button>
+        </el-form-item>
       </el-form>
       <p class="px-5 pb-5 text-caption leading-body text-ink-meta">
-        下架即从全站列表 / 搜索 / 热榜 / 详情消失（不碰作者删除墓碑，可恢复）；封禁即时拒绝登录与发帖。
-        全部操作写审计日志。
+        <template v-if="isSuperadmin">
+          下架即从全站列表 / 搜索 / 热榜 / 详情消失（不碰作者删除墓碑，可恢复）；封禁即时拒绝登录与发帖；
+          授予运营角色需目标用户重新登录后生效。全部操作写审计日志。
+        </template>
+        <template v-else>运营可处理举报工单、查看内容巡查与检索结果；处置与封禁由超级管理员执行。</template>
       </p>
     </el-card>
 

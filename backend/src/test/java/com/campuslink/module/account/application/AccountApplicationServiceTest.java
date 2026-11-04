@@ -410,7 +410,74 @@ class AccountApplicationServiceTest {
         verify(auditService).record(1L, "USER_UNBAN", "users", USER_ID, null);
     }
 
+    @Test
+    @DisplayName("授予 OPS：ACTIVE USER → OPS 定向更新，审计动作名为 USER_ROLE_UPDATE")
+    void adminPromoteToOpsWritesRoleAndAudits() {
+        when(accountRepository.findById(USER_ID)).thenReturn(Optional.of(account(AccountStatus.ACTIVE, null)));
+        when(accountRepository.updateRole(USER_ID, AccountRole.USER, AccountRole.OPS)).thenReturn(true);
+
+        service.adminPromoteToOps(1L, USER_ID);
+
+        verify(accountRepository).updateRole(USER_ID, AccountRole.USER, AccountRole.OPS);
+        verify(auditService).record(1L, "USER_ROLE_UPDATE", "users", USER_ID, "role=OPS");
+    }
+
+    @Test
+    @DisplayName("已是 OPS：幂等成功，不发 UPDATE、不记审计")
+    void adminPromoteToOpsIsIdempotentForOps() {
+        when(accountRepository.findById(USER_ID)).thenReturn(Optional.of(accountWithRole(AccountRole.OPS)));
+
+        service.adminPromoteToOps(1L, USER_ID);
+
+        verify(accountRepository, never()).updateRole(anyLong(), any(), any());
+        verifyNoInteractions(auditService);
+    }
+
+    @Test
+    @DisplayName("超管不可被授予 / 改动角色 → 1001，且不发 UPDATE")
+    void adminPromoteToOpsRefusesSuperadmin() {
+        when(accountRepository.findById(USER_ID)).thenReturn(Optional.of(accountWithRole(AccountRole.SUPERADMIN)));
+
+        assertThatThrownBy(() -> service.adminPromoteToOps(1L, USER_ID))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.INVALID_PARAM));
+
+        verify(accountRepository, never()).updateRole(anyLong(), any(), any());
+        verifyNoInteractions(auditService);
+    }
+
+    @Test
+    @DisplayName("封禁 / 注销账号不可授予 OPS → 1001")
+    void adminPromoteToOpsRefusesInactiveAccount() {
+        when(accountRepository.findById(USER_ID)).thenReturn(Optional.of(account(AccountStatus.BANNED, null)));
+
+        assertThatThrownBy(() -> service.adminPromoteToOps(1L, USER_ID))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.INVALID_PARAM));
+
+        verify(accountRepository, never()).updateRole(anyLong(), any(), any());
+        verifyNoInteractions(auditService);
+    }
+
+    @Test
+    @DisplayName("并发窗口内角色已被他人改动、条件更新落空：静默返回，不记审计")
+    void adminPromoteToOpsSkipsAuditWhenUpdateLosesRace() {
+        when(accountRepository.findById(USER_ID)).thenReturn(Optional.of(account(AccountStatus.ACTIVE, null)));
+        when(accountRepository.updateRole(USER_ID, AccountRole.USER, AccountRole.OPS)).thenReturn(false);
+
+        service.adminPromoteToOps(1L, USER_ID);
+
+        verify(accountRepository).updateRole(USER_ID, AccountRole.USER, AccountRole.OPS);
+        verifyNoInteractions(auditService);
+    }
+
     // ---------- helpers ----------
+
+    private static Account accountWithRole(AccountRole role) {
+        return Account.rehydrate(USER_ID, EmailAddress.of(EMAIL), null, StudentId.of(STUDENT_ID),
+                "张三同学", null, null, null, null, null, role, AccountStatus.ACTIVE,
+                true, false, null, Instant.parse("2026-09-01T08:00:00Z"), null);
+    }
 
     /** 校验码 + 票据两道门都放行的公共桩（邮箱与手机号渠道共用） */
     private void stubThroughTicket() {

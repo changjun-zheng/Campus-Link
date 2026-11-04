@@ -18,12 +18,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 后台内容搜索接口（F-ADMIN-002 / CR-141）：仅 SUPERADMIN。
+ * 后台内容搜索接口（F-ADMIN-002 / CR-141）：OPS 与 SUPERADMIN 可读。
  *
- * <p>只读端点——下架 / 恢复复用既有 {@code AdminModerationController} 的两个 PUT，
+ * <p>只读端点——下架 / 恢复复用既有 {@code AdminModerationController} 的两个 PUT（仍仅 SUPERADMIN），
  * 后者已有「匿名 401 / 角色不足 403」用例与 G9 守护；本端点只补"按关键词 / 用户 / 时间发现内容"。
  */
-@Tag(name = "admin-content", description = "运营后台 · 内容搜索（仅 SUPERADMIN）")
+@Tag(name = "admin-content", description = "运营后台 · 内容搜索（OPS / SUPERADMIN）")
 @RestController
 @RequestMapping("/api/v1/admin")
 @RequiredArgsConstructor
@@ -31,7 +31,7 @@ public class AdminContentSearchController {
 
     private final AdminContentSearchApplicationService adminContentSearchApplicationService;
 
-    @Operation(summary = "内容搜索（仅 SUPERADMIN）：type=post|reply，keyword 搜标题 / 正文，"
+    @Operation(summary = "内容搜索（OPS / SUPERADMIN）：type=post|reply，keyword 搜标题 / 正文，"
             + "userId 或 authorKeyword 筛作者，days 限 7/30/90；只列未删内容，已下架仍列出")
     @SecurityRequirement(name = ApiDocs.BEARER_AUTH)
     @ErrorCodes({ResultCode.NOT_LOGGED_IN, ResultCode.FORBIDDEN})
@@ -45,7 +45,7 @@ public class AdminContentSearchController {
             @RequestParam(value = "page", defaultValue = "1") int page,
             @RequestParam(value = "size", defaultValue = "20") int size,
             Authentication authentication) {
-        CurrentUser.requireRole(authentication, "ROLE_SUPERADMIN");
+        CurrentUser.requireRole(authentication, "ROLE_OPS");
         return ApiResponse.ok(AdminContentSearchVo.from(
                 adminContentSearchApplicationService.search(type, keyword, userId, authorKeyword,
                         days, page, size)));

@@ -25,20 +25,12 @@
       "description": "用户治理（仅 SUPERADMIN）"
     },
     {
-      "name": "admin-report",
-      "description": "举报工单处理（仅 SUPERADMIN）"
-    },
-    {
       "name": "auth",
       "description": "学籍核验、注册与登录"
     },
     {
       "name": "follow",
       "description": "关注关系"
-    },
-    {
-      "name": "admin-content",
-      "description": "运营后台 · 内容搜索（仅 SUPERADMIN）"
     },
     {
       "name": "post-image",
@@ -53,12 +45,16 @@
       "description": "楼层回复"
     },
     {
+      "name": "admin-content",
+      "description": "运营后台 · 内容搜索（OPS / SUPERADMIN）"
+    },
+    {
       "name": "message",
       "description": "私信"
     },
     {
       "name": "admin-review",
-      "description": "运营后台 · 内容巡查（仅 SUPERADMIN）"
+      "description": "运营后台 · 内容巡查（OPS / SUPERADMIN）"
     },
     {
       "name": "notification",
@@ -75,6 +71,10 @@
     {
       "name": "admin-tags",
       "description": "运营后台 · 标签管理（仅 SUPERADMIN）"
+    },
+    {
+      "name": "admin-report",
+      "description": "举报工单处理（OPS / SUPERADMIN）"
     },
     {
       "name": "team",
@@ -982,12 +982,109 @@
         ]
       }
     },
+    "/api/v1/admin/users/{id}/role": {
+      "put": {
+        "tags": [
+          "admin-user"
+        ],
+        "summary": "授予运营角色（仅 SUPERADMIN）：仅允许 USER → OPS，幂等；目标用户需重新登录后生效",
+        "operationId": "promoteToOps",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoleCommand"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseVoid"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数错误（1001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未登录（4001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "无权限（4002）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "用户不存在（2007）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "系统繁忙，请稍后再试（9999）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/reports/{id}": {
       "put": {
         "tags": [
           "admin-report"
         ],
-        "summary": "工单处理（仅 SUPERADMIN）：action=REMOVE 联动目标处置（下架 / 封禁），DISMISS 驳回；闭环 + 审计",
+        "summary": "工单处理（OPS / SUPERADMIN）：action=REMOVE 联动目标处置（下架 / 封禁），DISMISS 驳回；闭环 + 审计",
         "operationId": "close",
         "parameters": [
           {
@@ -5808,7 +5905,7 @@
         "tags": [
           "admin-review"
         ],
-        "summary": "内容巡查队列（仅 SUPERADMIN）：帖子 / 楼层按发布时间倒序；只列未删内容，已下架仍列出",
+        "summary": "内容巡查队列（OPS / SUPERADMIN）：帖子 / 楼层按发布时间倒序；只列未删内容，已下架仍列出",
         "operationId": "reviewQueue",
         "parameters": [
           {
@@ -5905,7 +6002,7 @@
         "tags": [
           "admin-report"
         ],
-        "summary": "工单分页（仅 SUPERADMIN）：status 可选 PENDING / CLOSED，缺省全部",
+        "summary": "工单分页（OPS / SUPERADMIN）：status 可选 PENDING / CLOSED，缺省全部",
         "operationId": "page",
         "parameters": [
           {
@@ -6057,7 +6154,7 @@
         "tags": [
           "admin-content"
         ],
-        "summary": "内容搜索（仅 SUPERADMIN）：type=post|reply，keyword 搜标题 / 正文，userId 或 authorKeyword 筛作者，days 限 7/30/90；只列未删内容，已下架仍列出",
+        "summary": "内容搜索（OPS / SUPERADMIN）：type=post|reply，keyword 搜标题 / 正文，userId 或 authorKeyword 筛作者，days 限 7/30/90；只列未删内容，已下架仍列出",
         "operationId": "search_1",
         "parameters": [
           {
@@ -6495,6 +6592,18 @@
         },
         "required": [
           "status"
+        ]
+      },
+      "RoleCommand": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "role"
         ]
       },
       "CloseCommand": {

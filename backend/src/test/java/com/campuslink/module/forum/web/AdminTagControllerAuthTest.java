@@ -75,6 +75,20 @@ class AdminTagControllerAuthTest {
     }
 
     @Test
+    @DisplayName("OPS 查 / 删标签 → 4002（标签管理仍仅 SUPERADMIN）")
+    void opsIsForbidden() {
+        assertThatThrownBy(() -> controller.tags(null, "use_count", 1, 20, auth("ROLE_OPS")))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.FORBIDDEN));
+        assertThatThrownBy(() -> controller.deleteTag(TAG_ID, auth("ROLE_OPS")))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.FORBIDDEN));
+
+        verify(service, never()).page(any(), anyString(), anyInt(), anyInt());
+        verify(service, never()).delete(anyLong(), anyLong());
+    }
+
+    @Test
     @DisplayName("SUPERADMIN 查列表 → 200，字段按条目映射")
     void superadminListMapsVo() {
         when(service.page("ja", "name", 2, 10)).thenReturn(new AdminTagApplicationService.AdminTags(

@@ -2,6 +2,7 @@ package com.campuslink.module.account.domain.gateway;
 
 import com.campuslink.module.account.domain.exception.AccountConflictException;
 import com.campuslink.module.account.domain.model.Account;
+import com.campuslink.module.account.domain.model.AccountRole;
 import com.campuslink.module.account.domain.model.AccountStatus;
 import com.campuslink.module.account.domain.model.ProfileField;
 
@@ -69,6 +70,13 @@ public interface AccountRepository {
      * （非注销场景传 null 即清空）。与 updateProfile 同理走定向 SQL，不整行回写。
      */
     void updateStatus(Long accountId, AccountStatus status, java.time.Instant deleteAt);
+
+    /**
+     * 角色定向 UPDATE（CR-196）：只 SET {@code role} 一列，条件同时带当前角色
+     * （{@code expectedRole}）——并发窗口内若角色已被他人改动，本次更新落空、返回 {@code false}，
+     * 调用方不得据此记审计。与 {@link #updateStatus} 同理不整行回写。
+     */
+    boolean updateRole(Long accountId, AccountRole expectedRole, AccountRole targetRole);
 
     /**
      * 匿名化（CR-082 注销冷静期满）：清 email / phone / 学号（_enc 与 _hash）、头像，

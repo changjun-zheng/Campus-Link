@@ -6,6 +6,7 @@ import com.campuslink.module.account.domain.exception.AccountConflictException;
 import com.campuslink.module.account.domain.gateway.AccountRepository;
 import com.campuslink.module.account.domain.gateway.SensitiveCodec;
 import com.campuslink.module.account.domain.model.Account;
+import com.campuslink.module.account.domain.model.AccountRole;
 import com.campuslink.module.account.domain.model.AccountStatus;
 import com.campuslink.module.account.domain.model.ProfileField;
 import com.campuslink.module.account.infrastructure.persistence.mapper.UserMapper;
@@ -149,6 +150,18 @@ public class AccountRepositoryImpl implements AccountRepository {
                 .eq(UserDO::getId, accountId)
                 .set(UserDO::getStatus, status.name())
                 .set(UserDO::getDeleteAt, deleteAt));
+    }
+
+    /** 角色定向 UPDATE（CR-196）：条件带当前角色，返回是否真的改动了一行 */
+    @Override
+    public boolean updateRole(Long accountId, AccountRole expectedRole, AccountRole targetRole) {
+        if (accountId == null || expectedRole == null || targetRole == null || expectedRole == targetRole) {
+            return false;
+        }
+        return userMapper.update(null, new LambdaUpdateWrapper<UserDO>()
+                .eq(UserDO::getId, accountId)
+                .eq(UserDO::getRole, expectedRole.name())
+                .set(UserDO::getRole, targetRole.name())) > 0;
     }
 
     @Override

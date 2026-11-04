@@ -22,8 +22,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 用户治理接口（F-ADMIN 治理 / CR-082）：封禁 / 解封，仅 SUPERADMIN（G9：requireRole 机器强制，
- * 配套「每个管理端点自带 403 用例」约定，见 AGENTS.md 测试约定）。
+ * 用户治理接口（F-ADMIN 治理 / CR-082、CR-196）：封禁 / 解封与运营角色授予，仅 SUPERADMIN
+ * （G9：requireRole 机器强制，配套「每个管理端点自带 403 用例」约定，见 AGENTS.md 测试约定）。
  */
 @Tag(name = "admin-user", description = "用户治理（仅 SUPERADMIN）")
 @RestController
@@ -34,6 +34,9 @@ public class AdminUserController {
     private final AccountApplicationService accountApplicationService;
 
     public record StatusCommand(@NotBlank(message = "status 仅支持 ACTIVE / BANNED") String status) {
+    }
+
+    public record RoleCommand(@NotBlank(message = "role 仅支持 OPS") String role) {
     }
 
     @Operation(summary = "封禁 / 解封（仅 SUPERADMIN）：BANNED 即时生效（登录拒绝、发帖回帖拒绝），全程审计")
@@ -50,6 +53,21 @@ public class AdminUserController {
             default -> throw new ApiException(ResultCode.INVALID_PARAM);
         };
         accountApplicationService.adminSetStatus(operatorId, id, target);
+        return ApiResponse.ok();
+    }
+
+    @Operation(summary = "授予运营角色（仅 SUPERADMIN）：仅允许 USER → OPS，幂等；目标用户需重新登录后生效")
+    @SecurityRequirement(name = ApiDocs.BEARER_AUTH)
+    @ErrorCodes({ResultCode.NOT_LOGGED_IN, ResultCode.FORBIDDEN, ResultCode.USER_NOT_FOUND})
+    @PutMapping("/{id}/role")
+    public ApiResponse<Void> promoteToOps(@PathVariable("id") long id,
+                                          @Valid @RequestBody RoleCommand command,
+                                          Authentication authentication) {
+        long operatorId = CurrentUser.requireRole(authentication, "ROLE_SUPERADMIN");
+        if (!"OPS".equals(command.role())) {
+            throw new ApiException(ResultCode.INVALID_PARAM);
+        }
+        accountApplicationService.adminPromoteToOps(operatorId, id);
         return ApiResponse.ok();
     }
 }

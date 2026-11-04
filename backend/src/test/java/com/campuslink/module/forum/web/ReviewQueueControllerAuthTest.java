@@ -24,10 +24,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * 巡查队列端点（CR-133 / F-SAFE-004）的授权三态：匿名 401、普通用户 403、SUPERADMIN 放行。
+ * 巡查队列端点（CR-133 / F-SAFE-004、CR-196）的授权：匿名 401、普通用户 403、OPS / SUPERADMIN 放行。
  *
  * <p>ROLE_USER 那一例是本端点真正的防线：路径级框架只区分「登录 / 未登录」，
- * 「仅 SUPERADMIN」只存在于 {@code CurrentUser.requireRole}。
+ * 「OPS / SUPERADMIN」只存在于 {@code CurrentUser.requireRole}。SUPERADMIN 在真实过滤器里
+ * 会同时持有 ROLE_OPS（CR-196 角色层级），本测试显式构造两个 authority 以模拟该事实。
  */
 class ReviewQueueControllerAuthTest {
 
@@ -53,6 +54,18 @@ class ReviewQueueControllerAuthTest {
     }
 
     @Test
+    @DisplayName("OPS 查巡查队列 → 200（内容审核职责）")
+    void opsIsAllowed() {
+        when(service.page("post", 1, 20)).thenReturn(new ReviewQueueApplicationService.ReviewQueue(
+                "post", List.of(), 0L, 1, 20));
+
+        ApiResponse<ReviewQueueVo> response = controller.reviewQueue("post", 1, 20, auth("ROLE_OPS"));
+
+        assertThat(response.code()).isZero();
+        assertThat(response.data().total()).isZero();
+    }
+
+    @Test
     @DisplayName("SUPERADMIN → 200，kind 与条目字段按用例结果映射")
     void superadminMapsVo() {
         when(service.page("reply", 2, 10)).thenReturn(new ReviewQueueApplicationService.ReviewQueue(
@@ -61,7 +74,7 @@ class ReviewQueueControllerAuthTest {
                         "张三", "REMOVED", Instant.parse("2026-10-24T10:00:00Z"))),
                 1L, 2, 10));
 
-        ApiResponse<ReviewQueueVo> response = controller.reviewQueue("reply", 2, 10, auth("ROLE_SUPERADMIN"));
+        ApiResponse<ReviewQueueVo> response = controller.reviewQueue("reply", 2, 10, superadmin());
 
         assertThat(response.code()).isZero();
         ReviewQueueVo vo = response.data();
@@ -76,5 +89,12 @@ class ReviewQueueControllerAuthTest {
     private static Authentication auth(String authority) {
         return new UsernamePasswordAuthenticationToken(1L, "",
                 List.of(new SimpleGrantedAuthority(authority)));
+    }
+
+    /** 真实过滤器对 SUPERADMIN 同时授予 ROLE_SUPERADMIN + ROLE_OPS（CR-196） */
+    private static Authentication superadmin() {
+        return new UsernamePasswordAuthenticationToken(1L, "",
+                List.of(new SimpleGrantedAuthority("ROLE_SUPERADMIN"),
+                        new SimpleGrantedAuthority("ROLE_OPS")));
     }
 }

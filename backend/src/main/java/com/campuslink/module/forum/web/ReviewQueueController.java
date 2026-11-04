@@ -18,12 +18,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 人工巡查队列接口（F-SAFE-004 / CR-133）：仅 SUPERADMIN。
+ * 人工巡查队列接口（F-SAFE-004 / CR-133）：OPS 与 SUPERADMIN 可读。
  *
- * <p>只读端点——下架 / 恢复复用既有 {@code AdminModerationController} 的两个 PUT；
+ * <p>只读端点——下架 / 恢复复用既有 {@code AdminModerationController} 的两个 PUT（仍仅 SUPERADMIN）；
  * 后者已有「匿名 401 / 角色不足 403」用例与 G9 守护，本端点只补发现入口。
  */
-@Tag(name = "admin-review", description = "运营后台 · 内容巡查（仅 SUPERADMIN）")
+@Tag(name = "admin-review", description = "运营后台 · 内容巡查（OPS / SUPERADMIN）")
 @RestController
 @RequestMapping("/api/v1/admin")
 @RequiredArgsConstructor
@@ -31,7 +31,7 @@ public class ReviewQueueController {
 
     private final ReviewQueueApplicationService reviewQueueApplicationService;
 
-    @Operation(summary = "内容巡查队列（仅 SUPERADMIN）：帖子 / 楼层按发布时间倒序；只列未删内容，已下架仍列出")
+    @Operation(summary = "内容巡查队列（OPS / SUPERADMIN）：帖子 / 楼层按发布时间倒序；只列未删内容，已下架仍列出")
     @SecurityRequirement(name = ApiDocs.BEARER_AUTH)
     @ErrorCodes({ResultCode.NOT_LOGGED_IN, ResultCode.FORBIDDEN})
     @GetMapping("/review-queue")
@@ -39,7 +39,7 @@ public class ReviewQueueController {
                                                   @RequestParam(value = "page", defaultValue = "1") int page,
                                                   @RequestParam(value = "size", defaultValue = "20") int size,
                                                   Authentication authentication) {
-        CurrentUser.requireRole(authentication, "ROLE_SUPERADMIN");
+        CurrentUser.requireRole(authentication, "ROLE_OPS");
         return ApiResponse.ok(ReviewQueueVo.from(reviewQueueApplicationService.page(kind, page, size)));
     }
 }

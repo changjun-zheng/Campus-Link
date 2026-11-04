@@ -1,6 +1,6 @@
 import { del, get, post, put } from './client'
 
-/** 举报工单（F-SAFE-002 / CR-082）：仅 SUPERADMIN 可读写列表与处理 */
+/** 举报工单（F-SAFE-002 / CR-082、CR-196）：OPS / SUPERADMIN 可读写列表与处理 */
 export interface AdminReportVo {
   id: number
   reporterId: number
@@ -44,6 +44,12 @@ export const moderateReply = (id: number, status: 'PUBLISHED' | 'REMOVED', reaso
 /** 封禁 / 解封（CR-082）：BANNED 即时生效 */
 export const setUserStatus = (id: number, status: 'ACTIVE' | 'BANNED') =>
   put<void>(`/admin/users/${id}/status`, { status })
+
+/**
+ * 授予运营角色（F-ADMIN-001 / CR-196，仅 SUPERADMIN）：只允许 USER → OPS，幂等。
+ * 目标用户须重新登录后才拿到 OPS 权限；本批不提供降级接口。
+ */
+export const grantOpsRole = (id: number) => put<void>(`/admin/users/${id}/role`, { role: 'OPS' })
 
 /** 提交举报（F-SAFE-002）：24h 同对象去重 → 429 / 2012 */
 export const submitReport = (payload: {
@@ -119,7 +125,7 @@ export const listAdminTags = (
 export const deleteAdminTag = (id: number) => del<void>(`/admin/tags/${id}`)
 
 /**
- * 内容巡查队列（F-SAFE-004 / CR-133，仅 SUPERADMIN）。
+ * 内容巡查队列（F-SAFE-004 / CR-133、CR-196）：OPS / SUPERADMIN 可读。
  *
  * 只列未删内容、**已下架仍列出**（可恢复）；`kind=reply` 时 `title` 是楼层正文纯文本前 60 字（不含 HTML）。
  * 处置不在本组：复用 `moderatePost` / `moderateReply`（审计仍为 `MODERATE_POST` / `MODERATE_REPLY`）。
@@ -142,7 +148,7 @@ export interface ReviewQueueVo {
   size: number
 }
 
-/** 巡查队列（仅 SUPERADMIN）：kind 只认 reply，其余服务端归一为 post */
+/** 巡查队列（OPS / SUPERADMIN）：kind 只认 reply，其余服务端归一为 post */
 export const getReviewQueue = (
   params: { kind?: 'post' | 'reply'; page?: number; size?: number } = {},
 ) => {
@@ -154,7 +160,7 @@ export const getReviewQueue = (
 }
 
 /**
- * 后台内容搜索（F-ADMIN-002 / CR-141，仅 SUPERADMIN）。
+ * 后台内容搜索（F-ADMIN-002 / CR-141、CR-196）：OPS / SUPERADMIN 可读。
  *
  * `keyword` 搜标题 / 正文（2~50 字）；`userId` 与 `authorKeyword` 二选一（userId 优先）；
  * `days` 只接受 7 / 30 / 90。只列未删内容、已下架仍列出；`summary` 为服务端纯文本前 200 字。

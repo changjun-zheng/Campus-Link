@@ -281,6 +281,27 @@ public class AccountApplicationService {
     }
 
     /**
+     * 授予运营角色（F-ADMIN-001 / CR-196）：只允许 **ACTIVE + USER → OPS**，幂等；超管与注销 / 封禁账号拒绝。
+     *
+     * <p>刻意不提供降级：JWT 把角色写死在 token 中，降级后旧 token 仍有效至过期（最长 7 天），
+     * 须先有 token 吊销 / 会话失效机制（与「封禁即时登出」同一前置），另开 CR。
+     * 升权同样需要目标用户重新登录才生效——旧 token 里仍是 USER，不会提前获得管理权限。
+     */
+    @Transactional
+    public void adminPromoteToOps(long operatorId, long targetId) {
+        Account a = accountOf(targetId);
+        if (a.getRole() == AccountRole.OPS) {
+            return;
+        }
+        if (a.getRole() != AccountRole.USER || a.getStatus() != AccountStatus.ACTIVE) {
+            throw new ApiException(ResultCode.INVALID_PARAM);
+        }
+        if (accountRepository.updateRole(targetId, AccountRole.USER, AccountRole.OPS)) {
+            auditService.record(operatorId, "USER_ROLE_UPDATE", "users", targetId, "role=OPS");
+        }
+    }
+
+    /**
      * 按 id 取**可公开露出**的账号（他人主页 {@code /u/:id} 与它的公开帖子列表共用这一道门）：
      * 不存在与已注销（{@code DEACTIVATED}）一律 2007 / 404，两种情形对外不区分——与帖子侧
      * {@code requireVisiblePost} 把「不存在 / 已删 / 未发布」全归 3001 是同一条纪律：不给按 id 探测账号状态的口子。
