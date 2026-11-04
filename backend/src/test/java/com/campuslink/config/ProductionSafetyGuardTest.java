@@ -60,6 +60,8 @@ class ProductionSafetyGuardTest {
         values.put(SEARCH_ENGINE, "mysql");
         values.put(MEILI_KEY, "");
         values.putAll(MailConfigurationGuardTest.compliant());
+        values.put("campuslink.post-images.upload-enabled", "false");
+        values.put("campuslink.post-images.read-enabled", "false");
         return values;
     }
 

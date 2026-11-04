@@ -2,7 +2,7 @@
 
 | 文档信息 | 内容 |
 |---------|------|
-| 版本 | v1.6 |
+| 版本 | v1.7 |
 | 状态 | 已归档（设计门行动项 **A3-5** 交付物，[CR-035](../变更日志/变更台账.md)） |
 | 维护人 | 技术负责人（发起人兼任） |
 | 最后更新 | 2026-11-04 |
@@ -316,3 +316,23 @@ erDiagram
 | 单帖楼层接近 **1000 楼上限**常态化 | 楼层分页游标化（当前 `(post_id, floor_no)` 复合索引已支撑，仅需改查询形态） |
 
 通知事件与消费凭证为逻辑关联，不设置外键；Outbox 的 SENT 表示消息已被 Broker 确认接收，不表示通知已消费。详细语义见[通知投递设计](技术方案.md#231-站内通知投递)。
+
+
+## 7. 帖子图片（V12／CR-195）
+
+`post_images` 逻辑关联 `users.id`（owner_id）与 `posts.id`（post_id，可空），无物理外键。`id` 为 UUID 主键，`storage_key` 唯一；`in_use` 表示当前正文是否引用，`state` 为 UPLOADING／READY／FAILED；其余为 mime_type、byte_size、width、height、created_at（UTC）。索引以 [V12](../../backend/src/main/resources/db/migration/V12__post_images.sql) 为准。失败记录、已移除引用与文件保留，不自动清理。每万张文件上限约 20GiB，元数据不含原文件名或正文。
+
+```mermaid
+erDiagram
+    USERS ||--o{ POST_IMAGES : owns
+    POSTS o|--o{ POST_IMAGES : binds
+    POST_IMAGES {
+        char36 id PK
+        bigint owner_id
+        bigint post_id
+        boolean in_use
+        varchar state
+        varchar storage_key UK
+        datetime created_at
+    }
+```

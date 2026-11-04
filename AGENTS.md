@@ -43,7 +43,7 @@ description: 重庆工程学院计算机专业学生交流论坛（Spring Boot 4
 | [`docs/设计/接口契约/README.md`](docs/设计/接口契约/README.md) | 改接口 / 错误码 / 鉴权**之后**重生成快照（§2 命令与现行版本） |
 | [`docs/设计/UI规范/界面规范.md`](docs/设计/UI规范/界面规范.md) · [`前端界面素材选型.md`](docs/设计/UI规范/前端界面素材选型.md) | 新增 / 修改前端页面前：令牌表、组件与交互约定；**引入任何外部素材（组件库 / 图标 / 字体 / 插画 / 动效）前先查选型文档 §3「禁区汇总」** |
 | [`docs/开发/实施方案/说明与模板.md`](docs/开发/实施方案/说明与模板.md) | 要做「够大」的改动前：先写 `CR-xxx-主题.md` 并**停下等确认** |
-| [`docs/设计/数据模型ER图与量级预估.md`](docs/设计/数据模型ER图与量级预估.md) | 查表结构 / 字段 / 量级时（以 `db/migration/` 全部迁移为唯一事实源，V1~V11） |
+| [`docs/设计/数据模型ER图与量级预估.md`](docs/设计/数据模型ER图与量级预估.md) | 查表结构 / 字段 / 量级时（以 `db/migration/` 全部迁移为唯一事实源，V1~V12） |
 | [`docs/开发/开发测试账号清单.md`](docs/开发/开发测试账号清单.md) | 需要开发测试账号时（45 个合成账号） |
 | [`docs/需求/产品需求文档.md`](docs/需求/产品需求文档.md) | 需求基线（学籍核验 F-ACC-004 为 P0） |
 | [`docs/评审/`](docs/评审/增量PRD评审纪要.md)（立项 / 需求 / 设计门纪要 · 技术方案追认纪要 · 增量PRD评审纪要 · 部署与机审选型决策材料） | 追溯评审结论与行动项（A1-*/A2-*/A3-*、F-1~F-7、R-1~R-3、七份增量 PRD 草案结论） |
@@ -62,7 +62,7 @@ description: 重庆工程学院计算机专业学生交流论坛（Spring Boot 4
 mysql -h127.0.0.1 -uroot -p -e "CREATE DATABASE IF NOT EXISTS campuslink DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;"
 
 mvn verify            # 编译 + 单测 + 架构守护 + jacoco 行覆盖 80% check + SpotBugs 静态扫描 + Checkstyle 风格门禁；合码前必须全绿
-                      # 当前基线 817（默认 mvn verify 有 12 例 SKIPPED：CR-090 的 4 例 + CR-106 的契约快照真身比对 1 例 + CR-193 的数据库集成 7 例；CI 与本机 SPRING_IT=true 时 0 SKIPPED 全跑）——改基线数只改本注释这一处
+                      # 当前基线 835（默认 mvn verify 有 14 例 SKIPPED：CR-090 的 4 例 + CR-106 的契约快照真身比对 1 例 + CR-193 的数据库集成 7 例 + CR-195 的图片事务集成 2 例；CI 与本机 SPRING_IT=true 时 0 SKIPPED 全跑）——改基线数只改本注释这一处
 mvn spring-boot:run   # 启动：8088（SERVER_PORT 可覆盖）；健康检查 /actuator/health，OpenAPI /api/docs
                       # 搜索升级（CR-181，可选）：默认 engine=mysql；启用 Meili 时先起本机 MeiliSearch（127.0.0.1:7700，
                       # 二进制不入仓），再以 SEARCH_ENGINE=meilisearch 启动；生产须注入 MEILI_URL / MEILI_API_KEY。

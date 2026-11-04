@@ -10,6 +10,19 @@ import static org.assertj.core.api.Assertions.assertThat;
  * 这些用例是论坛安全生命线的回归底线，任何渲染实现调整都必须保持全绿。
  */
 class MarkdownRendererTest {
+    @org.junit.jupiter.api.Test
+    void managedPostImagePathIsAllowedButNearbyPathsAreNot() {
+        String path = "/api/v1/post-images/123e4567-e89b-12d3-a456-426614174000/content";
+        var renderer = new MarkdownRenderer();
+        org.assertj.core.api.Assertions.assertThat(renderer.render("![图片](" + path + ")"))
+                .contains("src=\"" + path + "\"");
+        for (String unsafe : java.util.List.of("//evil.example/x.png", "/media/post-images/x.png",
+                path + "?token=secret", path + "/../other", "data:image/png;base64,abc", "blob:local")) {
+            org.assertj.core.api.Assertions.assertThat(renderer.render("<img src=\"" + unsafe + "\">"))
+                    .doesNotContain("src=");
+        }
+    }
+
 
     private final MarkdownRenderer renderer = new MarkdownRenderer();
 

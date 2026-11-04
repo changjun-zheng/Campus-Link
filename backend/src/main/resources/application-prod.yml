@@ -16,6 +16,9 @@ spring:
     password: ${DB_PASSWORD}
 
 campuslink:
+  post-images:
+    upload-enabled: false
+    read-enabled: false
   jwt:
     secret: ${JWT_SECRET}
   crypto:

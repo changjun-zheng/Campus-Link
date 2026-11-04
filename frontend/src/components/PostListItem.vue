@@ -17,6 +17,7 @@ import { useAuthStore } from '../stores/auth'
 import { formatCount } from '../utils/format'
 import { formatRelativeTime } from '../utils/time'
 import SvgIcon from './SvgIcon.vue'
+import PostImage from './PostImage.vue'
 import UserAvatar from './UserAvatar.vue'
 
 const props = withDefaults(
@@ -203,7 +204,7 @@ async function onLike() {
       </div>
       <!-- 封面缩略图（CR-074）：无图帖不占位；仅 https 外链（服务端提取时已限定）；
            CR-091 尺寸对齐参考站比例（112×70 ≈ 1.6:1），阅读节奏更接近封面语义 -->
-      <img
+      <PostImage
         v-if="post.coverUrl"
         :src="post.coverUrl"
         alt=""

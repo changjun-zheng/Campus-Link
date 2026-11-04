@@ -59,9 +59,13 @@ public class ReplyApplicationService {
         }
         // 机审放在帖子可见性校验之后：不可回帖的目标先给出准确的 3001，而不是被 5002 抢占语义
         moderateOrThrow(command.contentMd());
+        String html = markdownRenderer.render(command.contentMd());
+        if (!com.campuslink.common.markdown.PostImageUrls.references(html).isEmpty()) {
+            throw new ApiException(ResultCode.POST_IMAGE_REFERENCE_INVALID);
+        }
         int floorNo = postRepository.incrementReplyCountAndGet(post.getId());
         Reply reply = Reply.post(post.getId(), authorId, floorNo, command.contentMd(),
-                markdownRenderer.render(command.contentMd()), command.quotedReplyId());
+                html, command.quotedReplyId());
         Long replyId = replyRepository.save(reply).getId();
         // 通知与回帖同事务写入（F-SOC-001）；自问自答不产生通知，抑制逻辑归 notification 侧统一兜底
         notificationService.postReplied(authorId, replyId, post.getAuthorId());

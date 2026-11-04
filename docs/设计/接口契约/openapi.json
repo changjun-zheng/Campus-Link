@@ -41,6 +41,10 @@
       "description": "运营后台 · 内容搜索（仅 SUPERADMIN）"
     },
     {
+      "name": "post-image",
+      "description": "帖子图片上传与受控读取"
+    },
+    {
       "name": "post",
       "description": "帖子"
     },
@@ -693,7 +697,7 @@
             }
           },
           "403": {
-            "description": "无权限（4002）；账号已被封禁（2006）；账号注销中，请先撤销注销（2013）",
+            "description": "无权限（4002）；账号已被封禁（2006）；账号注销中，请先撤销注销（2013）；无权限（4002）",
             "content": {
               "application/json": {
                 "schema": {
@@ -713,7 +717,7 @@
             }
           },
           "422": {
-            "description": "内容未通过安全审核（5001）",
+            "description": "内容未通过安全审核（5001）；图片引用无效或超过数量限制（3006）",
             "content": {
               "application/json": {
                 "schema": {
@@ -2349,7 +2353,7 @@
             }
           },
           "403": {
-            "description": "账号已被封禁（2006）；账号注销中，请先撤销注销（2013）",
+            "description": "账号已被封禁（2006）；账号注销中，请先撤销注销（2013）；无权限（4002）",
             "content": {
               "application/json": {
                 "schema": {
@@ -2359,7 +2363,7 @@
             }
           },
           "422": {
-            "description": "内容未通过安全审核（5001）",
+            "description": "内容未通过安全审核（5001）；图片引用无效或超过数量限制（3006）",
             "content": {
               "application/json": {
                 "schema": {
@@ -2556,7 +2560,7 @@
             }
           },
           "422": {
-            "description": "内容未通过安全审核（5001）",
+            "description": "内容未通过安全审核（5001）；图片引用无效或超过数量限制（3006）",
             "content": {
               "application/json": {
                 "schema": {
@@ -2904,6 +2908,130 @@
           },
           "404": {
             "description": "资源不存在（3001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "系统繁忙，请稍后再试（9999）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/post-images": {
+      "post": {
+        "tags": [
+          "post-image"
+        ],
+        "summary": "上传帖子图片；仅登录且可发帖账号，JPEG/PNG ≤2MiB",
+        "operationId": "upload",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                },
+                "required": [
+                  "file"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseUploadedImage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数错误（1001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未登录（4001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "无权限（4002）；账号已被封禁（2006）；账号注销中，请先撤销注销（2013）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "文件大小超出限制（1005）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "图片格式不支持、文件损坏或尺寸超限（3004）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "图片上传过于频繁，请稍后重试（3005）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "图片存储暂不可用，请稍后重试（3007）",
             "content": {
               "application/json": {
                 "schema": {
@@ -5080,6 +5208,85 @@
         ]
       }
     },
+    "/api/v1/post-images/{id}/content": {
+      "get": {
+        "tags": [
+          "post-image"
+        ],
+        "summary": "图片内容：草稿仅本人；引用图片跟随帖子可见性，不缓存",
+        "operationId": "content",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "byte"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "byte"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数错误（1001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "资源不存在（3001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "账号已被封禁（2006）；账号注销中，请先撤销注销（2013）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "系统繁忙，请稍后再试（9999）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/notifications": {
       "get": {
         "tags": [
@@ -6731,6 +6938,48 @@
         "required": [
           "replyId"
         ]
+      },
+      "ApiResponseUploadedImage": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/UploadedImage"
+          },
+          "traceId": {
+            "type": "string"
+          }
+        }
+      },
+      "UploadedImage": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "url": {
+            "type": "string"
+          },
+          "width": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "height": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
       },
       "SendMessageCommand": {
         "type": "object",

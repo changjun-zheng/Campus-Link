@@ -1,0 +1,25 @@
+{
+  "migration": [
+    [
+      "12",
+      1
+    ]
+  ],
+  "stateCounts": [
+    [
+      "READY",
+      4
+    ]
+  ],
+  "browserImage": [
+    [
+      "e8c91f7f-b1c2-41da-8944-798d333e4fa0",
+      12,
+      0,
+      "READY",
+      1077,
+      480,
+      240
+    ]
+  ]
+}

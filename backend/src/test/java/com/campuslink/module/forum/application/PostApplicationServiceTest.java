@@ -71,7 +71,7 @@ class PostApplicationServiceTest {
         // MarkdownRenderer 是纯组件（无 I/O），直接 new，不必走 Spring 上下文
         service = new PostApplicationService(boardRepository, postRepository, replyRepository,
                 new MarkdownRenderer(), notificationService, auditService, moderationGateway,
-                accountApplicationService, tagRepository);
+                accountApplicationService, tagRepository, org.mockito.Mockito.mock(PostImageApplicationService.class));
     }
 
     @Test

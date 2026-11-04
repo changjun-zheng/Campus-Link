@@ -99,7 +99,7 @@ public class ProductionSafetyGuard implements BeanFactoryPostProcessor, Environm
 
     /** 校验项数写出来是为了让日志能证明"它真的跑过、且不是一条空规则"；Meili 开关打开时多一项 */
     private int checkedItemCount() {
-        return "meilisearch".equalsIgnoreCase(value("campuslink.search.engine")) ? 10 : 9;
+        return "meilisearch".equalsIgnoreCase(value("campuslink.search.engine")) ? 11 : 10;
     }
 
     /** 供测试直接断言，不经 Spring 生命周期 */
@@ -115,6 +115,7 @@ public class ProductionSafetyGuard implements BeanFactoryPostProcessor, Environm
         checkDatasourceDefaults(violations);
         checkSearchEngine(violations);
         violations.addAll(MailConfigurationGuard.violations(env));
+        violations.addAll(PostImageConfigurationGuard.violations(env));
         return violations;
     }
 

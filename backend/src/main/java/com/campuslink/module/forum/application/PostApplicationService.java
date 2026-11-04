@@ -18,7 +18,7 @@ import com.campuslink.module.forum.domain.gateway.TagRepository;
 import com.campuslink.module.forum.domain.model.Board;
 import com.campuslink.module.forum.domain.model.Post;
 import com.campuslink.module.forum.domain.model.Reply;
-import com.campuslink.module.forum.domain.service.CoverImages;
+import com.campuslink.common.markdown.PostImageUrls;
 import com.campuslink.module.forum.domain.service.TagNames;
 import com.campuslink.module.notification.application.NotificationApplicationService;
 import lombok.RequiredArgsConstructor;
@@ -44,6 +44,7 @@ public class PostApplicationService {
     private final ModerationGateway moderationGateway;
     private final AccountApplicationService accountApplicationService;
     private final TagRepository tagRepository;
+    private final PostImageApplicationService postImages;
 
     /**
      * 机审前置（F-SAFE-001 / CR-082）：命中风险 → 5001 拦发布；网关任何异常 → 5002（fail-closed，
@@ -82,14 +83,16 @@ public class PostApplicationService {
         }
         // 封面（CR-074 外链方案）：发布时从正文提取首张 https 图一次落库，读时零成本；无图即 null
         // anonymous 缺省（null）即非匿名——与契约"该字段可不传、缺省 false"一致（见 PublishPostCommand 注释）
+        String html = markdownRenderer.render(command.contentMd());
         Post post = Post.publish(board.getId(), authorId, Boolean.TRUE.equals(command.anonymous()), board.getType(),
                 command.title(),
-                command.contentMd(), markdownRenderer.render(command.contentMd()),
-                CoverImages.firstHttpsImage(command.contentMd()), tags);
+                command.contentMd(), html,
+                PostImageUrls.firstImage(html), tags);
         Post saved = postRepository.save(post);
         if (!tags.isEmpty()) {
             tagRepository.attachToPost(saved.getId(), tags);
         }
+        postImages.bind(saved.getId(), authorId, html);
         return new PublishedPost(saved.getId());
     }
 
@@ -183,13 +186,14 @@ public class PostApplicationService {
         for (String tag : tags) {
             moderateOrThrow(tag);
         }
-        Post revised = post.revise(command.title(), command.contentMd(),
-                markdownRenderer.render(command.contentMd()),
-                CoverImages.firstHttpsImage(command.contentMd()), tags);
+        String html = markdownRenderer.render(command.contentMd());
+        Post revised = post.revise(command.title(), command.contentMd(), html,
+                PostImageUrls.firstImage(html), tags);
         if (!postRepository.revise(postId, revised.getTitle(), revised.getContentMd(),
                 revised.getContentHtml(), revised.getCoverUrl(), tags)) {
             throw new PostNotFoundException();
         }
+        postImages.bind(postId, authorId, html);
         tagRepository.replaceForPost(postId, tags);
         auditService.record(authorId, "POST_UPDATE", "posts", postId, auditDetail(post));
     }

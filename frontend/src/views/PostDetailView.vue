@@ -20,6 +20,7 @@ import TableOfContents from '../components/TableOfContents.vue'
 /** 举报弹窗按需加载（CR-174）：el-dialog / el-select / el-form-item 不进详情页首包 */
 const ReportDialog = defineAsyncComponent(() => import('../components/ReportDialog.vue'))
 import { useAuthStore } from '../stores/auth'
+import { usePostImageHtml } from '../composables/usePostImageHtml'
 import { useNarrowScreen } from '../composables/useNarrowScreen'
 import { formatTime } from '../utils/time'
 import { vHighlight } from '../utils/highlight'
@@ -35,6 +36,7 @@ const narrow = useNarrowScreen()
 const postId = computed(() => String(route.params.id || ''))
 const post = ref<PostDetailVo | null>(null)
 const hasToc = computed(() => parseHeadingsFromHtml(post.value?.contentHtml || '').length > 0)
+const renderedPostHtml = usePostImageHtml(computed(() => post.value?.contentHtml || ''))
 const missing = ref(false)
 const postError = ref('')
 const replies = ref<ReplyVo[]>([])
@@ -77,7 +79,7 @@ async function enhancePostBody() {
  * 旧的按钮与 id 随子树被丢弃，需要基于新 DOM 重新注入。
  */
 watch(
-  () => post.value?.contentHtml,
+  renderedPostHtml,
   (html) => {
     if (html) void enhancePostBody()
   },
@@ -444,7 +446,7 @@ watch(
             ref="postBodyRef"
             class="markdown-body cl-post-body"
             v-highlight
-            v-html="post.contentHtml"
+            v-html="renderedPostHtml"
           />
           <!-- 互动操作行（F-FORUM-005）：toggle 后用响应 {active, count} 回填本地状态 -->
           <div class="mt-4 flex items-center gap-2">

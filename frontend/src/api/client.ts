@@ -50,7 +50,8 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
         ...(options.headers as Record<string, string> | undefined),
       },
     })
-  } catch {
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') throw error
     throw new ApiError(-1, '网络异常，请检查后端服务是否已启动')
   }
   // 非 JSON 响应（网关 / CORS 403 / 代理错误页）不能把解析器的原始错误抛给用户（CR-173）
@@ -93,5 +94,22 @@ export const put = <T>(path: string, data?: unknown): Promise<T> =>
 export const del = <T>(path: string): Promise<T> => request<T>(path, { method: 'DELETE' })
 
 /** 表单上传（CR-191）：Content-Type 交给浏览器生成（含 boundary） */
-export const upload = <T>(path: string, formData: FormData): Promise<T> =>
-  request<T>(path, { method: 'POST', body: formData })
+export const upload = <T>(path: string, formData: FormData, signal?: AbortSignal): Promise<T> =>
+  request<T>(path, { method: 'POST', body: formData, signal })
+
+/** Binary reads share JWT and error semantics with JSON requests. No URL tokens. */
+export async function getBinary(path: string, signal?: AbortSignal): Promise<Blob> {
+  let res: Response
+  try {
+    res = await fetch(BASE + path, { headers: authHeaders(), signal, cache: 'no-store' })
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') throw error
+    throw new ApiError(-1, '网络异常，请检查后端服务是否已启动')
+  }
+  if (!res.ok) {
+    const body = await res.json().catch(() => null) as ApiResponse<never> | null
+    if (body?.code === UNAUTHORIZED_CODE) unauthorizedHandler?.()
+    throw new ApiError(body?.code ?? res.status, body?.message || httpStatusMessage(res.status), body?.traceId)
+  }
+  return res.blob()
+}

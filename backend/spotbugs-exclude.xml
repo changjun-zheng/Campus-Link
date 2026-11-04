@@ -163,4 +163,10 @@
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.notification.infrastructure.messaging.NotificationRabbitListener"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.notification.infrastructure.messaging.RabbitNotificationTransport"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.notification.infrastructure.persistence.JdbcNotificationOutboxAdapter"/></Match>
+
+  <!-- CR-195: Spring-managed singleton constructor injection. -->
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.application.PostImageApplicationService"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.infrastructure.persistence.JdbcPostImageRepository"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.infrastructure.redis.RedisPostImageRateLimit"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.infrastructure.storage.LocalPostImageStorage"/></Match>
 </FindBugsFilter>

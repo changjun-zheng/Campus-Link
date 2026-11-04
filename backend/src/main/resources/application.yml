@@ -93,6 +93,10 @@ management:
       enabled: ${MAIL_HEALTH_ENABLED:false}
 
 campuslink:
+  post-images:
+    upload-enabled: ${POST_IMAGES_UPLOAD_ENABLED:true}
+    read-enabled: ${POST_IMAGES_READ_ENABLED:true}
+    dir: ${POST_IMAGES_DIR:var/uploads/post-images}
   notifications:
     delivery: ${NOTIFICATION_DELIVERY:sync}
     rabbitmq:

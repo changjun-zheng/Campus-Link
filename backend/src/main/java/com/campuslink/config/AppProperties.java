@@ -18,6 +18,14 @@ public class AppProperties {
     private Ai ai = new Ai();
     private Search search = new Search();
     private Avatar avatar = new Avatar();
+    private PostImages postImages = new PostImages();
+
+    @Data
+    public static class PostImages {
+        private boolean uploadEnabled = true;
+        private boolean readEnabled = true;
+        private String dir = "var/uploads/post-images";
+    }
 
     @Data
     public static class Jwt {

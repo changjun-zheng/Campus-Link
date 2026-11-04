@@ -6,6 +6,8 @@ import com.vladsch.flexmark.html.HtmlRenderer;
 import com.vladsch.flexmark.parser.Parser;
 import com.vladsch.flexmark.util.ast.Node;
 import org.jsoup.Jsoup;
+import org.jsoup.nodes.Attribute;
+import org.jsoup.nodes.Element;
 import org.jsoup.safety.Safelist;
 import org.springframework.stereotype.Service;
 
@@ -16,7 +18,7 @@ import java.util.Locale;
  * Markdown → HTML 的服务端唯一渲染出口（ADR-005，论坛安全生命线）。
  *
  * <p>净化用 jsoup 白名单（技术方案 7.1）：禁止 script / iframe / 事件属性 / style 属性，
- * a.href 仅 http(s) 与相对路径，img.src 仅 https；代码高亮由前端 highlight.js 对
+ * a.href 仅 http(s) 与相对路径，img.src 仅 https 与规范站内图片路径；代码高亮由前端 highlight.js 对
  * 已净化的 {@code <pre><code class="language-*">} 着色（纯展示，不产生脚本执行）。
  *
  * <p>说明：0.64.x 起表格扩展更名为 flexmark-ext-tables（原 ext-gfm-tables 停更于 0.50.x）；
@@ -35,7 +37,16 @@ public class MarkdownRenderer {
             .extensions(List.of(TablesExtension.create(), AutolinkExtension.create()))
             .build();
 
-    private static final Safelist SAFELIST = new Safelist()
+    private static final Safelist SAFELIST = new Safelist() {
+        @Override
+        public boolean isSafeAttribute(String tag, Element element, Attribute attribute) {
+            if ("img".equals(tag) && "src".equals(attribute.getKey())) {
+                return PostImageUrls.managed(attribute.getValue())
+                        || attribute.getValue().startsWith("https://") && super.isSafeAttribute(tag, element, attribute);
+            }
+            return super.isSafeAttribute(tag, element, attribute);
+        }
+    }
             .addTags("p", "br", "h1", "h2", "h3", "h4", "h5", "h6", "blockquote", "pre", "code",
                     "ul", "ol", "li", "a", "img", "strong", "em", "del", "hr",
                     "table", "thead", "tbody", "tr", "th", "td")

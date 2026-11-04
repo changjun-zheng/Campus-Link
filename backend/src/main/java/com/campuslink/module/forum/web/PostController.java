@@ -157,7 +157,7 @@ public class PostController {
     @Operation(summary = "发帖（需登录）：只返回 id，前端据此跳转详情")
     @SecurityRequirement(name = ApiDocs.BEARER_AUTH)
     @ErrorCodes({ ResultCode.NOT_LOGGED_IN, ResultCode.NOT_FOUND, ResultCode.USER_BANNED,
-            ResultCode.ACCOUNT_DEACTIVATED, ResultCode.MODERATION_BLOCKED, ResultCode.MODERATION_UNAVAILABLE })
+            ResultCode.ACCOUNT_DEACTIVATED, ResultCode.MODERATION_BLOCKED, ResultCode.MODERATION_UNAVAILABLE, ResultCode.POST_IMAGE_REFERENCE_INVALID, ResultCode.FORBIDDEN })
     @PostMapping
     public ApiResponse<PublishedPost> publish(@Valid @RequestBody PublishPostCommand command,
             Authentication authentication) {
@@ -177,7 +177,7 @@ public class PostController {
     @Operation(summary = "编辑自己的帖子（需登录，仅作者）：可改标题 / 正文 / 标签，版块不可改；已下架或已删除的帖子不可编辑")
     @SecurityRequirement(name = ApiDocs.BEARER_AUTH)
     @ErrorCodes({ ResultCode.NOT_LOGGED_IN, ResultCode.FORBIDDEN, ResultCode.NOT_FOUND, ResultCode.USER_BANNED,
-            ResultCode.ACCOUNT_DEACTIVATED, ResultCode.MODERATION_BLOCKED, ResultCode.MODERATION_UNAVAILABLE })
+            ResultCode.ACCOUNT_DEACTIVATED, ResultCode.MODERATION_BLOCKED, ResultCode.MODERATION_UNAVAILABLE, ResultCode.POST_IMAGE_REFERENCE_INVALID, ResultCode.FORBIDDEN })
     @PutMapping("/{id}")
     public ApiResponse<Void> update(@PathVariable("id") Long id,
             @Valid @RequestBody UpdatePostCommand command,

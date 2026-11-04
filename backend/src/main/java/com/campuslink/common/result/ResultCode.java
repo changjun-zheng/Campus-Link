@@ -49,6 +49,10 @@ public enum ResultCode {
     NOT_FOUND(3001, 404, "资源不存在"),
     NOT_A_QUESTION(3002, 400, "仅技术问答帖可采纳最佳答案"),
     CANNOT_ACCEPT_OWN_REPLY(3003, 400, "不能采纳自己的回复"),
+    POST_IMAGE_INVALID(3004, 422, "图片格式不支持、文件损坏或尺寸超限"),
+    POST_IMAGE_RATE_LIMITED(3005, 429, "图片上传过于频繁，请稍后重试"),
+    POST_IMAGE_REFERENCE_INVALID(3006, 422, "图片引用无效或超过数量限制"),
+    POST_IMAGE_STORAGE_UNAVAILABLE(3007, 503, "图片存储暂不可用，请稍后重试"),
     NOT_LOGGED_IN(4001, 401, "未登录"),
     FORBIDDEN(4002, 403, "无权限"),
 

@@ -191,17 +191,7 @@ public class ForumQueryApplicationService {
      * false——详情端点保持公开，登录态回显是**附加**能力（F-FORUM-005）。
      */
     public PostDetail postDetail(Long postId, Long viewerId) {
-        Post post = requireVisiblePost(postId);
-        // 拉黑后其帖子对本人按"不存在"处理（CR-129）：与已删除 / 已下架同一门槛，不另行暴露原因。
-        // 匿名帖例外（CR-139 / D4）：若按真实作者过滤，"看不到某人的匿名帖"就成了身份侧信道
-        if (!post.isAnonymous() && viewerId != null && blockedAuthorIds(viewerId).contains(post.getAuthorId())) {
-            throw new PostNotFoundException();
-        }
-        // 本人举报且工单未闭环的帖子同样按"不存在"处理（F-SAFE-002 / CR-140）：与拉黑同一门槛，
-        // 不向举报人暴露工单状态；工单闭环后（驳回）恢复可见
-        if (viewerId != null && reportedTargetsOf(viewerId).postIds().contains(postId)) {
-            throw new PostNotFoundException();
-        }
+        Post post = requireReadablePost(postId, viewerId);
         Board board = boardsById().get(post.getBoardId());
         AuthorBrief author = post.isAnonymous() ? null
                 : accountApplicationService.authorBriefsOf(List.of(post.getAuthorId())).get(post.getAuthorId());
@@ -567,6 +557,22 @@ public class ForumQueryApplicationService {
      */
     private ReportedTargets reportedTargetsOf(Long viewerId) {
         return viewerId == null ? ReportedTargets.EMPTY : reportRepository.findPendingTargetsByReporter(viewerId);
+    }
+
+    /** Shared viewer-specific gate for post content and its local images. */
+    public Post requireReadablePost(Long postId, Long viewerId) {
+        Post post = requireVisiblePost(postId);
+        // 拉黑后其帖子对本人按"不存在"处理（CR-129）：与已删除 / 已下架同一门槛，不另行暴露原因。
+        // 匿名帖例外（CR-139 / D4）：若按真实作者过滤，"看不到某人的匿名帖"就成了身份侧信道
+        if (!post.isAnonymous() && viewerId != null && blockedAuthorIds(viewerId).contains(post.getAuthorId())) {
+            throw new PostNotFoundException();
+        }
+        // 本人举报且工单未闭环的帖子同样按"不存在"处理（F-SAFE-002 / CR-140）：与拉黑同一门槛，
+        // 不向举报人暴露工单状态；工单闭环后（驳回）恢复可见
+        if (viewerId != null && reportedTargetsOf(viewerId).postIds().contains(postId)) {
+            throw new PostNotFoundException();
+        }
+        return post;
     }
 
     /** 不可读（不存在 / 已删除 / 非 PUBLISHED）统一 404 / 3001，三种情况不对外区分——防按 id 探测 */

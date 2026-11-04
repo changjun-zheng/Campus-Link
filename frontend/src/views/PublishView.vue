@@ -11,6 +11,8 @@ import {
   type SimilarPostVo,
 } from '../api/forum'
 import { previewMarkdown } from '../api/markdown'
+import { uploadPostImage } from '../api/postImages'
+import { usePostImageHtml } from '../composables/usePostImageHtml'
 import { useDraft } from '../composables/useDraft'
 import { vHighlight } from '../utils/highlight'
 import SvgIcon from '../components/SvgIcon.vue'
@@ -34,6 +36,46 @@ const splitPreview = ref(editorMedia.matches)
 const onEditorResize = (event: MediaQueryListEvent) => { splitPreview.value = event.matches }
 const { saveDraft, loadDraft, clearDraft } = useDraft()
 const boards = ref<BoardVo[]>([])
+const uploading = ref(false)
+const fileEl = ref<HTMLInputElement | null>(null)
+let uploadAbort: AbortController | undefined
+let uploadGeneration = 0
+let insertionEnd = 0
+function chooseImage() {
+  if (uploading.value || submitting.value) return
+  insertionEnd = contentEl.value?.selectionEnd ?? form.contentMd.length
+  fileEl.value?.click()
+}
+function cancelUpload() { uploadGeneration++; uploadAbort?.abort(); uploading.value = false }
+async function uploadSelectedImage(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file || uploading.value || submitting.value) return
+  if (file.size > 2 * 1024 * 1024) { ElMessage.error('图片不能超过 2MiB'); return }
+  const generation = ++uploadGeneration
+  const body = form.contentMd
+  const board = form.boardCode
+  const id = editingId.value
+  const controller = new AbortController()
+  uploadAbort = controller
+  uploading.value = true
+  try {
+    const image = await uploadPostImage(file, controller.signal)
+    if (controller.signal.aborted || generation !== uploadGeneration || board !== form.boardCode
+      || id !== editingId.value || body !== form.contentMd) return
+    const end = Math.min(insertionEnd, body.length)
+    const fragment = `\n![图片](${image.url})\n`
+    form.contentMd = body.slice(0, end) + fragment + body.slice(end)
+    await nextTick()
+    contentEl.value?.focus()
+    contentEl.value?.setSelectionRange(end + fragment.length, end + fragment.length)
+  } catch (error) {
+    if (!controller.signal.aborted) ElMessage.error(error instanceof Error ? error.message : '图片上传失败')
+  } finally {
+    if (generation === uploadGeneration) uploading.value = false
+  }
+}
 const submitting = ref(false)
 const contentEl = ref<HTMLTextAreaElement | null>(null)
 /** 校验失败时的焦点落点（CR-173）：标题是原生 input，版块 / 标签是 EP 组件（暴露 focus()） */
@@ -94,7 +136,7 @@ const showTemplateHint = computed(
 )
 
 function applyInterviewTemplate() {
-  if (!showTemplateHint.value) return
+  if (uploading.value || !showTemplateHint.value) return
   form.contentMd = INTERVIEW_TEMPLATE
   contentEl.value?.focus()
 }
@@ -128,6 +170,7 @@ let reqSeq = 0  // 请求序号，用于乱序保护
 /* ─── 实时预览（F-012 / CR-087 接线）：600ms 防抖调服务端渲染（ADR-005），移动端 Tab 切换 ─── */
 const previewMode = ref(false)          // <1024px 编辑 / 预览切换；宽屏双栏并存
 const previewHtml = ref('')
+const renderedPreviewHtml = usePostImageHtml(previewHtml)
 const previewLoading = ref(false)
 const previewError = ref('')
 let previewTimer: ReturnType<typeof setTimeout> | null = null
@@ -195,6 +238,7 @@ function handleBeforeUnload() {
 }
 
 onUnmounted(() => {
+  cancelUpload()
   if (debounceTimer) clearTimeout(debounceTimer)
   if (previewTimer) clearTimeout(previewTimer)
   previewSeq++
@@ -261,6 +305,7 @@ function flushPendingDraft(boardCode: string) {
 
 /** 版块切换：先 flush 旧版块草稿，再尝试恢复新版块草稿（编辑模式版块只读，不参与） */
 watch(() => form.boardCode, (newCode, prevCode) => {
+  cancelUpload()
   if (editing.value) return
   if (prevCode) flushPendingDraft(prevCode)
   if (!newCode) return
@@ -283,6 +328,7 @@ function formatDraftTime(iso: string): string {
 
 /** 清除草稿 + 清空表单 + 隐藏提示条 */
 function discardDraft() {
+  if (uploading.value) return
   if (draftTimer) clearTimeout(draftTimer)
   draftTimer = null
   clearDraft(form.boardCode)
@@ -325,6 +371,7 @@ onMounted(async () => {
 
 /** 在光标处包裹 / 插入 Markdown 片段，并恢复焦点与选区 */
 function wrap(before: string, after = '', placeholder = '') {
+  if (uploading.value) return
   const el = contentEl.value
   if (!el) {
     return
@@ -340,7 +387,7 @@ function wrap(before: string, after = '', placeholder = '') {
 }
 
 async function submit() {
-  if (submitting.value) return
+  if (submitting.value || uploading.value) return
   if (!form.boardCode) {
     ElMessage.warning('请选择版块')
     boardEl.value?.focus()
@@ -404,6 +451,7 @@ async function submit() {
         ref="boardEl"
         v-model="form.boardCode"
         aria-label="选择版块"
+        :disabled="uploading"
         placeholder="选择版块"
         class="cl-board-select"
       >
@@ -413,7 +461,7 @@ async function submit() {
       <span v-if="!editing" role="status" class="cl-draft-status text-caption text-ink-meta" :class="{ 'cl-draft-status--failed': draftStatus === 'failed' }">
         {{ draftStatusText }}
       </span>
-      <el-button class="cl-publish-submit" type="primary" :loading="submitting" @click="submit">
+      <el-button class="cl-publish-submit" type="primary" :loading="submitting" :disabled="uploading" @click="submit">
         {{ editing ? '保存修改' : '发布' }}
       </el-button>
     </div>
@@ -463,8 +511,10 @@ async function submit() {
 
       <!-- 匿名发布（F-FORUM-010 / CR-139）：发布后不可更改。编辑页只读展示当前身份 -->
       <el-checkbox v-if="!editing" v-model="form.anonymous" class="mb-4">
-        <span class="text-body text-ink">匿名发布</span>
-        <span class="ml-1 text-caption text-ink-meta">列表与详情只显示「匿名用户」，发布后不可更改</span>
+        <span class="block whitespace-normal">
+          <span class="text-body text-ink">匿名发布</span>
+          <span class="ml-1 text-caption text-ink-meta">列表与详情只显示「匿名用户」，发布后不可更改</span>
+        </span>
       </el-checkbox>
       <p v-else class="mb-4 text-note text-ink-meta">
         发布身份：
@@ -493,6 +543,8 @@ async function submit() {
       </a>
     </div>
 
+    <input ref="fileEl" type="file" accept="image/jpeg,image/png" aria-label="图片文件" hidden @change="uploadSelectedImage" />
+    <p v-if="uploading" role="status" class="px-5 py-2 text-note text-ink-meta">图片上传中…正文编辑与提交已暂停</p>
     <!-- 工具条：通栏（CSDN 式），样式来自全局 .cl-md-tool -->
     <div class="flex flex-wrap items-center gap-1 border-y-[0.5px] border-line bg-code px-5 py-1.5" role="toolbar" aria-label="Markdown 工具条">
       <button type="button" class="cl-md-tool text-caption font-medium" title="一级标题" aria-label="# 一级标题" @click="wrap('# ', '', '标题')">#</button>
@@ -519,9 +571,10 @@ async function submit() {
       <button
         type="button"
         class="cl-md-tool"
-        disabled
-        title="图片上传即将开放（暂无上传接口）"
-        aria-label="图片（暂未开放）"
+        :disabled="uploading || submitting"
+        title="上传 JPEG / PNG 图片（不超过 2MiB）"
+        aria-label="上传图片"
+        @click="chooseImage"
       >
         <SvgIcon name="photo" :size="16" />
       </button>
@@ -545,6 +598,7 @@ async function submit() {
           <p class="pt-4 text-caption text-ink-meta">Markdown 编辑</p>
           <textarea
             ref="contentEl"
+            :readonly="uploading"
             v-model="form.contentMd"
             maxlength="20000"
             aria-label="正文（Markdown）"
@@ -565,7 +619,7 @@ async function submit() {
           </p>
           <p v-else-if="previewLoading && !previewHtml" class="text-note text-ink-meta">渲染中…</p>
           <p v-else-if="previewError" class="text-note text-ink-meta">{{ previewError }}</p>
-          <div v-else class="markdown-body" v-highlight v-html="previewHtml" />
+          <div v-else class="markdown-body" v-highlight v-html="renderedPreviewHtml" />
         </div>
       </div>
       <p class="pb-6 text-caption leading-body text-ink-meta">
