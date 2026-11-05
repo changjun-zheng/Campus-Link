@@ -3,7 +3,7 @@ package com.campuslink.common.result;
 import lombok.Getter;
 
 /**
- * 统一错误码（技术方案第 5 节）：0 成功；1xxx 通用；2xxx 账号（21xx 学籍核验）；3xxx 版块与帖子；4xxx 权限；5xxx 安全与机审；6xxx 组队。
+ * 统一错误码（技术方案第 5 节）：0 成功；1xxx 通用；2xxx 账号（21xx 学籍核验）；3xxx 版块与帖子；4xxx 权限；5xxx 安全与机审；6xxx 组队；7xxx 帖子问 AI 助手。
  */
 @Getter
 public enum ResultCode {
@@ -65,7 +65,22 @@ public enum ResultCode {
     TEAM_APPLICATION_EXISTS(6004, 409, "已提交过申请"),
     CANNOT_APPLY_OWN_TEAM(6005, 400, "不能申请自己发起的组队"),
     /** 已处理的申请重复审批同一决定时幂等返回，换一个决定则按本条拒绝 */
-    TEAM_APPLICATION_NOT_FOUND(6006, 404, "申请不存在或已处理");
+    TEAM_APPLICATION_NOT_FOUND(6006, 404, "申请不存在或已处理"),
+
+    /** 帖子问 AI（CR-200）：配置关闭或未就绪时入口不可用 */
+    ASSISTANT_DISABLED(7001, 503, "AI 助手暂未开放"),
+    /** 每人每天 20 次；与分钟限流分开，文案不同 */
+    ASSISTANT_QUOTA_EXCEEDED(7002, 429, "今日 AI 提问次数已用完"),
+    ASSISTANT_RATE_LIMITED(7003, 429, "提问过于频繁，请稍后再试"),
+    /** 选区 / 问题超长或对话轮次达上限 */
+    ASSISTANT_INPUT_TOO_LONG(7004, 400, "选中内容或问题过长"),
+    /** 会话过期 / 不存在 / 不属于当前用户统一此码，避免枚举他人会话 */
+    ASSISTANT_CONVERSATION_NOT_FOUND(7005, 404, "对话不存在或已过期"),
+    /** 上游模型超时、网络失败或返回异常 */
+    ASSISTANT_UNAVAILABLE(7006, 503, "AI 助手暂不可用，请稍后再试"),
+    /** 同一用户已有生成中的回答（双击 / 多标签页） */
+    ASSISTANT_BUSY(7007, 409, "上一条回答还在生成中"),
+    ASSISTANT_TURN_LIMIT(7008, 400, "本次对话轮次已达上限，请重新选择内容提问");
 
     private final int code;
     private final int httpStatus;

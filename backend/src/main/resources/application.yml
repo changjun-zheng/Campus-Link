@@ -140,6 +140,34 @@ campuslink:
       enabled: true
       min-title-length: 6
       max-results: 3
+  assistant:
+    # 帖子选中文本问 AI（CR-200）：默认关闭；开启前必须注入 DEEPSEEK_API_KEY，否则启动失败。
+    # 密钥只从环境变量读取，任何源码 / 示例 / 测试都不得写入可用凭据。
+    enabled: ${ASSISTANT_ENABLED:false}
+    provider: deepseek
+    base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
+    model: ${DEEPSEEK_MODEL:deepseek-chat}
+    api-key: ${DEEPSEEK_API_KEY:}
+    daily-limit: 20
+    per-minute-limit: 5
+    max-concurrent-per-user: 1
+    session-ttl-minutes: 30
+    max-selected-chars: 2000
+    max-question-chars: 500
+    max-user-turns: 5
+    max-output-tokens: 1024
+    connect-timeout-seconds: 10
+    request-timeout-seconds: 90
+    sse-timeout-seconds: 120
+    temperature: 0.3
+    # 每日配额按校区自然日切割，避免服务器 UTC 时区把"今天"算错
+    quota-zone: Asia/Shanghai
+    moderate-output: true
+    privacy-notice-version: "1"
+    quick-prompts:
+      - 这段内容是什么意思？
+      - 举个例子解释一下
+      - 这段代码在做什么？
   avatar:
     # 自定义头像（CR-191）：本地磁盘存储；生产用 AVATAR_DIR 指向持久卷，
     # 再由 Nginx 代理 /media/（部署清单在 CR-079 实施时补）

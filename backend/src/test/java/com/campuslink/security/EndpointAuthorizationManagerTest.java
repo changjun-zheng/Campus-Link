@@ -1,6 +1,8 @@
 package com.campuslink.security;
 
 import com.campuslink.module.account.web.UserController;
+import com.campuslink.module.assistant.web.AssistantController;
+import com.campuslink.module.assistant.web.vo.StartConversationRequest;
 import com.campuslink.module.forum.web.BoardController;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -36,6 +38,9 @@ class EndpointAuthorizationManagerTest {
 
     private static final Method BOARD_LIST = methodOf(BoardController.class, "list");
     private static final Method USER_ME = methodOf(UserController.class, "me", Authentication.class);
+    private static final Method ASSISTANT_CONFIG = methodOf(AssistantController.class, "config");
+    private static final Method ASSISTANT_START = methodOf(AssistantController.class, "start",
+            StartConversationRequest.class, Authentication.class);
 
     private final RequestMappingHandlerMapping handlerMapping = mock(RequestMappingHandlerMapping.class);
     private final ObjectProvider<RequestMappingHandlerMapping> handlerMappingProvider = providerOf(handlerMapping);
@@ -62,6 +67,17 @@ class EndpointAuthorizationManagerTest {
     void protectedEndpointAllowsSignedInUser() throws Exception {
         mappedTo(USER_ME, UserController.class);
 
+        assertThat(authorize(user()).isGranted()).isTrue();
+    }
+
+    @Test
+    @DisplayName("问 AI：公开配置放行；开启会话受保护，匿名在链上拒绝")
+    void assistantEndpointsFollowDeclarations() throws Exception {
+        mappedTo(ASSISTANT_CONFIG, AssistantController.class);
+        assertThat(authorize(anonymous()).isGranted()).isTrue();
+
+        mappedTo(ASSISTANT_START, AssistantController.class);
+        assertThat(authorize(anonymous()).isGranted()).isFalse();
         assertThat(authorize(user()).isGranted()).isTrue();
     }
 

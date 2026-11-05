@@ -120,4 +120,43 @@ class MarkdownRendererTest {
 
         assertThat(snippet).contains("Spring Boot").doesNotContain("**");
     }
+
+    @Test
+    @DisplayName("AI 回答渲染：图片全部移除（含 https，避免第三方追踪）")
+    void assistantRenderDropsImages() {
+        String out = renderer.renderForAssistant("说明 ![追踪](https://evil.example/pixel.png) 结束");
+
+        assertThat(out).contains("说明").contains("结束");
+        assertThat(out).doesNotContain("<img").doesNotContain("evil.example");
+    }
+
+    @Test
+    @DisplayName("AI 回答渲染：http(s) 链接保留并补 rel / target，非 http(s) 链接去掉 href")
+    void assistantRenderHardensLinks() {
+        String out = renderer.renderForAssistant(
+                "[文档](https://example.com/doc) [相对](/api/v1/posts) [脚本](javascript:alert(1))");
+
+        assertThat(out).contains("href=\"https://example.com/doc\"");
+        assertThat(out).contains("rel=\"noopener noreferrer nofollow\"");
+        assertThat(out).contains("target=\"_blank\"");
+        assertThat(out).doesNotContain("href=\"/api/v1/posts\"");
+        assertThat(out).doesNotContain("javascript:");
+    }
+
+    @Test
+    @DisplayName("AI 回答渲染：仍走同一条净化链路，脚本 / 事件属性不复活")
+    void assistantRenderKeepsSanitizer() {
+        String out = renderer.renderForAssistant(
+                "hello <script>alert(1)</script> <img src=\"https://a.example/x.png\" onerror=\"alert(2)\">");
+
+        assertThat(out).doesNotContain("<script").doesNotContain("alert(1)").doesNotContain("onerror");
+    }
+
+    @Test
+    @DisplayName("AI 回答渲染：代码块与常规 Markdown 保留")
+    void assistantRenderKeepsMarkdown() {
+        String out = renderer.renderForAssistant("## 结论\n\n```java\nint a = 1;\n```\n\n- 第一点");
+
+        assertThat(out).contains("<h2>").contains("language-java").contains("<li>");
+    }
 }

@@ -36,6 +36,12 @@ html {
   --cl-color-primary-strong-active: color-mix(in srgb, var(--cl-color-primary-strong) 76%, #000);
   --cl-color-danger-strong: #cf1322;
 
+  /* ---- 热榜前三名奖牌（2026-11-05）：只用于名次徽章的金 / 银 / 铜档，
+     与主色系刻意分开、不派生；三色对白色描边图标均 ≥4.5:1（非文本对比度要求 3:1） ---- */
+  --cl-rank-gold: #a16207;
+  --cl-rank-silver: #64748b;
+  --cl-rank-bronze: #92400e;
+
   /* ---- 文本（--cl-text-meta 专供元信息，对比度见 ui-guideline §4.3） ---- */
   --cl-text-primary: #303133;
   --cl-text-regular: #606266;
@@ -762,6 +768,58 @@ html {
 
   .cl-board-dot--chat {
     background: var(--cl-board-chat);
+  }
+
+  /* 帖子行左缘版块色条（2026-11-05）：2px 行级识别色，静止态半透明、悬停满色。
+     与版块色点同源，仅引 --cl-board-*；不承载文字，未知版块不渲染 */
+  .cl-board-rail--qna {
+    background: var(--cl-board-qna);
+  }
+
+  .cl-board-rail--resources {
+    background: var(--cl-board-resources);
+  }
+
+  .cl-board-rail--interview {
+    background: var(--cl-board-interview);
+  }
+
+  .cl-board-rail--contest {
+    background: var(--cl-board-contest);
+  }
+
+  .cl-board-rail--course {
+    background: var(--cl-board-course);
+  }
+
+  .cl-board-rail--chat {
+    background: var(--cl-board-chat);
+  }
+
+  /* 版块导航图标着色（2026-11-05）：只给线性图标描边，不铺色块；
+     与 .cl-board-icon 的 color 同源，去掉淡底后图标仍是版块识别色 */
+  .cl-board-ink--qna {
+    color: var(--cl-board-qna);
+  }
+
+  .cl-board-ink--resources {
+    color: var(--cl-board-resources);
+  }
+
+  .cl-board-ink--interview {
+    color: var(--cl-board-interview);
+  }
+
+  .cl-board-ink--contest {
+    color: var(--cl-board-contest);
+  }
+
+  .cl-board-ink--course {
+    color: var(--cl-board-course);
+  }
+
+  .cl-board-ink--chat {
+    color: var(--cl-board-chat);
   }
 
   /* 版块卡 hover 微抬（CR-052 定点偏离③：translateY 但不用投影，反馈靠主色描边 + 图标实色化） */

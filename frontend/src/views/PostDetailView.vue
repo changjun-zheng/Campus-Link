@@ -22,6 +22,9 @@ const ReportDialog = defineAsyncComponent(() => import('../components/ReportDial
 import { useAuthStore } from '../stores/auth'
 import { usePostImageHtml } from '../composables/usePostImageHtml'
 import { useNarrowScreen } from '../composables/useNarrowScreen'
+import { useAssistant, type AssistantMessage } from '../composables/useAssistant'
+import AssistantPanel from '../components/AssistantPanel.vue'
+import SelectionToolbar from '../components/SelectionToolbar.vue'
 import { formatTime } from '../utils/time'
 import { vHighlight } from '../utils/highlight'
 import { ensureHeadingIds, parseHeadingsFromHtml } from '../utils/heading'
@@ -35,6 +38,60 @@ const auth = useAuthStore()
 const narrow = useNarrowScreen()
 const postId = computed(() => String(route.params.id || ''))
 const post = ref<PostDetailVo | null>(null)
+
+/* ─── 选中文本问 AI（CR-200）：入口只在配置开启时出现，状态随详情页生命周期 ─── */
+const {
+  enabled: assistantEnabled,
+  config: assistantConfig,
+  maxSelectedChars: assistantMaxSelectedChars,
+  maxQuestionChars: assistantMaxQuestionChars,
+  open: assistantOpen,
+  privacyVisible: assistantPrivacyVisible,
+  selectedText: assistantSelectedText,
+  input: assistantInput,
+  messages: assistantMessages,
+  streaming: assistantStreaming,
+  remainingToday: assistantRemainingToday,
+  quotaExhausted: assistantQuotaExhausted,
+  ended: assistantEnded,
+  loadConfig: loadAssistantConfig,
+  openWithSelection: openAssistant,
+  acceptPrivacy: acceptAssistantPrivacy,
+  declinePrivacy: declineAssistantPrivacy,
+  close: closeAssistant,
+  sendQuestion: sendAssistantQuestion,
+  stop: stopAssistant,
+  retry: retryAssistant,
+  restart: restartAssistant,
+  copyMessage: copyAssistantMessage,
+} = useAssistant(() => post.value?.id ?? null)
+
+void loadAssistantConfig()
+
+// 面板自身关闭（关闭按钮 / 移动端遮罩）时也要中止流，避免后台继续消耗一次回答
+watch(assistantOpen, (open) => {
+  if (!open) closeAssistant()
+})
+
+function onAskAssistant(text: string) {
+  if (!assistantEnabled.value) return
+  if (!auth.isLoggedIn) {
+    router.push({ path: '/login', query: { redirect: route.fullPath } })
+    return
+  }
+  const limit = assistantMaxSelectedChars.value
+  if (limit > 0 && text.length > limit) {
+    ElMessage.warning(`选中内容过长，最多 ${limit} 字`)
+    return
+  }
+  openAssistant(text)
+}
+
+async function onCopyAssistant(message: AssistantMessage) {
+  const ok = await copyAssistantMessage(message)
+  if (ok) ElMessage.success('已复制回答')
+  else ElMessage.error('复制失败，请手动选择文本')
+}
 const hasToc = computed(() => parseHeadingsFromHtml(post.value?.contentHtml || '').length > 0)
 const renderedPostHtml = usePostImageHtml(computed(() => post.value?.contentHtml || ''))
 const missing = ref(false)
@@ -359,6 +416,8 @@ function onReportSubmitted(type: 'POST' | 'REPLY') {
 watch(
   postId,
   () => {
+    // 换帖子即结束当前 AI 会话：选中内容与上下文属于上一篇，不能沿用
+    closeAssistant()
     page.value = 1
     replyMd.value = ''
     quoting.value = null
@@ -709,6 +768,36 @@ watch(
         </template>
       </el-skeleton>
     </el-card>
+
+    <!-- 选中正文后浮出的「问 AI」入口；内容与定位都在组件内，只把选中文本交给面板 -->
+    <SelectionToolbar
+      :container="postBodyRef"
+      :enabled="assistantEnabled && !assistantOpen"
+      @ask="onAskAssistant"
+    />
+
+    <!-- 问 AI 私密面板（CR-200）：服务端净化 HTML，回答不落楼层、不进搜索 / 热榜 -->
+    <AssistantPanel
+      v-model:visible="assistantOpen"
+      v-model:input="assistantInput"
+      v-model:privacy-visible="assistantPrivacyVisible"
+      :selected-text="assistantSelectedText"
+      :messages="assistantMessages"
+      :streaming="assistantStreaming"
+      :remaining-today="assistantRemainingToday"
+      :daily-limit="assistantConfig?.dailyLimit ?? 20"
+      :quick-prompts="assistantConfig?.quickPrompts ?? []"
+      :max-question-chars="assistantMaxQuestionChars"
+      :ended="assistantEnded"
+      :quota-exhausted="assistantQuotaExhausted"
+      @accept-privacy="acceptAssistantPrivacy"
+      @decline-privacy="declineAssistantPrivacy"
+      @send="sendAssistantQuestion"
+      @stop="stopAssistant"
+      @retry="retryAssistant"
+      @restart="restartAssistant"
+      @copy="onCopyAssistant"
+    />
 
     <!-- 举报框（F-SAFE-002 / CR-084）：异步组件，首次点击才加载；24h 同对象去重由后端兜底。
          ⚠️ 必须放在根 div 之内：App.vue 用 <Transition mode="out-in"> 包路由组件，多根组件（fragment）

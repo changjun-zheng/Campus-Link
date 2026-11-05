@@ -1,4 +1,7 @@
-const BASE = '/api/v1'
+/** 所有业务接口的统一前缀；SSE（fetch 流）与普通 JSON 请求共用 */
+export const API_BASE = '/api/v1'
+
+const BASE = API_BASE
 
 /** 后端未认证错误码：401 / 4001（见 common/result/ResultCode.NOT_LOGGED_IN） */
 const UNAUTHORIZED_CODE = 4001
@@ -30,6 +33,14 @@ export class ApiError extends Error {
 let unauthorizedHandler: (() => void) | null = null
 export function setUnauthorizedHandler(handler: (() => void) | null): void {
   unauthorizedHandler = handler
+}
+
+/**
+ * 供不走 `request()` 的调用点复用同一套 401 处理（如问 AI 的 SSE 流）。
+ * 预检失败返回的是普通 `ApiError`，其中 4001 必须和 JSON 请求一样清会话并跳登录。
+ */
+export function notifyUnauthorized(): void {
+  unauthorizedHandler?.()
 }
 
 function authHeaders(): Record<string, string> {
@@ -76,7 +87,7 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
 }
 
 /** 非业务错误（响应不是 ApiResponse 外壳）时的可达文案；不暴露网关 / 解析器原文 */
-function httpStatusMessage(status: number): string {
+export function httpStatusMessage(status: number): string {
   if (status === 403) return '请求被服务器拒绝（HTTP 403），请稍后重试'
   if (status === 429) return '请求过于频繁（HTTP 429），请稍后重试'
   if (status >= 500) return '服务暂时不可用（HTTP 5xx），请稍后重试'

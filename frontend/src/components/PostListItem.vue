@@ -76,6 +76,12 @@ const boardDotClass = computed(() => {
   return BOARD_MAP[code] ? `cl-board-dot cl-board-dot--${code}` : ''
 })
 
+/** 行级版块色条（2026-11-05）：与版块色点同源，未知 code 不渲染色条 */
+const boardRailClass = computed(() => {
+  const code = props.post.boardCode as BoardCode
+  return BOARD_MAP[code] ? `cl-board-rail--${code}` : ''
+})
+
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
@@ -106,12 +112,15 @@ async function onLike() {
 
 <template>
   <li
-    class="group relative border-b-[0.5px] border-divider px-5 py-4 transition-colors duration-fast ease-standard last:border-b-0 hover:bg-bg-hover"
+    class="group relative border-b-[0.5px] border-line px-5 py-4 transition-colors duration-fast ease-standard last:border-b-0 hover:bg-bg-hover"
   >
-    <!-- hover 左侧主色指示条（CR-161）：2px 绝对定位，不占布局、不位移 -->
+    <!-- 行级版块色条（2026-11-05）：替代原 hover 才出现的主色条，让每条帖子的版块归属
+         在静止态就可扫读；未知版块不渲染，仍靠标题 hover 与行底色反馈 -->
     <span
+      v-if="boardRailClass"
       aria-hidden="true"
-      class="absolute inset-y-0 left-0 w-0.5 bg-primary-strong opacity-0 transition-opacity duration-fast ease-standard group-hover:opacity-100"
+      class="absolute inset-y-1 left-0 w-0.5 rounded-full opacity-[0.55] transition-opacity duration-fast ease-standard group-hover:opacity-100"
+      :class="boardRailClass"
     />
     <div class="flex gap-3">
       <div class="min-w-0 flex-1">

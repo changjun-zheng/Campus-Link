@@ -33,6 +33,10 @@ class ProductionSafetyGuardTest {
     private static final String DB_PASSWORD_PROP = "spring.datasource." + "password";
     private static final String SEARCH_ENGINE = "campuslink.search.engine";
     private static final String MEILI_KEY = "campuslink.search.meili.api-key";
+    private static final String ASSISTANT_ENABLED = "campuslink.assistant.enabled";
+    private static final String ASSISTANT_KEY = "campuslink.assistant.api-key";
+    private static final String ASSISTANT_BASE_URL = "campuslink.assistant.base-url";
+    private static final String ASSISTANT_MODEL = "campuslink.assistant.model";
 
     // 测试夹具用的合成强密钥（非真实凭据）：字段级只存短片段、运行时拼装，避免被安全扫描器当作硬编码凭据；
     // 值只需满足 guard 的 ≥32 字节与两两不同约束，不与任何外部配置对表
@@ -267,6 +271,44 @@ class ProductionSafetyGuardTest {
     @DisplayName("engine=mysql（缺省）时不要求 MEILI_API_KEY")
     void mysqlSearchDoesNotRequireMeiliKey() {
         assertThat(violationsOf(compliant())).isEmpty();
+    }
+
+    @Test
+    @DisplayName("问 AI 开启但未注入 DEEPSEEK_API_KEY 即判违规")
+    void assistantEnabledWithoutKeyIsRejected() {
+        Map<String, Object> values = compliant();
+        values.put(ASSISTANT_ENABLED, "true");
+        values.put(ASSISTANT_BASE_URL, "https://api.deepseek.com");
+        values.put(ASSISTANT_MODEL, "deepseek-chat");
+        values.put(ASSISTANT_KEY, "");
+
+        assertThat(violationsOf(values))
+                .anySatisfy(v -> assertThat(v).contains("DEEPSEEK_API_KEY").contains("assistant.enabled=true"));
+    }
+
+    @Test
+    @DisplayName("问 AI 生产入口必须是 https，明文 base-url 即判违规")
+    void assistantHttpBaseUrlIsRejected() {
+        Map<String, Object> values = compliant();
+        values.put(ASSISTANT_ENABLED, "true");
+        values.put(ASSISTANT_KEY, strongKey("deepseek"));
+        values.put(ASSISTANT_BASE_URL, "http://api.deepseek.com");
+        values.put(ASSISTANT_MODEL, "deepseek-chat");
+
+        assertThat(violationsOf(values))
+                .anySatisfy(v -> assertThat(v).contains("base-url").contains("https://"));
+    }
+
+    @Test
+    @DisplayName("问 AI 开启且密钥 / https / 模型齐全时不产生额外违规")
+    void assistantCompleteConfigPasses() {
+        Map<String, Object> values = compliant();
+        values.put(ASSISTANT_ENABLED, "true");
+        values.put(ASSISTANT_KEY, strongKey("deepseek"));
+        values.put(ASSISTANT_BASE_URL, "https://api.deepseek.com");
+        values.put(ASSISTANT_MODEL, "deepseek-chat");
+
+        assertThat(violationsOf(values)).isEmpty();
     }
 
     /** 取 {@code ${VAR:default}} 里的 default 段；无默认值时返回 null */

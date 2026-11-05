@@ -199,29 +199,32 @@ const myEntries: { label: string; to: string; icon: IconName }[] = [
     <aside class="hidden w-[184px] flex-none lg:block lg:overflow-y-auto">
       <el-card shadow="never" :body-style="{ padding: '8px' }">
         <nav aria-label="版块导航">
+          <p class="px-3 pb-1 pt-1 text-caption text-ink-meta">版块</p>
           <RouterLink
             v-for="b in BOARDS"
             :key="b.code"
             :to="`/board/${b.code}`"
-            class="flex items-center gap-2.5 rounded-md px-3 py-2.5 text-body text-ink-regular transition-colors duration-fast ease-standard hover:bg-bg-hover"
+            class="group flex items-center gap-2.5 rounded-md px-3 py-2.5 text-body text-ink-regular transition-colors duration-fast ease-standard hover:bg-bg-hover"
+            active-class="bg-primary-soft font-medium text-primary-strong"
           >
-            <span :class="['cl-board-icon', 'cl-board-icon--sm', `cl-board-icon--${b.code}`]">
-              <SvgIcon :name="b.icon" :size="16" />
-            </span>
+            <SvgIcon :name="b.icon" :size="20" :class="['flex-none', `cl-board-ink--${b.code}`]" />
             {{ b.name }}
           </RouterLink>
         </nav>
-        <el-divider class="my-2" />
-        <nav aria-label="我的入口">
+        <nav aria-label="我的入口" class="mt-2 border-t-[0.5px] border-divider pt-2">
+          <p class="px-3 pb-1 text-caption text-ink-meta">我的</p>
           <RouterLink
             v-for="m in myEntries"
             :key="m.to"
             :to="m.to"
-            class="flex items-center gap-2.5 rounded-md px-3 py-2.5 text-body text-ink-regular transition-colors duration-fast ease-standard hover:bg-bg-hover"
+            class="group flex items-center gap-2.5 rounded-md px-3 py-2.5 text-body text-ink-regular transition-colors duration-fast ease-standard hover:bg-bg-hover"
+            active-class="bg-primary-soft font-medium text-primary-strong"
           >
-            <span class="inline-flex h-7 w-7 flex-none items-center justify-center rounded-sm bg-code text-ink-meta">
-              <SvgIcon :name="m.icon" :size="16" />
-            </span>
+            <SvgIcon
+              :name="m.icon"
+              :size="20"
+              class="flex-none text-ink-meta transition-colors group-hover:text-primary-strong"
+            />
             {{ m.label }}
           </RouterLink>
         </nav>
@@ -233,7 +236,7 @@ const myEntries: { label: string; to: string; icon: IconName }[] = [
       <el-card shadow="never" class="sort-card min-h-0 flex-1" :body-style="{ padding: 0 }">
         <template #header>
           <!-- 排序 Tab（CR-091）：文字型自有 Tab，选中态主色 + 底部指示条（参考站分类 Tab 风格）；
-               真按钮保留键盘可达与 aria-pressed -->
+               真按钮保留键盘可达与 aria-pressed。不在卡头展示总条数——万级数据没有展示价值 -->
           <nav ref="sortNavRef" class="flex items-center gap-1" aria-label="帖子排序">
             <button
               v-for="s in sortOptions"
@@ -302,9 +305,7 @@ const myEntries: { label: string; to: string; icon: IconName }[] = [
                 <el-link type="primary" :underline="false" @click="retryMore">重试</el-link>
               </template>
               <span v-else-if="loadingMore">正在加载…</span>
-              <span v-else-if="!hasMore && posts.length" class="tabular-nums">
-                已经到底了 · 共 {{ total }} 条
-              </span>
+              <span v-else-if="!hasMore && posts.length">已经到底了</span>
               <span aria-hidden="true" class="h-[0.5px] flex-1 bg-divider" />
             </div>
           </div>
@@ -329,7 +330,10 @@ const myEntries: { label: string; to: string; icon: IconName }[] = [
       <el-card shadow="never" class="side-card" :body-style="{ padding: '16px' }">
         <template #header>
           <div class="flex items-center justify-between">
-            <span class="text-title-sm font-medium">等你来答</span>
+            <span class="inline-flex items-center gap-1.5 text-title-sm font-medium">
+              <SvgIcon name="message-circle" :size="16" class="text-primary-strong" />
+              等你来答
+            </span>
             <RouterLink
               to="/board/qna?filter=unanswered"
               class="text-caption text-link hover:underline"
@@ -342,7 +346,7 @@ const myEntries: { label: string; to: string; icon: IconName }[] = [
             :key="p.id"
             class="-mx-2 flex items-start gap-2 rounded-md border-b-[0.5px] border-divider px-2 py-1.5 transition-colors duration-fast ease-standard last:border-b-0 hover:bg-bg-hover"
           >
-            <span class="inline-flex h-5 w-5 flex-none items-center justify-center rounded-sm text-caption tabular-nums text-ink-meta">
+            <span class="inline-flex h-5 w-5 flex-none items-center justify-center rounded-sm bg-code text-caption tabular-nums text-ink-meta">
               {{ i + 1 }}
             </span>
             <RouterLink :to="`/post/${p.id}`" class="min-w-0 flex-1 line-clamp-2 break-words text-note leading-tight text-ink-regular hover:text-link">
@@ -361,7 +365,10 @@ const myEntries: { label: string; to: string; icon: IconName }[] = [
       <el-card shadow="never" class="side-card mt-4" :body-style="{ padding: '16px' }">
         <template #header>
           <div class="flex items-center justify-between">
-            <span class="text-title-sm font-medium">全站热榜</span>
+            <span class="inline-flex items-center gap-1.5 text-title-sm font-medium">
+              <SvgIcon name="trophy" :size="16" class="text-rank-gold" />
+              全站热榜
+            </span>
             <button type="button" class="cursor-pointer text-caption text-link hover:underline" aria-label="更多全站热榜" @click="showHotPosts">更多</button>
           </div>
         </template>
@@ -371,10 +378,29 @@ const myEntries: { label: string; to: string; icon: IconName }[] = [
             :key="p.id"
             class="-mx-2 flex items-start gap-2 rounded-md border-b-[0.5px] border-divider px-2 py-1.5 transition-colors duration-fast ease-standard last:border-b-0 hover:bg-bg-hover"
           >
-            <!-- 前三名徽章分级（CR-102）：第 1 实心主色白字、2/3 浅底主色，其余灰字——层级一眼可读 -->
+            <!-- 前三名奖牌徽章（2026-11-05）：只保留奖杯 / 奖牌自身的轮廓（不铺圆形底色），
+                 名次数字按各自图形的空腔落位——皇冠落在冠身、奖牌落在盘面、绶带落在圆章；
+                 颜色只表达金 / 银 / 铜档，不用实心底纹把图标碾成水印 -->
             <span
-              class="inline-flex h-5 w-5 flex-none items-center justify-center rounded-sm text-caption tabular-nums"
-              :class="i === 0 ? 'bg-primary-strong font-medium text-white' : i < 3 ? 'bg-primary-soft font-medium text-primary-strong' : 'text-ink-meta'"
+              v-if="i < 3"
+              role="img"
+              class="relative inline-flex h-6 w-6 flex-none"
+              :class="i === 0 ? 'text-rank-gold' : i === 1 ? 'text-rank-silver' : 'text-rank-bronze'"
+              :aria-label="`第 ${i + 1} 名`"
+            >
+              <SvgIcon
+                :name="i === 0 ? 'crown' : i === 1 ? 'medal' : 'award'"
+                :size="24"
+                class="absolute inset-0"
+              />
+              <span
+                class="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] font-semibold leading-none tabular-nums"
+                :class="i === 0 ? 'top-[64%]' : i === 1 ? 'top-[62.5%]' : 'top-[37.5%]'"
+              >{{ i + 1 }}</span>
+            </span>
+            <span
+              v-else
+              class="inline-flex h-6 w-6 flex-none items-center justify-center rounded-sm text-caption tabular-nums text-ink-meta"
             >
               {{ i + 1 }}
             </span>
@@ -408,6 +434,13 @@ const myEntries: { label: string; to: string; icon: IconName }[] = [
 .sort-card {
   display: flex;
   flex-direction: column;
+}
+
+/* 卡片头层（2026-11-05）：排序条与右栏卡头统一用主色淡底压一层，
+   让白卡不再是整块白板、也把品牌色带进信息流；只改底色，不动 EP 的内边距与描边 */
+.sort-card :deep(.el-card__header),
+.side-card :deep(.el-card__header) {
+  background: var(--cl-color-primary-soft);
 }
 .sort-card :deep(.el-card__body) {
   flex: 1;

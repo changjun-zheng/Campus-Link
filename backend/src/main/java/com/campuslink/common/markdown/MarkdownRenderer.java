@@ -7,6 +7,7 @@ import com.vladsch.flexmark.parser.Parser;
 import com.vladsch.flexmark.util.ast.Node;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Attribute;
+import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.safety.Safelist;
 import org.springframework.stereotype.Service;
@@ -60,6 +61,29 @@ public class MarkdownRenderer {
     public String render(String markdown) {
         Node document = parser.parse(markdown == null ? "" : markdown);
         return Jsoup.clean(htmlRenderer.render(document), SAFELIST);
+    }
+
+    /**
+     * AI 回答专用渲染（CR-200）：仍走 {@link #render} 的解析 + 白名单，再收紧两处——
+     * 移除所有图片（模型无法保证来源，避免第三方追踪像素 / 意外外链），
+     * 链接仅保留 http(s) 并补 {@code rel} / {@code target}；相对链接去掉 href、保留文字。
+     *
+     * <p>不新建第二套 Markdown 解析器：这里只对已净化的 HTML 做后处理，记号规则仍只有一份。
+     * AI 原文在流式阶段只按纯文本展示，只有本方法产出的 HTML 才允许进入前端 {@code v-html}。
+     */
+    public String renderForAssistant(String markdown) {
+        Document document = Jsoup.parseBodyFragment(render(markdown));
+        document.select("img").remove();
+        for (Element link : document.select("a[href]")) {
+            String href = link.attr("href");
+            if (href.startsWith("http://") || href.startsWith("https://")) {
+                link.attr("rel", "noopener noreferrer nofollow");
+                link.attr("target", "_blank");
+            } else {
+                link.removeAttr("href");
+            }
+        }
+        return document.body().html();
     }
 
     /**

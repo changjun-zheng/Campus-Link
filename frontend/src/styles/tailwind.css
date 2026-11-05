@@ -25,6 +25,11 @@
   --color-code: var(--cl-bg-code);
   --color-success-soft: var(--cl-color-success-soft);
 
+  /* 热榜前三名奖牌（仅名次徽章使用） */
+  --color-rank-gold: var(--cl-rank-gold);
+  --color-rank-silver: var(--cl-rank-silver);
+  --color-rank-bronze: var(--cl-rank-bronze);
+
   /* 6 版块识别色（CR-052，仅图标容器 / 小点缀） */
   --color-board-qna: var(--cl-board-qna);
   --color-board-resources: var(--cl-board-resources);

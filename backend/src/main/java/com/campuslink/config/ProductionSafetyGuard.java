@@ -97,9 +97,13 @@ public class ProductionSafetyGuard implements BeanFactoryPostProcessor, Environm
                 fingerprint(value("campuslink.crypto.crypt-key")));
     }
 
-    /** 校验项数写出来是为了让日志能证明"它真的跑过、且不是一条空规则"；Meili 开关打开时多一项 */
+    /** 校验项数写出来是为了让日志能证明"它真的跑过、且不是一条空规则"；可选开关打开时增加 */
     private int checkedItemCount() {
-        return "meilisearch".equalsIgnoreCase(value("campuslink.search.engine")) ? 11 : 10;
+        int count = "meilisearch".equalsIgnoreCase(value("campuslink.search.engine")) ? 11 : 10;
+        if ("true".equalsIgnoreCase(value("campuslink.assistant.enabled"))) {
+            count++;
+        }
+        return count;
     }
 
     /** 供测试直接断言，不经 Spring 生命周期 */
@@ -114,6 +118,7 @@ public class ProductionSafetyGuard implements BeanFactoryPostProcessor, Environm
         checkCodeSenderMode(violations);
         checkDatasourceDefaults(violations);
         checkSearchEngine(violations);
+        checkAssistant(violations);
         violations.addAll(MailConfigurationGuard.violations(env));
         violations.addAll(PostImageConfigurationGuard.violations(env));
         return violations;
@@ -130,6 +135,28 @@ public class ProductionSafetyGuard implements BeanFactoryPostProcessor, Environm
         String apiKey = value("campuslink.search.meili.api-key");
         if (!StringUtils.hasText(apiKey) || isUnresolved(apiKey)) {
             violations.add("campuslink.search.engine=meilisearch 但 MEILI_API_KEY 未配置：搜索服务对任意调用者开放");
+        }
+    }
+
+    /**
+     * 问 AI 助手（CR-200）：只有显式开启时才要求模型密钥与 HTTPS 入口。
+     * 关闭时功能入口隐藏、端点返回 7001，不把"没配密钥"误报成生产违规。
+     */
+    private void checkAssistant(List<String> violations) {
+        if (!"true".equalsIgnoreCase(value("campuslink.assistant.enabled"))) {
+            return;
+        }
+        String apiKey = value("campuslink.assistant.api-key");
+        if (!StringUtils.hasText(apiKey) || isUnresolved(apiKey)) {
+            violations.add("campuslink.assistant.enabled=true 但 DEEPSEEK_API_KEY 未配置：助手入口会打开却无法生成回答");
+        }
+        String baseUrl = value("campuslink.assistant.base-url");
+        if (!StringUtils.hasText(baseUrl) || isUnresolved(baseUrl) || !baseUrl.startsWith("https://")) {
+            violations.add("campuslink.assistant.base-url 必须为 https:// 地址：生产不允许明文传输选中内容与问题");
+        }
+        String model = value("campuslink.assistant.model");
+        if (!StringUtils.hasText(model) || isUnresolved(model)) {
+            violations.add("campuslink.assistant.model 未配置");
         }
     }
 

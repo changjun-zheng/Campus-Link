@@ -28,6 +28,7 @@ import {
 } from '../api/admin'
 import { useAuthStore } from '../stores/auth'
 import { formatRelativeTime } from '../utils/time'
+import DonutChart from '../components/DonutChart.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -272,45 +273,93 @@ async function loadDashboard() {
   }
 }
 
-/** 四张卡片的数据源：分组与标签只在模板外组装一次，模板只负责渲染 */
-const dashboardCards = computed(() => {
+/**
+ * 看板呈现（2026-11-05）：四张 KPI 卡给出总量与状态拆分，下方「总量对比」横向柱状图
+ * 与「内容状态」环形图负责量感；颜色全部取既有语义令牌，文字与数值始终同屏。
+ */
+const dashboardKpis = computed(() => {
+  const d = dashboard.value
+  if (!d) return []
+  const primary = 'var(--cl-color-primary-strong)'
+  const warning = 'var(--cl-color-warning-strong)'
+  const success = 'var(--cl-color-success-strong)'
+  const danger = 'var(--cl-color-danger-strong)'
+  const muted = 'var(--cl-text-placeholder)'
+  return [
+    {
+      title: '用户',
+      total: d.userTotal,
+      items: [
+        { label: '活跃', value: d.userActive, color: primary },
+        { label: '封禁', value: d.userBanned, color: danger },
+        { label: '已注销', value: d.userDeactivated, color: muted },
+      ],
+      extra: null,
+    },
+    {
+      title: '帖子',
+      total: d.postTotal,
+      items: [
+        { label: '已发布', value: d.postPublished, color: primary },
+        { label: '已下架', value: d.postRemoved, color: warning },
+      ],
+      extra: { label: '今日新增', value: d.postTodayCreated },
+    },
+    {
+      title: '楼层',
+      total: d.replyTotal,
+      items: [
+        { label: '已发布', value: d.replyPublished, color: primary },
+        { label: '已下架', value: d.replyRemoved, color: warning },
+      ],
+      extra: { label: '今日新增', value: d.replyTodayCreated },
+    },
+    {
+      title: '举报',
+      total: d.reportTotal,
+      items: [
+        { label: '待处理', value: d.reportPending, color: warning },
+        { label: '已闭环', value: d.reportClosed, color: success },
+      ],
+      extra: null,
+    },
+  ]
+})
+
+/** 总量对比（横向柱状图）：保持线性刻度，不做对数压缩以免误读数 */
+const totalBars = computed(() => {
+  const d = dashboard.value
+  if (!d) return []
+  return [
+    { label: '用户', value: d.userTotal },
+    { label: '帖子', value: d.postTotal },
+    { label: '楼层', value: d.replyTotal },
+    { label: '举报', value: d.reportTotal },
+  ]
+})
+
+const maxTotal = computed(() => Math.max(1, ...totalBars.value.map((item) => item.value)))
+
+/** 非零值至少给 2% 宽度，避免个位数被压成看不见的细线 */
+function barWidth(value: number): string {
+  if (!value) return '0%'
+  return `${Math.max((value / maxTotal.value) * 100, 2)}%`
+}
+
+/** 内容状态环形图：帖子与楼层合并，只保留「已发布 / 已下架」两段 */
+const contentDonut = computed(() => {
   const d = dashboard.value
   if (!d) return []
   return [
     {
-      title: '用户',
-      items: [
-        { label: '总数', value: d.userTotal },
-        { label: '活跃', value: d.userActive },
-        { label: '封禁', value: d.userBanned },
-        { label: '已注销', value: d.userDeactivated },
-      ],
+      label: '已发布',
+      value: d.postPublished + d.replyPublished,
+      color: 'var(--cl-color-primary-strong)',
     },
     {
-      title: '帖子',
-      items: [
-        { label: '总数', value: d.postTotal },
-        { label: '已发布', value: d.postPublished },
-        { label: '已下架', value: d.postRemoved },
-        { label: '今日新增', value: d.postTodayCreated },
-      ],
-    },
-    {
-      title: '楼层',
-      items: [
-        { label: '总数', value: d.replyTotal },
-        { label: '已发布', value: d.replyPublished },
-        { label: '已下架', value: d.replyRemoved },
-        { label: '今日新增', value: d.replyTodayCreated },
-      ],
-    },
-    {
-      title: '举报',
-      items: [
-        { label: '总数', value: d.reportTotal },
-        { label: '待处理', value: d.reportPending },
-        { label: '已闭环', value: d.reportClosed },
-      ],
+      label: '已下架',
+      value: d.postRemoved + d.replyRemoved,
+      color: 'var(--cl-color-warning-strong)',
     },
   ]
 })
@@ -488,21 +537,80 @@ function goLogin() {
           <el-button size="small" @click="loadDashboard">重新加载</el-button>
         </el-alert>
       </div>
-      <div v-else-if="dashboard" class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <section
-          v-for="card in dashboardCards"
-          :key="card.title"
-          class="rounded-md border-[0.5px] border-divider p-4"
-        >
-          <h3 class="text-body font-medium text-ink">{{ card.title }}</h3>
-          <div class="mt-3 grid grid-cols-2 gap-3">
-            <div v-for="item in card.items" :key="item.label">
-              <p class="text-title-lg font-medium text-ink tabular-nums">{{ item.value }}</p>
-              <p class="mt-0.5 text-caption text-ink-meta">{{ item.label }}</p>
+      <template v-else-if="dashboard">
+        <!-- KPI 卡：总量做视觉锚点，状态拆分用色点 + 数值，不做整块彩色背景 -->
+        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <section
+            v-for="card in dashboardKpis"
+            :key="card.title"
+            class="rounded-md border-[0.5px] border-divider p-4"
+          >
+            <h3 class="text-body font-medium text-ink">{{ card.title }}</h3>
+            <div class="mt-2 flex items-baseline gap-2">
+              <span class="text-hero font-medium tabular-nums text-ink">{{ card.total }}</span>
+              <span class="text-caption text-ink-meta">总数</span>
             </div>
-          </div>
-        </section>
-      </div>
+            <ul class="mt-3 space-y-1.5 border-t-[0.5px] border-divider pt-3 text-caption">
+              <li
+                v-for="item in card.items"
+                :key="item.label"
+                class="flex items-center justify-between gap-2"
+              >
+                <span class="inline-flex items-center gap-1.5 text-ink-regular">
+                  <span
+                    class="h-1.5 w-1.5 flex-none rounded-full"
+                    :style="{ background: item.color }"
+                    aria-hidden="true"
+                  />
+                  {{ item.label }}
+                </span>
+                <span class="tabular-nums text-ink">{{ item.value }}</span>
+              </li>
+              <li
+                v-if="card.extra"
+                class="flex items-center justify-between gap-2 pt-1.5 text-ink-meta"
+              >
+                <span>{{ card.extra.label }}</span>
+                <span class="tabular-nums">{{ card.extra.value }}</span>
+              </li>
+            </ul>
+          </section>
+        </div>
+
+        <!-- 图表区：横向柱状图看总量，环形图看内容状态；数值与图例同屏 -->
+        <div class="mt-4 grid gap-4 lg:grid-cols-2">
+          <section class="rounded-md border-[0.5px] border-divider p-4">
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
+              <h3 class="text-body font-medium text-ink">总量对比</h3>
+              <span class="text-caption text-ink-meta">含已下架 / 已注销</span>
+            </div>
+            <ul class="mt-4 space-y-3">
+              <li v-for="bar in totalBars" :key="bar.label">
+                <div class="flex items-baseline justify-between gap-3 text-note">
+                  <span class="text-ink-regular">{{ bar.label }}</span>
+                  <span class="tabular-nums text-ink">{{ bar.value }}</span>
+                </div>
+                <div class="mt-1.5 h-2 overflow-hidden rounded-full bg-code">
+                  <div
+                    class="h-full rounded-full bg-primary-strong transition-[width] duration-base ease-standard"
+                    :style="{ width: barWidth(bar.value) }"
+                  />
+                </div>
+              </li>
+            </ul>
+          </section>
+
+          <section class="rounded-md border-[0.5px] border-divider p-4">
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
+              <h3 class="text-body font-medium text-ink">内容状态</h3>
+              <span class="text-caption text-ink-meta">帖子 + 楼层</span>
+            </div>
+            <div class="mt-4">
+              <DonutChart :segments="contentDonut" caption="内容" />
+            </div>
+          </section>
+        </div>
+      </template>
     </el-card>
 
     <!-- ─── 标签管理（F-ADMIN-004 标签侧 / CR-132）：仅 SUPERADMIN；进入 Tab 才加载 ─── -->

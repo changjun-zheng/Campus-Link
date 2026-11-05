@@ -16,6 +16,7 @@ public class AppProperties {
     private Cors cors = new Cors();
     private Hot hot = new Hot();
     private Ai ai = new Ai();
+    private Assistant assistant = new Assistant();
     private Search search = new Search();
     private Avatar avatar = new Avatar();
     private PostImages postImages = new PostImages();
@@ -91,6 +92,39 @@ public class AppProperties {
             /** Maximum number of similar posts to return */
             private int maxResults = 3;
         }
+    }
+
+    /**
+     * 帖子选中文本问 AI（CR-200）：DeepSeek / OpenAI 兼容接口。
+     *
+     * <p>密钥只从环境变量 {@code DEEPSEEK_API_KEY} 注入；{@code enabled=true} 但密钥为空时由
+     * {@code ProductionSafetyGuard}（prod）与 {@code AssistantPropertiesGuard}（启动即校验）拦下，
+     * 不允许"入口可见、每次 503"的半开状态。
+     */
+    @Data
+    public static class Assistant {
+        private boolean enabled = false;
+        private String provider = "deepseek";
+        private String baseUrl = "https://api.deepseek.com";
+        private String model = "deepseek-chat";
+        private String apiKey = "";
+        private int dailyLimit = 20;
+        private int perMinuteLimit = 5;
+        private int maxConcurrentPerUser = 1;
+        private int sessionTtlMinutes = 30;
+        private int maxSelectedChars = 2000;
+        private int maxQuestionChars = 500;
+        private int maxUserTurns = 5;
+        private int maxOutputTokens = 1024;
+        private int connectTimeoutSeconds = 10;
+        private int requestTimeoutSeconds = 90;
+        private int sseTimeoutSeconds = 120;
+        private double temperature = 0.3d;
+        private String quotaZone = "Asia/Shanghai";
+        private boolean moderateOutput = true;
+        private String privacyNoticeVersion = "1";
+        private java.util.List<String> quickPrompts = new java.util.ArrayList<>(java.util.List.of(
+                "这段内容是什么意思？", "举个例子解释一下", "这段代码在做什么？"));
     }
 
     /**

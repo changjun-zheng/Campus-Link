@@ -47,6 +47,13 @@
 
   <!-- CR-194: Spring injects the shared mutable mail sender and bound configuration. -->
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.account.infrastructure.notify.MailCodeSender"/></Match>
+  <!-- CR-200 AI 助手：application / 适配器 / 控制器均为 Spring 单例，构造器注入不做防御性拷贝（同①） -->
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.config.AssistantConfigurationGuard"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.assistant.application.AssistantApplicationService"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.assistant.infrastructure.model.DeepSeekChatModelAdapter"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.assistant.infrastructure.redis.RedisAssistantUsageGateway"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.assistant.infrastructure.redis.RedisConversationStore"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.assistant.web.AssistantController"/></Match>
 
   <!-- ② Spring Boot 配置属性绑定（EI_EXPOSE_REP / REP2）：`@ConfigurationProperties` 的内嵌对象由 Boot
        实例化并经 setter 注入、getter 供业务读取；拷贝会切断绑定链 ⇒ 已知误报。 -->
@@ -57,6 +64,12 @@
   <!-- CR-181 搜索配置：同型（Boot 绑定内嵌 Search / Meili，getter 供业务读取） -->
   <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.config.AppProperties$Search"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.config.AppProperties$Search"/></Match>
+  <!-- CR-200 AI 助手配置：同型（Boot 绑定内嵌 Assistant，quickPrompts 由 getter 读取） -->
+  <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.config.AppProperties$Assistant"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.config.AppProperties$Assistant"/></Match>
+
+  <!-- ④ 提示词是确定性文本：模型输入要求固定 LF（不能用平台相关的 %n），否则测试与上游行为随 OS 漂移 -->
+  <Match><Bug pattern="VA_FORMAT_STRING_USES_NEWLINE"/><Class name="com.campuslink.module.assistant.domain.service.AssistantPromptBuilder"/></Match>
 
   <!-- ③ 不可变值载体（EI_EXPOSE_REP / REP2）：web VO、application cmd、分页载体与领域聚合 Post——
        构造后不再变更，集合字段只读使用；唯一写入入口 `Post.publish` 已 `List.copyOf`。 -->

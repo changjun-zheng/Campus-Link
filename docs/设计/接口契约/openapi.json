@@ -45,6 +45,10 @@
       "description": "楼层回复"
     },
     {
+      "name": "assistant",
+      "description": "帖子选中文本问 AI"
+    },
+    {
       "name": "admin-content",
       "description": "运营后台 · 内容搜索（OPS / SUPERADMIN）"
     },
@@ -3892,6 +3896,248 @@
         }
       }
     },
+    "/api/v1/assistant/conversations": {
+      "post": {
+        "tags": [
+          "assistant"
+        ],
+        "summary": "开启问 AI（需登录，SSE）：event=meta/delta/done/error；回答仅提问者可见，不写入楼层",
+        "operationId": "start",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartConversationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "SSE 事件流（text/event-stream）",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数错误（1001）；参数错误（1001）；选中内容或问题过长（7004）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未登录（4001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "资源不存在（3001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "AI 助手暂未开放（7001）；AI 助手暂不可用，请稍后再试（7006）；内容审核服务暂不可用，发布已临时关闭（5002）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "今日 AI 提问次数已用完（7002）；提问过于频繁，请稍后再试（7003）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "上一条回答还在生成中（7007）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "内容未通过安全审核（5001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "系统繁忙，请稍后再试（9999）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/assistant/conversations/{conversationId}/messages": {
+      "post": {
+        "tags": [
+          "assistant"
+        ],
+        "summary": "当前会话追问（需登录，SSE）：会话必须属于当前用户，30 分钟过期",
+        "operationId": "followUp",
+        "parameters": [
+          {
+            "name": "conversationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FollowUpRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "SSE 事件流（text/event-stream）",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数错误（1001）；参数错误（1001）；本次对话轮次已达上限，请重新选择内容提问（7008）；选中内容或问题过长（7004）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未登录（4001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "AI 助手暂未开放（7001）；AI 助手暂不可用，请稍后再试（7006）；内容审核服务暂不可用，发布已临时关闭（5002）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "对话不存在或已过期（7005）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "今日 AI 提问次数已用完（7002）；提问过于频繁，请稍后再试（7003）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "上一条回答还在生成中（7007）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "内容未通过安全审核（5001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "系统繁忙，请稍后再试（9999）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/roster/import": {
       "post": {
         "tags": [
@@ -5795,6 +6041,37 @@
         }
       }
     },
+    "/api/v1/assistant/config": {
+      "get": {
+        "tags": [
+          "assistant"
+        ],
+        "summary": "AI 助手公开配置：是否启用、每日次数、选区 / 问题上限、快捷问题",
+        "operationId": "config",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseAssistantConfigVo"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "系统繁忙，请稍后再试（9999）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/tags": {
       "get": {
         "tags": [
@@ -7355,6 +7632,40 @@
           "target"
         ]
       },
+      "StartConversationRequest": {
+        "type": "object",
+        "properties": {
+          "postId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "selectedText": {
+            "type": "string",
+            "minLength": 1
+          },
+          "question": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "postId",
+          "question",
+          "selectedText"
+        ]
+      },
+      "FollowUpRequest": {
+        "type": "object",
+        "properties": {
+          "question": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "question"
+        ]
+      },
       "ApiResponseRosterImportResult": {
         "type": "object",
         "properties": {
@@ -8805,6 +9116,53 @@
           "sort": {
             "type": "integer",
             "format": "int32"
+          }
+        }
+      },
+      "ApiResponseAssistantConfigVo": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/AssistantConfigVo"
+          },
+          "traceId": {
+            "type": "string"
+          }
+        }
+      },
+      "AssistantConfigVo": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "dailyLimit": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "maxSelectedChars": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "maxQuestionChars": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "privacyNoticeVersion": {
+            "type": "string"
+          },
+          "quickPrompts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
