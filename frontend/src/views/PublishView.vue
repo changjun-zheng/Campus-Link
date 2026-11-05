@@ -477,15 +477,17 @@ async function submit() {
     </div>
 
     <div class="px-6 max-md:px-4">
-      <!-- 标题：超大无边框输入（CSDN / 掘金式） -->
-      <input
-        ref="titleEl"
-        v-model="form.title"
-        aria-label="帖子标题"
-        maxlength="100"
-        :placeholder="form.boardCode === 'interview' ? '如：XX 公司 Java 后端一面面经' : '输入标题（1~100 字）'"
-        class="cl-editor-title block w-full border-0 bg-transparent py-6 text-[26px] leading-snug font-medium text-ink outline-none placeholder:text-ink-meta max-md:text-[22px]"
-      />
+      <!-- 标题（CR-201 批次 A）：20px + 一条细下划线，聚焦时提亮——比 26px 无边界大字更像编辑器 -->
+      <div class="border-b-[0.5px] border-divider transition-colors duration-fast ease-standard focus-within:border-primary-strong">
+        <input
+          ref="titleEl"
+          v-model="form.title"
+          aria-label="帖子标题"
+          maxlength="100"
+          :placeholder="form.boardCode === 'interview' ? '如：XX 公司 Java 后端一面面经' : '输入标题（1~100 字）'"
+          class="cl-editor-title block w-full border-0 bg-transparent py-5 text-[20px] leading-snug font-medium text-ink outline-none placeholder:text-ink-meta"
+        />
+      </div>
 
       <!-- 面经模板入口（CR-143）：仅面经版块 + 正文为空时出现，填入后自动隐藏 -->
       <div v-if="showTemplateHint" class="flex flex-wrap items-center gap-1.5 pb-4 text-note text-ink-meta">
@@ -603,13 +605,13 @@ async function submit() {
             maxlength="20000"
             aria-label="正文（Markdown）"
             placeholder="正文支持 Markdown：标题 / 列表 / 代码块（```语言）/ 链接 / 引用。开始输入…"
-            class="cl-editor-body min-h-[50vh] w-full resize-y border-0 bg-transparent py-4 text-body leading-body text-ink outline-none placeholder:text-ink-meta max-md:min-h-[36vh]"
+            class="cl-editor-body min-h-[520px] w-full resize-y border-0 bg-transparent py-4 text-body leading-body text-ink outline-none placeholder:text-ink-meta max-md:min-h-[360px]"
           />
         </section>
         <!-- 预览面板：服务端渲染并净化的 HTML，直接 v-html（XSS 防线在 MarkdownRenderer） -->
         <div
           v-show="previewMode || splitPreview"
-          class="cl-editor-pane cl-editor-preview min-h-[50vh] py-4 max-md:min-h-[36vh]"
+          class="cl-editor-pane cl-editor-preview min-h-[520px] py-4 max-md:min-h-[360px]"
           aria-label="正文预览"
           :aria-busy="previewLoading"
         >

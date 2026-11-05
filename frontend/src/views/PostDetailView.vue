@@ -103,6 +103,8 @@ const size = 20
 const repliesLoading = ref(false)
 const repliesError = ref('')
 const replyMd = ref('')
+/** 回复输入框（CR-201 批次 A）：空态里的「写下第一回复」直接把焦点落到这里 */
+const replyInputRef = ref<{ focus: () => void } | null>(null)
 const submitting = ref(false)
 const acceptingReplyId = ref<number | null>(null)
 const togglingLike = ref(false)
@@ -379,6 +381,13 @@ function cancelQuote() {
   quoting.value = null
 }
 
+/** 空态主操作（CR-201 批次 A）：未登录先跳登录，登录后滚到回复框并聚焦 */
+function focusComposer() {
+  if (!requireLoginOrRedirect()) return
+  document.getElementById('replyComposer')?.scrollIntoView({ block: 'center' })
+  replyInputRef.value?.focus()
+}
+
 /**
  * 通知跳转定位（F-SOC-001）：`?floor=<replyId>` 命中当前页楼层时滚动并高亮。
  * 楼层不在本页时不猜页码——最佳答案置顶会改变分页组成，猜错反而跳错楼层，落到帖子即可。
@@ -452,7 +461,7 @@ watch(
     <template v-else-if="post">
       <div class="cl-post-shell" :class="{ 'cl-post-shell--with-toc': hasToc }">
         <div class="cl-post-main">
-      <el-card shadow="never" class="mb-5">
+      <el-card shadow="never" class="mb-4">
         <!-- 标题与正文同处 760px 阅读列（ui-guideline §6），否则标题贴卡片边、正文内缩，左缘不齐 -->
         <div class="mx-auto max-w-reading">
           <div class="flex items-center gap-2">
@@ -507,60 +516,64 @@ watch(
             v-highlight
             v-html="renderedPostHtml"
           />
-          <!-- 互动操作行（F-FORUM-005）：toggle 后用响应 {active, count} 回填本地状态 -->
-          <div class="mt-4 flex items-center gap-2">
-            <el-button
-              size="small"
-              :type="post.likedByMe ? 'primary' : 'default'"
-              :plain="!post.likedByMe"
-              :loading="togglingLike"
-              @click="toggleLike"
-            >
-              <span class="inline-flex items-center gap-1 tabular-nums">
-                <SvgIcon name="thumb-up" :size="16" />
-                点赞{{ post.likeCount > 0 ? ` ${post.likeCount}` : '' }}
-              </span>
-            </el-button>
-            <el-button
-              size="small"
-              :type="post.favoritedByMe ? 'primary' : 'default'"
-              :plain="!post.favoritedByMe"
-              :loading="togglingFavorite"
-              @click="toggleFavorite"
-            >
-              <span class="inline-flex items-center gap-1">
-                <SvgIcon name="bookmark" :size="16" />
-                {{ post.favoritedByMe ? '已收藏' : '收藏' }}
-              </span>
-            </el-button>
-            <el-button
-              v-if="isAuthor"
-              link
-              size="small"
-              class="ml-auto"
-              @click="router.push(`/post/${post.id}/edit`)"
-            >
-              编辑
-            </el-button>
-            <el-button
-              v-if="isAuthor"
-              link
-              type="danger"
-              size="small"
-              :loading="deleting"
-              @click="onDelete"
-            >
-              删除
-            </el-button>
-            <el-button
-              v-else
-              link
-              size="small"
-              :class="{ 'ml-auto max-md:!h-7': true }"
-              @click="openReport('POST', post.id)"
-            >
-              举报
-            </el-button>
+          <!-- 互动操作行（F-FORUM-005）：toggle 后用响应 {active, count} 回填本地状态。
+               CR-201 批次 A：整条与正文用细线隔开，左侧互动、右侧管理动作分两组，不再一串平铺 -->
+          <div class="mt-5 flex flex-wrap items-center gap-2 border-t-[0.5px] border-divider pt-4">
+            <div class="flex items-center gap-2">
+              <el-button
+                size="small"
+                :type="post.likedByMe ? 'primary' : 'default'"
+                :plain="!post.likedByMe"
+                :loading="togglingLike"
+                @click="toggleLike"
+              >
+                <span class="inline-flex items-center gap-1 tabular-nums">
+                  <SvgIcon name="thumb-up" :size="16" />
+                  点赞{{ post.likeCount > 0 ? ` ${post.likeCount}` : '' }}
+                </span>
+              </el-button>
+              <el-button
+                size="small"
+                :type="post.favoritedByMe ? 'primary' : 'default'"
+                :plain="!post.favoritedByMe"
+                :loading="togglingFavorite"
+                @click="toggleFavorite"
+              >
+                <span class="inline-flex items-center gap-1">
+                  <SvgIcon name="bookmark" :size="16" />
+                  {{ post.favoritedByMe ? '已收藏' : '收藏' }}
+                </span>
+              </el-button>
+            </div>
+            <div class="ml-auto flex items-center gap-1">
+              <el-button
+                v-if="isAuthor"
+                link
+                size="small"
+                @click="router.push(`/post/${post.id}/edit`)"
+              >
+                编辑
+              </el-button>
+              <el-button
+                v-if="isAuthor"
+                link
+                type="danger"
+                size="small"
+                :loading="deleting"
+                @click="onDelete"
+              >
+                删除
+              </el-button>
+              <el-button
+                v-else
+                link
+                size="small"
+                :class="{ 'max-md:!h-7': true }"
+                @click="openReport('POST', post.id)"
+              >
+                举报
+              </el-button>
+            </div>
           </div>
         </div>
       </el-card>
@@ -600,9 +613,16 @@ watch(
         </div>
 
         <template v-else>
-          <p v-if="!replies.length" class="px-5 py-6 text-center text-body text-ink-regular">
-            还没有回复，来占一楼
-          </p>
+          <!-- 回复空态（CR-201 批次 A）：图标 + 文案 + 主操作，把「来占一楼」从一句话变成一个入口 -->
+          <div v-if="!replies.length" class="flex flex-col items-center px-5 py-10 text-center">
+            <span class="flex h-12 w-12 items-center justify-center rounded-full bg-bg-subtle text-ink-meta">
+              <SvgIcon name="message-2" :size="20" />
+            </span>
+            <p class="mt-3 text-body text-ink-regular">还没有回复，来占一楼</p>
+            <el-button class="mt-4" type="primary" size="small" @click="focusComposer">
+              写下第一回复
+            </el-button>
+          </div>
           <ul v-else ref="repliesListRef">
             <li
               v-for="r in replies"
@@ -718,6 +738,7 @@ watch(
                   <el-button link size="small" class="ml-auto" @click="cancelQuote">取消引用</el-button>
                 </div>
                 <el-input
+                  ref="replyInputRef"
                   v-model="replyMd"
                   type="textarea"
                   :rows="narrow ? 4 : 6"
@@ -832,14 +853,19 @@ watch(
 
 .cl-post-toc {
   display: none;
-  flex: 0 0 auto;
-  width: 224px;
+  flex: 0 0 240px;
+  width: 240px;
   position: sticky;
   top: 80px;
   /* 侧栏内部自己滚动，避免长目录把页面拉长 */
   max-height: calc(100vh - 112px);
   overflow-y: auto;
   overscroll-behavior: contain;
+  /* CR-201 批次 A：目录收成一张 240px 的小卡——与正文卡同材质，阅读时右侧有明确的落脚点 */
+  padding: var(--cl-space-3);
+  border: var(--cl-hairline) solid var(--cl-border-base);
+  border-radius: var(--cl-radius-lg);
+  background: var(--cl-bg-card);
   /* 细滚动条，不抢视觉 */
   scrollbar-width: thin;
   scrollbar-color: var(--cl-border-base) transparent;
@@ -857,7 +883,7 @@ watch(
 }
 
 .cl-post-toc__inner {
-  padding: 4px 0 8px;
+  padding: 0;
 }
 
 /* ≥ lg 才开双栏；窄屏目录隐藏，不影响阅读 */

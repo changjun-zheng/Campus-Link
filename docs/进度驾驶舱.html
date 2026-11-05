@@ -1331,10 +1331,10 @@
           <div class="chips">
 
 
-            <span class="chip">数据快照 <b>2026-11-05</b></span>
+            <span class="chip">数据快照 <b>2026-11-06</b></span>
 
 
-            <span class="chip">change-log <b>v1.237</b></span>
+            <span class="chip">change-log <b>v1.239</b></span>
 
 
             <span class="chip">next-steps <b>v1.15</b></span>
@@ -3029,7 +3029,7 @@
       <div class="rule"></div>
 
 
-      Campus-Link 进度驾驶舱 · 视图 v2.0（2026-09-13 重构视觉与结构）· 数据快照 2026-11-05<br>
+      Campus-Link 进度驾驶舱 · 视图 v2.0（2026-09-13 重构视觉与结构）· 数据快照 2026-11-06<br>
 
 
       数据由 变更台账 / 下一步行动 / 流程偏离记录 / 设计门纪要 / Sprint2计划 五份事实文档提取生成 · <b>每次工作收尾由 AI 会话按 AGENTS.md「工作收尾约定」更新数据</b>，结构与样式不改
@@ -3051,6 +3051,8 @@
 
 
     const CRS = [
+      { id: "CR-201", date: "2026-11-06", title: "视觉统一批次 A：首页三栏去侧栏白卡、中栏唯一白卡，列表标题 16/600 并去掉行级版块色条，详情目录改 240px sticky 卡、操作条分组、回复空态加入口，发布页标题 20px + 编辑区 520px；纯样式 / 模板，无接口与数据变更；详见<a href='变更日志/变更台账.md#cr-201'>CR-201</a>。", type: "前端（视觉）", status: "full", review: "用户选择方向 A 并确认开工", hash: "待提交" },
+
       { id: "CR-200", date: "2026-11-05", title: "帖子选中文本问 AI（私密侧栏）：详情页划选正文 →「问 AI」→ 仅提问者可见侧栏调用 DeepSeek 流式回答；Redis 30 分钟多轮、每日 20 次、选区 ≤2000 字；完成帧服务端 Markdown 净化，不写楼层 / 搜索 / 热榜、不落 MySQL；详见<a href='变更日志/变更台账.md#cr-200'>CR-200</a>。", type: "功能 / 接口 / 安全", status: "full", review: "用户批准实施方案", hash: "待提交" },
 
       { id: "CR-195", date: "2026-11-04", title: "帖子图片上传、草稿预览、详情封面与受控读取完成本机验收；生产禁用，详见<a href='变更日志/变更台账.md#cr-195'>CR-195</a>。", type: "论坛 / 图片 / 安全", status: "full", review: "用户批准实施方案", hash: "d238e96" },

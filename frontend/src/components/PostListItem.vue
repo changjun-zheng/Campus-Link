@@ -76,11 +76,8 @@ const boardDotClass = computed(() => {
   return BOARD_MAP[code] ? `cl-board-dot cl-board-dot--${code}` : ''
 })
 
-/** 行级版块色条（2026-11-05）：与版块色点同源，未知 code 不渲染色条 */
-const boardRailClass = computed(() => {
-  const code = props.post.boardCode as BoardCode
-  return BOARD_MAP[code] ? `cl-board-rail--${code}` : ''
-})
+/** 行级版块色条已移除（CR-201 批次 A）：版块归属只保留元信息行的 6px 色点，
+ *  避免每条帖子都挂一条饱和色带、整列看起来像彩条 */
 
 const route = useRoute()
 const router = useRouter()
@@ -112,16 +109,8 @@ async function onLike() {
 
 <template>
   <li
-    class="group relative border-b-[0.5px] border-line px-5 py-4 transition-colors duration-fast ease-standard last:border-b-0 hover:bg-bg-hover"
+    class="group relative border-b-[0.5px] border-line px-5 py-3.5 transition-colors duration-fast ease-standard last:border-b-0 hover:bg-bg-subtle"
   >
-    <!-- 行级版块色条（2026-11-05）：替代原 hover 才出现的主色条，让每条帖子的版块归属
-         在静止态就可扫读；未知版块不渲染，仍靠标题 hover 与行底色反馈 -->
-    <span
-      v-if="boardRailClass"
-      aria-hidden="true"
-      class="absolute inset-y-1 left-0 w-0.5 rounded-full opacity-[0.55] transition-opacity duration-fast ease-standard group-hover:opacity-100"
-      :class="boardRailClass"
-    />
     <div class="flex gap-3">
       <div class="min-w-0 flex-1">
         <!-- 作者行（CSDN / 掘金式）：头像 + 昵称 + 时间在标题上方（CR-085） -->
@@ -140,7 +129,7 @@ async function onLike() {
           </el-tag>
           <RouterLink
             :to="`/post/${post.id}`"
-            class="min-w-0 flex-1 line-clamp-2 break-words text-title font-medium leading-tight text-ink [overflow-wrap:anywhere] hover:text-link"
+            class="min-w-0 flex-1 line-clamp-2 break-words text-list-title font-semibold leading-snug text-ink [overflow-wrap:anywhere] hover:text-link"
           >
             <template v-for="(part, i) in titleParts" :key="i">
               <mark v-if="part.hit" class="bg-primary-soft text-ink">{{ part.text }}</mark>

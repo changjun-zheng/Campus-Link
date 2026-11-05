@@ -19,6 +19,7 @@
   --color-ink-meta: var(--cl-text-meta);
   --color-page: var(--cl-bg-page);
   --color-card: var(--cl-bg-card);
+  --color-bg-subtle: var(--cl-bg-subtle);
   --color-bg-hover: var(--cl-bg-hover);
   --color-line: var(--cl-border-base);
   --color-divider: var(--cl-border-divider);
@@ -46,6 +47,7 @@
   --text-note: var(--cl-font-sm);
   --text-body: var(--cl-font-body);
   --text-title-sm: var(--cl-font-title-sm);
+  --text-list-title: var(--cl-font-list-title);
   --text-title: var(--cl-font-title);
   --text-title-lg: var(--cl-font-title-lg);
   --text-h1: var(--cl-font-h1);

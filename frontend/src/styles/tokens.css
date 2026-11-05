@@ -48,9 +48,12 @@ html {
   --cl-text-meta: #606266;
   --cl-text-placeholder: #a8abb2;
 
-  /* ---- 背景 ---- */
-  --cl-bg-page: #f5f6f8;
+  /* ---- 背景 ----
+     CR-201 批次 A：页面底从 #f5f6f8 压到 #eef1f5，让白卡真正「浮」起来；
+     --cl-bg-subtle 是列表 hover / 次级分区的中性底（不掺主色，避免整页泛蓝）。 */
+  --cl-bg-page: #eef1f5;
   --cl-bg-card: #fff;
+  --cl-bg-subtle: #f7f9fc;
   --cl-bg-hover: var(--cl-color-primary-soft);
   --cl-bg-code: #f6f8fa;
 
@@ -72,6 +75,8 @@ html {
   --cl-font-sm: 13px;
   --cl-font-body: 14px;
   --cl-font-title-sm: 15px;
+  /* 列表标题（CR-201 批次 A）：信息流里的帖子标题固定 16px，让中栏白卡成为唯一视觉焦点 */
+  --cl-font-list-title: 16px;
   --cl-font-title: 17px;
   --cl-font-title-lg: 20px;
   --cl-font-h1: 22px;
@@ -767,32 +772,6 @@ html {
   }
 
   .cl-board-dot--chat {
-    background: var(--cl-board-chat);
-  }
-
-  /* 帖子行左缘版块色条（2026-11-05）：2px 行级识别色，静止态半透明、悬停满色。
-     与版块色点同源，仅引 --cl-board-*；不承载文字，未知版块不渲染 */
-  .cl-board-rail--qna {
-    background: var(--cl-board-qna);
-  }
-
-  .cl-board-rail--resources {
-    background: var(--cl-board-resources);
-  }
-
-  .cl-board-rail--interview {
-    background: var(--cl-board-interview);
-  }
-
-  .cl-board-rail--contest {
-    background: var(--cl-board-contest);
-  }
-
-  .cl-board-rail--course {
-    background: var(--cl-board-course);
-  }
-
-  .cl-board-rail--chat {
     background: var(--cl-board-chat);
   }
 
