@@ -38,6 +38,8 @@
     <!-- 风格门禁（问题清单 E-003 最后一块，CR-151）：插件 3.6.0 显式配 10.x 规则引擎，
          不追 14.x（插件兼容面未验证）；规则集见 config/checkstyle/checkstyle.xml -->
     <checkstyle.version>10.26.1</checkstyle.version>
+    <!-- module 覆盖率门禁（CR-197）：脚本解释器。Windows 默认 python；unix 系由 profile 覆盖为 python3 -->
+    <coverage.python>python</coverage.python>
   </properties>
 
   <dependencyManagement>
@@ -241,7 +243,8 @@
                      而 `<include>*</include>` 同样条件下会如实报 `0.81 < 0.90` ⇒ 匹配器生效、只是
                      这些模式命中 0 个类。**空样本的门禁等于没门禁**，故放弃 module-only 规则，
                      改用全局 80%（CR-111 实测总覆盖 81.5%、module 83.6%）。
-                     想真正单盯 module，需要 CSV/XML 后处理步骤，属另一条工程线，未在本轮引入。 -->
+                     想真正单盯 module，需要 CSV/XML 后处理步骤——已由 CR-197 落地（见下方
+                     exec-maven-plugin；脚本把「样本为空」判为失败，绕开本注释所述的静默通过）。 -->
                 <rule>
                   <element>BUNDLE</element>
                   <limits>
@@ -253,6 +256,35 @@
                   </limits>
                 </rule>
               </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- module 包覆盖率门禁（CR-197 / 问题清单 R-5）：上条注释已说明 jacoco rule 级 includes
+           对嵌套包空匹配、空样本会静默 PASS；改为脚本解析 jacoco.xml，并把「报告缺失 / 样本为空」
+           判为失败。声明在 jacoco 之后 ⇒ 同 phase 内先出报告再判门禁；CI 仍只跑 `mvn -B verify`。
+           解释器见 ${coverage.python}（Windows=python，unix profile=python3）。 -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>3.5.0</version>
+        <executions>
+          <execution>
+            <id>module-coverage-gate</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>${coverage.python}</executable>
+              <workingDirectory>${project.basedir}</workingDirectory>
+              <arguments>
+                <argument>scripts/check_module_coverage.py</argument>
+                <argument>--report</argument>
+                <argument>target/site/jacoco/jacoco.xml</argument>
+                <argument>--min</argument>
+                <argument>0.80</argument>
+              </arguments>
             </configuration>
           </execution>
         </executions>
@@ -314,4 +346,20 @@
       </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <!-- CR-197：unix 系（CI ubuntu）默认没有 `python` 命令，门禁脚本改用 python3；
+         Windows 开发机保持 properties 里的 python 默认值。 -->
+    <profile>
+      <id>python3-on-unix</id>
+      <activation>
+        <os>
+          <family>unix</family>
+        </os>
+      </activation>
+      <properties>
+        <coverage.python>python3</coverage.python>
+      </properties>
+    </profile>
+  </profiles>
 </project>
