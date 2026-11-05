@@ -3,7 +3,8 @@ package com.campuslink.module.account.domain.model;
 import java.util.List;
 
 /**
- * 默认头像目录（CR-162；CR-187 起为 8 款狐狸吉祥物表情变体）：注册时按 userId 取模分配。
+ * 默认头像目录：8 款「小联」蓝鹊表情，注册时按 userId 取模分配。
+ * 资源沿用历史 fox 文件名，兼容已存储的头像 URL，无需回填用户数据。
  *
  * <p>刻意做成**固定数组**而非运行时扫描 {@code public/avatars}：分配结果必须与部署目录无关，
  * 且同一 userId 在任何实例、任何时间都映射到同一张图。新增 / 删除素材要同时改这里与前端目录。
