@@ -97,6 +97,7 @@ python backend/scripts/scan_deps_osv.py             # --fail-on high / none、--
 - **测试名册**（仅 `campuslink.roster.bypass=true` 生效，学号 9 位数字）：`249971346/张三` ~ `249971349/赵六`；
 - **45 个开发账号**（全合成身份、仅限本机开发库；清单见[开发测试账号清单](docs/开发/开发测试账号清单.md)）：学号 `888800001`~`888800045`、邮箱 `dev-stu-01@dev.campuslink.local`~、登录 = **邮箱 + 验证码 `123456`**（**本系统没有密码字段**；接口自 CR-093 起"邮箱或手机号"二合一，开发账号只有邮箱）；批量核验用 `VERIFY_IP_HOURLY_LIMIT=<n>` 临时抬高 IP 限流（默认 10 次/小时/IP，对外行为不变）；
 - **管理员**（dev-only 种子）：`admin@campuslink.local` + 验证码 `123456`，角色 `SUPERADMIN`，无学号、不走学籍核验；
+- **合成样例帖**（2026-11-07，UI-08）：`backend/scripts/data/D006__seed_dev_synthetic_posts.py`（默认 dry-run；需后端已启动，走真实发帖 / 回帖 / 采纳 / 点赞接口；`--cleanup` 按标题定向清理 12 条样例及关联数据）；
 - **入参格式**：学号 `^\d{9}$`；姓名限中文名（2~16 汉字可含 `·`）或外文名（字母起头可含空格 / `-` / `'` / `.`）；`nickname` 2~32 自由文本。
 
 **机审**（F-SAFE-001）：`campuslink.moderation.mode` 缺省 `log`（只记录放行，开发用）；`local`＝本地词表，命中即拦 `5001 / 422`，**词表为空则启动失败**（`MODERATION_WORDS` 逗号分隔），**不允许"配了 local 却没有词"变成静默放行**；真实服务商适配待 A3-8。
