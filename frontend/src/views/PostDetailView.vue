@@ -518,7 +518,7 @@ watch(
           />
           <!-- 互动操作行（F-FORUM-005）：toggle 后用响应 {active, count} 回填本地状态。
                CR-201 批次 A：整条与正文用细线隔开，左侧互动、右侧管理动作分两组，不再一串平铺 -->
-          <div class="mt-5 flex flex-wrap items-center gap-2 border-t-[0.5px] border-divider pt-4">
+          <div class="cl-post-actions mt-5 flex flex-wrap items-center gap-2 border-t-[0.5px] border-divider pt-4">
             <div class="flex items-center gap-2">
               <el-button
                 size="small"
@@ -635,7 +635,7 @@ watch(
               }"
             >
               <div class="mx-auto max-w-reading">
-                <div class="mb-1.5 flex flex-wrap items-center gap-1.5 text-caption text-ink-meta">
+                <div class="cl-reply-actions mb-1.5 flex flex-wrap items-center gap-1.5 text-caption text-ink-meta">
                   <span class="inline-flex items-center rounded-sm bg-code px-1.5 py-px text-ink-regular">
                     #{{ r.floorNo }} 楼
                   </span>
@@ -1032,6 +1032,20 @@ watch(
   .markdown-body :deep(.cl-copy-btn) {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* 移动端操作可点性（CR-205 / UI-06）：EP 的 link 按钮默认只有约 18px 高，
+   触摸命中区过小。只抬最小高度，不改字号与视觉外观；桌面保持原密度。 */
+@media (max-width: 767px), (hover: none) {
+  .cl-post-actions :deep(.el-button),
+  .cl-reply-actions :deep(.el-button) {
+    min-height: 28px;
+  }
+
+  .cl-post-actions :deep(.el-button--small:not(.is-link)),
+  .cl-reply-actions :deep(.el-button--small:not(.is-link)) {
+    min-height: 32px;
   }
 }
 </style>
