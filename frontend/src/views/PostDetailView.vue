@@ -503,7 +503,7 @@ watch(
               link
               size="small"
               :type="following ? 'default' : 'primary'"
-              class="ml-1"
+              class="cl-follow-action ml-1"
               @click="toggleFollow"
             >
               {{ following ? '已关注' : '＋ 关注' }}
@@ -1039,7 +1039,8 @@ watch(
    触摸命中区过小。只抬最小高度，不改字号与视觉外观；桌面保持原密度。 */
 @media (max-width: 767px), (hover: none) {
   .cl-post-actions :deep(.el-button),
-  .cl-reply-actions :deep(.el-button) {
+  .cl-reply-actions :deep(.el-button),
+  .cl-follow-action {
     min-height: 28px;
   }
 

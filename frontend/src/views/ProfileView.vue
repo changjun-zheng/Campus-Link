@@ -356,7 +356,7 @@ watch(userId, () => void loadAll(), { immediate: true })
               <template #reference>
                 <button
                   type="button"
-                  class="inline-flex cursor-pointer items-center gap-1 rounded-full border-0 bg-primary-soft px-2 py-0.5 text-caption text-primary-strong"
+                  class="inline-flex cursor-pointer items-center gap-1 rounded-full border-0 bg-primary-soft px-2 py-0.5 text-caption text-primary-strong max-md:min-h-7"
                   :aria-label="`等级 Lv${profile.level} ${profile.levelName}，查看声望口径`"
                 >
                   <SvgIcon name="trophy" :size="12" />
