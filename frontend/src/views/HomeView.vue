@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { onBeforeRouteLeave } from 'vue-router'
 import { listFollowingPosts, listPosts, type PostSort, type PostSummaryVo } from '../api/forum'
 import { BOARDS } from '../constants/boards'
 import { useAuthStore } from '../stores/auth'
@@ -25,8 +26,83 @@ const sortOptions = computed<{ value: PostSort | 'following'; label: string }[]>
 const posts = ref<PostSummaryVo[]>([])
 const total = ref(0)
 const page = ref(1)
-/** 每批条数（CR-091 触底加载）：首屏 6 条，触底自动续载 6 条 */
-const size = 6
+/** 每批条数（CR-091 触底加载）：首屏 6 条，触底自动续载 6 条；
+ *  CR-204 恢复列表时临时放大为已加载条数（≤100），后续批次沿用同一页大小保证不重不漏 */
+const size = ref(6)
+/** 列表状态记忆（CR-204）：只写给「离开首页去帖子详情」的那一次，回到首页消费一次即清 */
+const LIST_STATE_KEY = 'campuslink:home:list'
+const LIST_STATE_TTL_MS = 30 * 60 * 1000
+const LIST_RESTORE_MAX = 100
+interface HomeListState {
+  sort: PostSort | 'following'
+  loaded: number
+  scrollTop: number
+  windowY: number
+  ts: number
+}
+
+function readListState(): HomeListState | null {
+  try {
+    const raw = sessionStorage.getItem(LIST_STATE_KEY)
+    if (!raw) return null
+    const s = JSON.parse(raw) as Partial<HomeListState>
+    if (!s || typeof s.ts !== 'number' || Date.now() - s.ts > LIST_STATE_TTL_MS) return null
+    if (s.sort !== 'latest' && s.sort !== 'hot' && s.sort !== 'following') return null
+    if (s.sort === 'following' && !auth.isLoggedIn) return null
+    if (typeof s.loaded !== 'number' || s.loaded < 1) return null
+    return {
+      sort: s.sort,
+      loaded: Math.min(Math.floor(s.loaded), LIST_RESTORE_MAX),
+      scrollTop: typeof s.scrollTop === 'number' ? Math.max(0, s.scrollTop) : 0,
+      windowY: typeof s.windowY === 'number' ? Math.max(0, s.windowY) : 0,
+      ts: s.ts,
+    }
+  } catch {
+    return null
+  }
+}
+
+/** 在 setup 期同步读取：排序与页大小必须先于首次加载确定，避免 watch(sort) 触发二次请求 */
+const pendingRestore = readListState()
+if (pendingRestore) {
+  sort.value = pendingRestore.sort
+  size.value = pendingRestore.loaded
+  try {
+    sessionStorage.removeItem(LIST_STATE_KEY)
+  } catch {
+    /* 存储不可用：忽略 */
+  }
+}
+
+function saveListState() {
+  try {
+    sessionStorage.setItem(
+      LIST_STATE_KEY,
+      JSON.stringify({
+        sort: sort.value,
+        loaded: posts.value.length,
+        scrollTop: listWrapRef.value?.scrollTop ?? 0,
+        windowY: window.scrollY,
+        ts: Date.now(),
+      } satisfies HomeListState),
+    )
+  } catch {
+    /* 隐私模式 / 配额不足：状态记忆失败不影响浏览 */
+  }
+}
+
+/** 只记「去帖子详情」的离开；去其它页面一律丢弃快照，避免下次进首页误恢复 */
+onBeforeRouteLeave((to) => {
+  try {
+    if (String(to.path).startsWith('/post/')) {
+      saveListState()
+    } else {
+      sessionStorage.removeItem(LIST_STATE_KEY)
+    }
+  } catch {
+    /* 存储不可用：忽略 */
+  }
+})
 const loading = ref(false)
 const loadError = ref('')
 /** 触底加载（CR-091）：每批 6 条，距列表容器底部 320px 内自动续载 */
@@ -57,8 +133,8 @@ async function loadFirst() {
   try {
     const res =
       sort.value === 'following'
-        ? await listFollowingPosts(1, size)
-        : await listPosts(1, size, undefined, sort.value)
+        ? await listFollowingPosts(1, size.value)
+        : await listPosts(1, size.value, undefined, sort.value)
     posts.value = res.list
     total.value = res.total
     page.value = 1
@@ -85,8 +161,8 @@ async function loadMore() {
     const next = page.value + 1
     const res =
       sort.value === 'following'
-        ? await listFollowingPosts(next, size)
-        : await listPosts(next, size, undefined, sort.value)
+        ? await listFollowingPosts(next, size.value)
+        : await listPosts(next, size.value, undefined, sort.value)
     posts.value.push(...res.list)
     page.value = next
     // 防御：total 虚高而后续页为空时收敛计数，避免无限触发
@@ -160,6 +236,9 @@ watch(sort, () => {
   total.value = 0
   page.value = 1
   moreError.value = false
+  // 切换排序回到列表起点（CR-204）：中栏独立滚动与窄屏整页滚动两处都归零
+  listWrapRef.value?.scrollTo({ top: 0 })
+  window.scrollTo({ top: 0 })
   void loadFirst()
 })
 
@@ -175,8 +254,24 @@ async function loadUnanswered() {
   }
 }
 
-onMounted(() => {
-  void loadFirst()
+/** 恢复滚动位置（CR-204）：有独立滚动容器的档位还原容器，窄屏整页滚动还原窗口 */
+function applyRestoredScroll(state: HomeListState) {
+  const el = listWrapRef.value
+  if (el && el.scrollHeight > el.clientHeight + 1) {
+    el.scrollTop = state.scrollTop
+  } else {
+    window.scrollTo({ top: state.windowY })
+  }
+}
+
+onMounted(async () => {
+  if (pendingRestore) {
+    await loadFirst()
+    await nextTick()
+    applyRestoredScroll(pendingRestore)
+  } else {
+    void loadFirst()
+  }
   loadHotTop()
   loadUnanswered()
   window.addEventListener('scroll', onWindowScroll, { passive: true })
