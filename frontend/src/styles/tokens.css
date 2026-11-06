@@ -30,8 +30,9 @@ html {
   --cl-color-success-strong: #3f7a1f;
   --cl-color-warning-strong: #8a5a12;
   /* ---- AA 达标深色（CR-156）：主色 #409eff 白字仅 2.78:1、危险色 #f56c6c 白字 2.89:1；
-     实心按钮 / 白字徽章 / 白底主色文字改用下面两色（5.10:1 / 5.8:1），品牌 logo 与装饰仍用原色 ---- */
-  --cl-color-primary-strong: #1a6fc4;
+     实心按钮 / 白字徽章 / 白底主色文字改用下面两色（白底 5.59:1 / 5.8:1），品牌 logo 与装饰仍用原色。
+     CR-206：页面底压到 #eef1f5 后，#1a6fc4 仅 4.505:1（axe 实测 4.45 判失败），微调为 #1969b8（页面底 4.94:1） ---- */
+  --cl-color-primary-strong: #1969b8;
   --cl-color-primary-strong-hover: color-mix(in srgb, var(--cl-color-primary-strong) 88%, #000);
   --cl-color-primary-strong-active: color-mix(in srgb, var(--cl-color-primary-strong) 76%, #000);
   --cl-color-danger-strong: #cf1322;
@@ -46,6 +47,7 @@ html {
   --cl-text-primary: #303133;
   --cl-text-regular: #606266;
   --cl-text-meta: #606266;
+  /* 仅余装饰 / 禁用态等非文本用途；EP 占位文本映射到 meta（#a8abb2 对白底 2.30:1，不达 AA） */
   --cl-text-placeholder: #a8abb2;
 
   /* ---- 背景 ----
@@ -186,7 +188,8 @@ html {
   --el-text-color-primary: var(--cl-text-primary);
   --el-text-color-regular: var(--cl-text-regular);
   --el-text-color-secondary: var(--cl-text-regular);
-  --el-text-color-placeholder: var(--cl-text-placeholder);
+  /* 占位文本属于文本，按 WCAG 1.4.3 取 6.11:1 的元信息色（CR-206） */
+  --el-text-color-placeholder: var(--cl-text-meta);
   --el-bg-color-page: var(--cl-bg-page);
   --el-border-color-light: var(--cl-border-base);
   --el-border-color-lighter: var(--cl-border-divider);
