@@ -16,6 +16,7 @@ import { listMyFavorites, listMyPosts, listMyReplies } from '../api/forum'
 import type { IconName } from '../assets/icons'
 import type { UserInfo } from '../types'
 import { useAuthStore } from '../stores/auth'
+import PageHeader from '../components/PageHeader.vue'
 import SvgIcon from '../components/SvgIcon.vue'
 import UserAvatar from '../components/UserAvatar.vue'
 
@@ -213,8 +214,9 @@ async function onDeactivate() {
 
 <template>
   <div class="mx-auto w-full max-w-reading">
-    <el-card shadow="never" class="mb-5">
-      <div class="flex items-center gap-3">
+    <!-- 页头（CR-203）：原先标题单独占一张卡，现与批次 A/B 一致——透明页头 + 下方各区块白卡 -->
+    <PageHeader title="设置" description="本页内容仅本人可见">
+      <template #lead>
         <button
           type="button"
           class="group relative flex-none rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-strong"
@@ -226,12 +228,8 @@ async function onDeactivate() {
             class="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 text-caption text-white opacity-0 transition-opacity duration-fast ease-standard group-hover:opacity-100"
           >更换</span>
         </button>
-        <div class="min-w-0">
-          <h1 class="truncate text-title-lg font-medium text-ink">设置</h1>
-          <p class="mt-0.5 text-note text-ink-meta">本页内容仅本人可见</p>
-        </div>
-      </div>
-    </el-card>
+      </template>
+    </PageHeader>
 
     <!-- 区块 1：我的资料 -->
     <el-card shadow="never" class="mb-5">

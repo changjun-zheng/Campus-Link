@@ -189,6 +189,15 @@ async function onClose() {
 <template>
   <!-- TRANSITION-SINGLE-ROOT -->
   <div>
+    <!-- 面包屑（CR-203）：与版块页 / 搜索页同构，补上从详情回组队广场的可见入口 -->
+    <nav class="mb-3 flex items-center gap-1.5 text-note" aria-label="面包屑">
+      <RouterLink to="/">首页</RouterLink>
+      <span class="text-ink-meta">/</span>
+      <RouterLink to="/teams">组队广场</RouterLink>
+      <span class="text-ink-meta">/</span>
+      <span class="min-w-0 truncate text-ink-regular">{{ detail?.title || '组队详情' }}</span>
+    </nav>
+
     <el-card v-if="loading" shadow="never" class="mb-5">
       <el-skeleton animated :rows="4" />
     </el-card>

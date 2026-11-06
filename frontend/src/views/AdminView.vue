@@ -29,6 +29,7 @@ import {
 import { useAuthStore } from '../stores/auth'
 import { formatRelativeTime } from '../utils/time'
 import DonutChart from '../components/DonutChart.vue'
+import PageHeader from '../components/PageHeader.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -514,13 +515,19 @@ function goLogin() {
   </el-result>
 
   <template v-else>
-    <el-tabs v-model="tab" class="mb-5">
-      <el-tab-pane label="举报工单" name="reports" />
-      <el-tab-pane :label="isSuperadmin ? '内容处置台' : '内容检索'" name="moderation" />
-      <el-tab-pane v-if="isSuperadmin" label="数据看板" name="dashboard" />
-      <el-tab-pane v-if="isSuperadmin" label="标签管理" name="tags" />
-      <el-tab-pane label="内容巡查" name="review" />
-    </el-tabs>
+    <!-- 页头（CR-203）：本页原先没有标题，直接以 Tab 起头；补上与其余页面一致的页头 -->
+    <PageHeader
+      title="管理后台"
+      :description="isSuperadmin ? '举报工单、内容处置、运营数据与标签管理；仅运营 / 超级管理员可见' : '举报工单、内容处置与内容巡查；仅运营 / 超级管理员可见'"
+    >
+      <el-tabs v-model="tab">
+        <el-tab-pane label="举报工单" name="reports" />
+        <el-tab-pane :label="isSuperadmin ? '内容处置台' : '内容检索'" name="moderation" />
+        <el-tab-pane v-if="isSuperadmin" label="数据看板" name="dashboard" />
+        <el-tab-pane v-if="isSuperadmin" label="标签管理" name="tags" />
+        <el-tab-pane label="内容巡查" name="review" />
+      </el-tabs>
+    </PageHeader>
 
     <!-- ─── 数据看板（F-ADMIN-005 / CR-131）：仅 SUPERADMIN；进入 Tab 才加载 ─── -->
     <el-card v-if="isSuperadmin" v-show="tab === 'dashboard'" shadow="never" class="mb-5">
@@ -1019,5 +1026,10 @@ export default {}
 <style scoped>
 :deep(.el-dialog) {
   max-width: 480px;
+}
+
+/* Tab 移入页头后（CR-203）：EP 的 nav 下划线是 2px 灰线，会与 PageHeader 的 0.5px 收底叠成双线 */
+:deep(.el-tabs__nav-wrap::after) {
+  display: none;
 }
 </style>

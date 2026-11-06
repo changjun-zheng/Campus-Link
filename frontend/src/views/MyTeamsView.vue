@@ -8,6 +8,7 @@ import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { listMyTeams, TEAM_STATUS_LABELS, type MyTeamVo } from '../api/teams'
 import { formatRelativeTime } from '../utils/time'
+import PageHeader from '../components/PageHeader.vue'
 import SvgIcon from '../components/SvgIcon.vue'
 
 const route = useRoute()
@@ -71,23 +72,20 @@ function statusTagType(s: MyTeamVo['status']): 'success' | 'warning' | 'info' {
 <template>
   <!-- TRANSITION-SINGLE-ROOT -->
   <div>
-    <el-card shadow="never" class="mb-5">
-      <div class="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 class="text-title-lg font-medium text-ink">我的组队</h2>
-          <p class="mt-1.5 text-note text-ink-meta">
-            我发起的组队可在这里审批申请；我申请的组队保留待审批 / 已加入 / 已拒绝状态。
-          </p>
-        </div>
+    <PageHeader
+      title="我的组队"
+      description="我发起的组队可在这里审批申请；我申请的组队保留待审批 / 已加入 / 已拒绝状态。"
+    >
+      <template #actions>
         <RouterLink to="/teams/new">
           <el-button type="primary">
             <SvgIcon name="pencil" :size="16" class="mr-1" />
             发起组队
           </el-button>
         </RouterLink>
-      </div>
+      </template>
 
-      <nav class="mt-3 flex items-center gap-1" aria-label="我的组队视角">
+      <nav class="flex items-center gap-1" aria-label="我的组队视角">
         <button
           type="button"
           class="relative cursor-pointer px-3 py-1.5 text-body transition-colors duration-fast ease-standard"
@@ -117,7 +115,7 @@ function statusTagType(s: MyTeamVo['status']): 'success' | 'warning' | 'info' {
           />
         </button>
       </nav>
-    </el-card>
+    </PageHeader>
 
     <el-card shadow="never" :body-style="{ padding: 0 }">
       <el-skeleton v-if="loading" animated class="px-5 pt-4">
