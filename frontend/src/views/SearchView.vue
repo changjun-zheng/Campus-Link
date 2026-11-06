@@ -3,6 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { searchPosts, type PostSummaryVo } from '../api/forum'
 import { BOARDS } from '../constants/boards'
+import PageHeader from '../components/PageHeader.vue'
 import PostListItem from '../components/PostListItem.vue'
 import SvgIcon from '../components/SvgIcon.vue'
 
@@ -145,10 +146,8 @@ onMounted(async () => {
     <span class="text-ink-regular">搜索</span>
   </nav>
 
-  <el-card shadow="never" class="mb-5">
-    <h2 class="text-title-lg font-medium text-ink">站内搜索</h2>
-    <p class="mt-1.5 text-note text-ink-meta">按标题、正文与标签检索，至少 2 个字；结果按相关度排序</p>
-    <div class="mt-4 flex flex-col gap-3 md:flex-row md:items-center">
+  <PageHeader title="站内搜索" description="按标题、正文与标签检索，至少 2 个字；结果按相关度排序">
+    <div class="flex flex-col gap-3 md:flex-row md:items-center">
       <el-input
         ref="inputRef"
         v-model="keyword"
@@ -164,17 +163,17 @@ onMounted(async () => {
         </template>
       </el-input>
       <div class="flex shrink-0 items-center gap-2">
-        <el-select v-model="boardCode" aria-label="按版块筛选" class="w-[130px]" placeholder="全部版块">
+        <el-select v-model="boardCode" aria-label="按版块筛选" class="cl-search-board" placeholder="全部版块">
           <el-option label="全部版块" value="" />
           <el-option v-for="b in BOARDS" :key="b.code" :label="b.name" :value="b.code" />
         </el-select>
-        <el-select v-model="days" aria-label="按时间筛选" class="w-[120px]" placeholder="全部时间">
+        <el-select v-model="days" aria-label="按时间筛选" class="cl-search-days" placeholder="全部时间">
           <el-option v-for="w in timeWindows" :key="String(w.value)" :label="w.label" :value="w.value" />
         </el-select>
         <el-button type="primary" @click="onSubmit">搜索</el-button>
       </div>
     </div>
-  </el-card>
+  </PageHeader>
 
   <el-card shadow="never" :body-style="{ padding: 0 }">
     <el-skeleton v-if="loading" animated class="px-5 pt-4">
@@ -235,3 +234,19 @@ onMounted(async () => {
   </el-card>
   </div>
 </template>
+
+<style scoped>
+/* 选择框宽度（CR-202）：EP 的 `.el-select` 是无层样式，Tailwind 的 `w-[130px]` 会被压掉
+   （实测只剩箭头宽）。按项目约定改用组件级规则，与 PublishView 的 `.cl-board-select` 同法。 */
+.cl-search-board {
+  --el-select-width: 130px;
+  width: 130px;
+  flex: none;
+}
+
+.cl-search-days {
+  --el-select-width: 120px;
+  width: 120px;
+  flex: none;
+}
+</style>

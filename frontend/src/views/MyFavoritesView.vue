@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { listMyFavorites, type PostSummaryVo } from '../api/forum'
 import PostListItem from '../components/PostListItem.vue'
+import PageHeader from '../components/PageHeader.vue'
 
 const posts = ref<PostSummaryVo[]>([])
 const total = ref(0)
@@ -37,10 +38,7 @@ loadFavorites()
 <template>
   <!-- TRANSITION-SINGLE-ROOT：App.vue 以 <Transition mode="out-in"> 包路由组件，多根组件（fragment）在该模式下会随机卡死路由切换（CR-091 修复详情页同类问题） -->
   <div>
-  <el-card shadow="never" class="mb-5">
-    <h2 class="text-title-lg font-medium text-ink">我的收藏</h2>
-    <p class="mt-1.5 text-note text-ink-meta">按收藏时间倒序，仅本人可见</p>
-  </el-card>
+  <PageHeader title="我的收藏" description="按收藏时间倒序，仅本人可见" />
 
   <el-card shadow="never" :body-style="{ padding: 0 }">
     <el-skeleton v-if="loading" animated class="px-5 pt-4">

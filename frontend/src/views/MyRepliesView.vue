@@ -11,6 +11,7 @@ import { ref } from 'vue'
 import { listMyReplies, type MyReplySummaryVo } from '../api/forum'
 import { formatRelativeTime } from '../utils/time'
 import SvgIcon from '../components/SvgIcon.vue'
+import PageHeader from '../components/PageHeader.vue'
 
 const replies = ref<MyReplySummaryVo[]>([])
 const total = ref(0)
@@ -46,10 +47,10 @@ loadReplies()
 <template>
   <!-- TRANSITION-SINGLE-ROOT：App.vue 以 <Transition mode="out-in"> 包路由组件，多根组件（fragment）在该模式下会随机卡死路由切换（CR-091 修复详情页同类问题） -->
   <div>
-  <el-card shadow="never" class="mb-5">
-    <h2 class="text-title-lg font-medium text-ink">我的回帖</h2>
-    <p class="mt-1.5 text-note text-ink-meta">按回帖时间倒序，仅本人可见；所在帖子已消失的回帖不出现</p>
-  </el-card>
+  <PageHeader
+    title="我的回帖"
+    description="按回帖时间倒序，仅本人可见；所在帖子已消失的回帖不出现"
+  />
 
   <el-card shadow="never" :body-style="{ padding: 0 }">
     <el-skeleton v-if="loading" animated class="px-5 pt-4">

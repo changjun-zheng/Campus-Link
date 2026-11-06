@@ -11,6 +11,7 @@ import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { listFollowers, listFollowing, type FollowUserVo } from '../api/follow'
 import { getUserProfile } from '../api/user'
+import PageHeader from '../components/PageHeader.vue'
 import SvgIcon from '../components/SvgIcon.vue'
 import UserAvatar from '../components/UserAvatar.vue'
 
@@ -93,18 +94,17 @@ function onPageChange(next: number) {
 <template>
   <!-- TRANSITION-SINGLE-ROOT：App.vue 以 <Transition mode="out-in"> 包路由组件，多根会卡死路由切换（CR-091） -->
   <div>
-    <el-card shadow="never" class="mb-5">
-      <h2 class="text-title-lg font-medium text-ink">
-        <RouterLink v-if="targetNickname" :to="`/u/${targetId}`" class="hover:text-link">
+    <PageHeader :title="`${targetNickname || '用户主页'}的${modeLabel}`" :description="modeHint">
+      <template #title>
+        <RouterLink v-if="targetNickname" :to="`/u/${targetId}`" class="cl-follow-title-link">
           {{ targetNickname }}
         </RouterLink>
         <span v-else>用户主页</span>
         <span class="text-ink-meta">的{{ modeLabel }}</span>
-      </h2>
-      <p class="mt-1.5 text-note text-ink-meta">{{ modeHint }}</p>
+      </template>
 
       <!-- 双 Tab：沿用 CR-091 的文字型自有 Tab（主色 + 底部指示条），不复用 EP 组件 -->
-      <nav class="mt-3 flex items-center gap-1" aria-label="粉丝与关注">
+      <nav class="flex items-center gap-1" aria-label="粉丝与关注">
         <RouterLink
           v-for="tab in tabs"
           :key="tab.to"
@@ -121,7 +121,7 @@ function onPageChange(next: number) {
           />
         </RouterLink>
       </nav>
-    </el-card>
+    </PageHeader>
 
     <el-card shadow="never" :body-style="{ padding: 0 }">
       <el-skeleton v-if="loading" animated class="px-5 pt-4">
@@ -197,3 +197,15 @@ function onPageChange(next: number) {
     </div>
   </div>
 </template>
+
+<style scoped>
+/* 标题里的昵称链接（CR-202）：全局 `a` 是无层规则，会压过 Tailwind 的 `text-ink`，
+   导致页面标题变成链接蓝。这里用同类选择器拉回标题墨色，hover 才现链接色。 */
+.cl-follow-title-link {
+  color: var(--cl-text-primary);
+}
+
+.cl-follow-title-link:hover {
+  color: var(--cl-color-link);
+}
+</style>

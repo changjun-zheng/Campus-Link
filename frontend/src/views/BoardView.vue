@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import type { IconName } from '../assets/icons'
 import { listBoards, listPosts, type BoardVo, type PostSummaryVo } from '../api/forum'
 import { BOARD_MAP, type BoardCode } from '../constants/boards'
+import PageHeader from '../components/PageHeader.vue'
 import PostListItem from '../components/PostListItem.vue'
 import SvgIcon from '../components/SvgIcon.vue'
 
@@ -112,26 +113,20 @@ watch(
     <span class="text-ink-regular">{{ board?.name || code }}</span>
   </nav>
 
-  <el-card shadow="never" class="mb-5">
-    <div class="flex items-center justify-between gap-3">
-      <div class="flex min-w-0 items-center gap-3.5">
-        <span :class="['cl-board-icon', `cl-board-icon--${code}`]">
-          <SvgIcon :name="boardIcon" :size="24" />
-        </span>
-        <div class="min-w-0">
-          <h2 class="text-title-lg font-medium text-ink">{{ board?.name || code }}</h2>
-          <p class="mt-1.5 text-note text-ink-meta">{{ board?.description || '' }}</p>
-        </div>
-      </div>
-      <RouterLink :to="`/publish?board=${code}`" class="flex-none">
+  <PageHeader :title="board?.name || code" :description="board?.description || ''">
+    <template #lead>
+      <span :class="['cl-board-icon', `cl-board-icon--${code}`]">
+        <SvgIcon :name="boardIcon" :size="22" />
+      </span>
+    </template>
+    <template #actions>
+      <RouterLink :to="`/publish?board=${code}`">
         <el-button type="primary">发帖</el-button>
       </RouterLink>
-    </div>
-  </el-card>
+    </template>
 
-  <!-- 待解答筛选（CR-142）：仅问答版块露出；「待解答」= 问答帖且尚无采纳答案 -->
-  <div v-if="isQuestionBoard" class="mb-4">
-    <nav class="inline-flex items-center gap-1" aria-label="帖子筛选">
+    <!-- 待解答筛选（CR-142）：仅问答版块露出；「待解答」= 问答帖且尚无采纳答案 -->
+    <nav v-if="isQuestionBoard" class="inline-flex items-center gap-1" aria-label="帖子筛选">
       <button
         v-for="opt in filterOptions"
         :key="String(opt.value)"
@@ -149,7 +144,7 @@ watch(
         />
       </button>
     </nav>
-  </div>
+  </PageHeader>
 
   <el-card shadow="never" :body-style="{ padding: 0 }">
     <el-skeleton v-if="loading" animated class="px-5 pt-4">

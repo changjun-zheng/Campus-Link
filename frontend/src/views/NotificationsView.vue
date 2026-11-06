@@ -3,6 +3,7 @@ import { onBeforeUnmount, ref, watch } from 'vue'
 import { listNotifications, markAllRead, markNotificationRead, type NotificationVo } from '../api/notifications'
 import { refreshUnreadCount, unreadNotificationCount } from '../composables/useUnreadNotifications'
 import { formatRelativeTime } from '../utils/time'
+import PageHeader from '../components/PageHeader.vue'
 import UserAvatar from '../components/UserAvatar.vue'
 
 const items = ref<NotificationVo[]>([])
@@ -124,21 +125,18 @@ loadNotifications()
 <template>
   <!-- TRANSITION-SINGLE-ROOT：App.vue 以 <Transition mode="out-in"> 包路由组件，多根组件（fragment）在该模式下会随机卡死路由切换（CR-091 修复详情页同类问题） -->
   <div>
-  <el-card shadow="never" class="mb-5">
-    <div class="flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <h2 class="text-title-lg font-medium text-ink">通知中心</h2>
-        <p class="mt-1.5 text-note text-ink-meta">回复、引用、采纳、点赞、收藏与内容处置的站内提醒，仅本人可见</p>
-      </div>
-      <div class="flex items-center gap-3">
-        <el-radio-group v-model="onlyUnread" @change="onFilterChange">
-          <el-radio-button :value="false">全部</el-radio-button>
-          <el-radio-button :value="true">未读</el-radio-button>
-        </el-radio-group>
-        <el-button text type="primary" :loading="marking" @click="readAll">全部已读</el-button>
-      </div>
-    </div>
-  </el-card>
+  <PageHeader
+    title="通知中心"
+    description="回复、引用、采纳、点赞、收藏与内容处置的站内提醒，仅本人可见"
+  >
+    <template #actions>
+      <el-radio-group v-model="onlyUnread" @change="onFilterChange">
+        <el-radio-button :value="false">全部</el-radio-button>
+        <el-radio-button :value="true">未读</el-radio-button>
+      </el-radio-group>
+      <el-button text type="primary" :loading="marking" @click="readAll">全部已读</el-button>
+    </template>
+  </PageHeader>
 
   <el-card shadow="never" :body-style="{ padding: 0 }">
     <el-skeleton v-if="loading" animated class="px-5 pt-4">
