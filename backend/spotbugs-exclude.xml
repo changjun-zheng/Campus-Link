@@ -14,6 +14,8 @@
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.config.SecurityConfig"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.config.HotConfigGuard"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.security.ApiErrorSecurityHandler"/></Match>
+  <!-- CR-208 JWT 吊销：Redis 适配器构造器注入 Spring 单例，同① -->
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.security.RedisTokenRevocationGateway"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.account.application.AccountApplicationService"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.account.application.CaptchaService"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.account.infrastructure.redis.RedisCaptchaStore"/></Match>

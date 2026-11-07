@@ -2,6 +2,7 @@ package com.campuslink.module.account.application;
 
 import com.campuslink.common.exception.ApiException;
 import com.campuslink.common.result.ResultCode;
+import com.campuslink.common.security.TokenRevocationGateway;
 import com.campuslink.common.audit.AuditService;
 import com.campuslink.config.AppProperties;
 import static org.mockito.Mockito.mock;
@@ -80,7 +81,7 @@ class AccountApplicationServiceRegisterTest {
                 service = new AccountApplicationService(
                                 verificationService, accountRepository, rosterGateway, ticketStore, captchaService,
                                 codec, tokenIssuer, rateLimitGateway, mock(AuditService.class), new AppProperties(),
-                                eventPublisher, moderationService);
+                                eventPublisher, moderationService, mock(TokenRevocationGateway.class));
         }
 
         @Test

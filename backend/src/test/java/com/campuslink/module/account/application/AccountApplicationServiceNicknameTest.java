@@ -1,6 +1,7 @@
 package com.campuslink.module.account.application;
 
 import com.campuslink.common.audit.AuditService;
+import com.campuslink.common.security.TokenRevocationGateway;
 import com.campuslink.config.AppProperties;
 import static org.mockito.Mockito.mock;
 import com.campuslink.module.account.domain.gateway.AccountRepository;
@@ -67,7 +68,7 @@ class AccountApplicationServiceNicknameTest {
         service = new AccountApplicationService(
                 verificationService, accountRepository, rosterGateway, ticketStore, captchaService,
                 codec, tokenIssuer, rateLimitGateway, mock(AuditService.class), new AppProperties(), eventPublisher,
-                mock(ModerationApplicationService.class));
+                mock(ModerationApplicationService.class), mock(TokenRevocationGateway.class));
     }
 
     @Test

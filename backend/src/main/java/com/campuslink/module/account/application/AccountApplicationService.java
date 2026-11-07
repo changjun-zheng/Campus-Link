@@ -3,6 +3,7 @@ package com.campuslink.module.account.application;
 import com.campuslink.common.audit.AuditService;
 import com.campuslink.common.exception.ApiException;
 import com.campuslink.common.result.ResultCode;
+import com.campuslink.common.security.TokenRevocationGateway;
 import com.campuslink.config.AppProperties;
 import com.campuslink.module.account.application.cmd.AccountCommands.LoginCommand;
 import com.campuslink.module.account.application.cmd.AccountCommands.LoginResult;
@@ -59,6 +60,7 @@ public class AccountApplicationService {
     private final AppProperties props;
     private final ApplicationEventPublisher eventPublisher;
     private final ModerationApplicationService moderationService;
+    private final TokenRevocationGateway tokenRevocationGateway;
 
     /** 学籍核验（F-ACC-004）：IP 限流 → 比对 → 签发一次性票据（payload 为加密学号） */
     public VerifyStudentResult verifyStudent(VerifyStudentCommand command, String ip) {
@@ -247,6 +249,8 @@ public class AccountApplicationService {
     public void deactivate(long userId) {
         accountOf(userId);
         accountRepository.updateStatus(userId, AccountStatus.DEACTIVATED, Instant.now().plus(Duration.ofDays(7)));
+        // 旧 token 立即失效：冷静期内只能重新登录（登录即撤销注销），不能沿用注销前的会话
+        tokenRevocationGateway.revokeAllBefore(userId, Instant.now());
         auditService.record(userId, "ACCOUNT_DEACTIVATE", "users", userId, "coolingDays=7");
     }
 
@@ -271,6 +275,10 @@ public class AccountApplicationService {
             throw new ApiException(ResultCode.FORBIDDEN);
         }
         accountRepository.updateStatus(targetId, target, null);
+        if (target == AccountStatus.BANNED) {
+            // 封禁即时登出：旧 token 下一请求即按未登录处理，不等 7 天自然过期
+            tokenRevocationGateway.revokeAllBefore(targetId, Instant.now());
+        }
         auditService.record(operatorId, target == AccountStatus.BANNED ? "USER_BAN" : "USER_UNBAN",
                 "users", targetId, null);
     }
@@ -283,9 +291,8 @@ public class AccountApplicationService {
     /**
      * 授予运营角色（F-ADMIN-001 / CR-196）：只允许 **ACTIVE + USER → OPS**，幂等；超管与注销 / 封禁账号拒绝。
      *
-     * <p>刻意不提供降级：JWT 把角色写死在 token 中，降级后旧 token 仍有效至过期（最长 7 天），
-     * 须先有 token 吊销 / 会话失效机制（与「封禁即时登出」同一前置），另开 CR。
-     * 升权同样需要目标用户重新登录才生效——旧 token 里仍是 USER，不会提前获得管理权限。
+     * <p>刻意不提供降级。升权后立即吊销目标用户旧 token（CR-208）：目标须重新登录才会拿到带 OPS
+     * 的新 token，旧 token 不会以 USER 身份继续使用；这也为将来的降级接口预留了同一套会话失效机制。
      */
     @Transactional
     public void adminPromoteToOps(long operatorId, long targetId) {
@@ -297,6 +304,8 @@ public class AccountApplicationService {
             throw new ApiException(ResultCode.INVALID_PARAM);
         }
         if (accountRepository.updateRole(targetId, AccountRole.USER, AccountRole.OPS)) {
+            // 升权须重新登录才能拿到带 OPS 的新 token；旧 token 的 USER 角色不再可用
+            tokenRevocationGateway.revokeAllBefore(targetId, Instant.now());
             auditService.record(operatorId, "USER_ROLE_UPDATE", "users", targetId, "role=OPS");
         }
     }

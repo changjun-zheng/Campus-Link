@@ -3,6 +3,7 @@ package com.campuslink.module.account.application;
 import com.campuslink.common.audit.AuditService;
 import com.campuslink.common.exception.ApiException;
 import com.campuslink.common.result.ResultCode;
+import com.campuslink.common.security.TokenRevocationGateway;
 import com.campuslink.config.AppProperties;
 import com.campuslink.module.account.application.cmd.AccountCommands.LoginCommand;
 import com.campuslink.module.account.application.cmd.AccountCommands.LoginResult;
@@ -93,6 +94,8 @@ class AccountApplicationServiceTest {
     private AuditService auditService;
     @Mock
     private ApplicationEventPublisher eventPublisher;
+    @Mock
+    private TokenRevocationGateway tokenRevocationGateway;
 
     private AppProperties props;
     private AccountApplicationService service;
@@ -102,7 +105,7 @@ class AccountApplicationServiceTest {
         props = new AppProperties();
         service = new AccountApplicationService(verificationService, accountRepository, rosterGateway, ticketStore,
                 captchaService, codec, tokenIssuer, rateLimitGateway, auditService, props, eventPublisher,
-                mock(ModerationApplicationService.class));
+                mock(ModerationApplicationService.class), tokenRevocationGateway);
     }
 
     // ── 学籍核验（F-ACC-004）────────────────────────────────────────────
@@ -340,6 +343,7 @@ class AccountApplicationServiceTest {
         verify(accountRepository).updateStatus(eq(USER_ID), eq(AccountStatus.DEACTIVATED), deleteAt.capture());
         assertThat(deleteAt.getValue()).isBetween(expected.minusSeconds(60), expected.plusSeconds(60));
         verify(auditService).record(USER_ID, "ACCOUNT_DEACTIVATE", "users", USER_ID, "coolingDays=7");
+        verify(tokenRevocationGateway).revokeAllBefore(eq(USER_ID), any(Instant.class));
     }
 
     @Test
@@ -352,7 +356,7 @@ class AccountApplicationServiceTest {
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.USER_NOT_FOUND));
 
         verify(accountRepository, never()).updateStatus(anyLong(), any(), any());
-        verifyNoInteractions(auditService);
+        verifyNoInteractions(auditService, tokenRevocationGateway);
     }
 
     @Test
@@ -397,6 +401,7 @@ class AccountApplicationServiceTest {
 
         verify(accountRepository).updateStatus(USER_ID, AccountStatus.BANNED, null);
         verify(auditService).record(1L, "USER_BAN", "users", USER_ID, null);
+        verify(tokenRevocationGateway).revokeAllBefore(eq(USER_ID), any(Instant.class));
     }
 
     @Test
@@ -408,6 +413,7 @@ class AccountApplicationServiceTest {
 
         verify(accountRepository).updateStatus(eq(USER_ID), eq(AccountStatus.ACTIVE), isNull());
         verify(auditService).record(1L, "USER_UNBAN", "users", USER_ID, null);
+        verify(tokenRevocationGateway, never()).revokeAllBefore(anyLong(), any());
     }
 
     @Test
@@ -420,6 +426,7 @@ class AccountApplicationServiceTest {
 
         verify(accountRepository).updateRole(USER_ID, AccountRole.USER, AccountRole.OPS);
         verify(auditService).record(1L, "USER_ROLE_UPDATE", "users", USER_ID, "role=OPS");
+        verify(tokenRevocationGateway).revokeAllBefore(eq(USER_ID), any(Instant.class));
     }
 
     @Test
@@ -430,7 +437,7 @@ class AccountApplicationServiceTest {
         service.adminPromoteToOps(1L, USER_ID);
 
         verify(accountRepository, never()).updateRole(anyLong(), any(), any());
-        verifyNoInteractions(auditService);
+        verifyNoInteractions(auditService, tokenRevocationGateway);
     }
 
     @Test
@@ -468,7 +475,7 @@ class AccountApplicationServiceTest {
         service.adminPromoteToOps(1L, USER_ID);
 
         verify(accountRepository).updateRole(USER_ID, AccountRole.USER, AccountRole.OPS);
-        verifyNoInteractions(auditService);
+        verifyNoInteractions(auditService, tokenRevocationGateway);
     }
 
     // ---------- helpers ----------
