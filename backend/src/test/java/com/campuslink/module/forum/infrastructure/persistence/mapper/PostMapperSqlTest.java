@@ -64,6 +64,26 @@ class PostMapperSqlTest {
     }
 
     @Test
+    @DisplayName("动态 SQL 必须整体包在 <script> 内：漏包会让 foreach 里的 #{} 绑定失败（CR-207）")
+    void dynamicSqlMustBeScriptWrapped() {
+        for (var method : PostMapper.class.getDeclaredMethods()) {
+            Select select = method.getAnnotation(Select.class);
+            if (select == null) {
+                continue;
+            }
+            String sql = String.join("", select.value());
+            if (sql.contains("<if") || sql.contains("<foreach")) {
+                // 缺 <script> 时 MyBatis 把 <if>/<foreach> 当普通文本，
+                // foreach 体内的 #{excludedPostId} 会在执行期抛 BindingException（CR-207 的线上形态）
+                assertThat(sql.strip())
+                        .as("%s 的动态 SQL 缺少 <script> 包裹", method.getName())
+                        .startsWith("<script>")
+                        .endsWith("</script>");
+            }
+        }
+    }
+
+    @Test
     @DisplayName("作者获赞总数 SQL：匿名帖的赞不计入公开资料（CR-139 / D3）")
     void authorLikeSumExcludesAnonymousPosts() throws NoSuchMethodException {
         String sql = String.join("", PostMapper.class.getMethod("sumVisibleLikeCountByAuthor", Long.class)

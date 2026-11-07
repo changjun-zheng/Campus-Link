@@ -59,6 +59,7 @@ public interface PostMapper extends BaseMapper<PostDO> {
      * <p>显式列清单（CR-077 Warning #7）：只取推荐条目需要的 6 列，避免 SELECT * 拉出 content_md / content_html 等大字段。
      */
     @Select("""
+            <script>
             SELECT id, board_id, author_id, title, reply_count, is_accepted, created_at,
                    MATCH(title) AGAINST(#{keyword} IN NATURAL LANGUAGE MODE) AS relevance
             FROM posts
@@ -74,6 +75,7 @@ public interface PostMapper extends BaseMapper<PostDO> {
               </if>
             ORDER BY relevance DESC, created_at DESC, id DESC
             LIMIT #{limit}
+            </script>
             """)
     List<PostDO> findSimilar(@Param("keyword") String keyword,
                              @Param("boardId") Long boardId,
