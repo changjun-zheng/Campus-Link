@@ -1,6 +1,8 @@
 package com.campuslink.module.account.application;
 
 import com.campuslink.common.audit.AuditService;
+import com.campuslink.common.event.UserMutedEvent;
+import com.campuslink.common.event.UserWarnedEvent;
 import com.campuslink.common.exception.ApiException;
 import com.campuslink.common.result.ResultCode;
 import com.campuslink.common.security.TokenRevocationGateway;
@@ -254,8 +256,22 @@ public class AccountApplicationService {
         auditService.record(userId, "ACCOUNT_DEACTIVATE", "users", userId, "coolingDays=7");
     }
 
-    /** 内容发布前置（CR-082）：封禁（2006）与注销中（2013）均不得发帖 / 回帖 */
+    /** 账号状态前置（CR-082）：封禁（2006）与注销中（2013）拒绝；读路径也用它，故**不含禁言** */
     public void assertActiveForContent(long userId) {
+        requireContentAccount(userId);
+    }
+
+    /**
+     * 内容写入前置（CR-209）：在 {@link #assertActiveForContent} 之上追加禁言判定（2019）。
+     * 写路径用它、读路径（如草稿图片读取）继续用前者——禁言只限制发布，不冻结已有内容的查看与编辑入口。
+     */
+    public void assertAllowedToWriteContent(long userId) {
+        if (requireContentAccount(userId).isMutedAt(Instant.now())) {
+            throw new ApiException(ResultCode.USER_MUTED);
+        }
+    }
+
+    private Account requireContentAccount(long userId) {
         Account a = accountOf(userId);
         if (a.getStatus() == AccountStatus.BANNED) {
             throw new ApiException(ResultCode.USER_BANNED);
@@ -263,6 +279,7 @@ public class AccountApplicationService {
         if (a.getStatus() == AccountStatus.DEACTIVATED) {
             throw new ApiException(ResultCode.ACCOUNT_DEACTIVATED);
         }
+        return a;
     }
 
     /**
@@ -308,6 +325,63 @@ public class AccountApplicationService {
             tokenRevocationGateway.revokeAllBefore(targetId, Instant.now());
             auditService.record(operatorId, "USER_ROLE_UPDATE", "users", targetId, "role=OPS");
         }
+    }
+
+    /**
+     * 管理员警告（F-ADMIN-002 / CR-209）：只通知、不改账号状态；目标不可为 SUPERADMIN 或已注销账号。
+     *
+     * <p>通知经 {@link UserWarnedEvent} 交给 notification 上下文监听——account 不直接注入
+     * NotificationApplicationService，否则会与对方（它已依赖本类）形成构造器循环依赖。
+     */
+    @Transactional
+    public void adminWarn(long operatorId, long targetId, String reason) {
+        Account target = accountOf(targetId);
+        if (target.getRole() == AccountRole.SUPERADMIN) {
+            throw new ApiException(ResultCode.FORBIDDEN);
+        }
+        if (target.getStatus() == AccountStatus.DEACTIVATED) {
+            throw new ApiException(ResultCode.INVALID_PARAM);
+        }
+        auditService.record(operatorId, "USER_WARN", "users", targetId, "reason=" + reason);
+        eventPublisher.publishEvent(new UserWarnedEvent(operatorId, targetId, reason));
+    }
+
+    /**
+     * 管理员禁言（F-ADMIN-002 / CR-209）：写截止时间，到期自然失效；不吊销 token（登录与浏览不受影响，
+     * 只有内容写入被 {@link #assertAllowedToWriteContent} 拦下）。
+     *
+     * @param hours 1~720（最长 30 天）；永久处置用封禁而不是禁言
+     * @return 禁言截止时间，供调用方回显
+     */
+    @Transactional
+    public Instant adminMute(long operatorId, long targetId, int hours, String reason) {
+        if (hours < 1 || hours > 720) {
+            throw new ApiException(ResultCode.INVALID_PARAM);
+        }
+        Account target = accountOf(targetId);
+        if (target.getRole() == AccountRole.SUPERADMIN || target.getStatus() != AccountStatus.ACTIVE) {
+            throw new ApiException(ResultCode.INVALID_PARAM);
+        }
+        Instant until = Instant.now().plus(Duration.ofHours(hours));
+        accountRepository.updateMutedUntil(targetId, until);
+        auditService.record(operatorId, "USER_MUTE", "users", targetId,
+                "until=%s hours=%d reason=%s".formatted(until, hours, reason));
+        eventPublisher.publishEvent(new UserMutedEvent(operatorId, targetId, until, reason));
+        return until;
+    }
+
+    /** 解除禁言（F-ADMIN-002 / CR-209）：幂等；本来未禁言时不写库、不记审计 */
+    @Transactional
+    public void adminUnmute(long operatorId, long targetId) {
+        Account target = accountOf(targetId);
+        if (target.getRole() == AccountRole.SUPERADMIN) {
+            throw new ApiException(ResultCode.FORBIDDEN);
+        }
+        if (target.getMutedUntil() == null) {
+            return;
+        }
+        accountRepository.updateMutedUntil(targetId, null);
+        auditService.record(operatorId, "USER_UNMUTE", "users", targetId, null);
     }
 
     /**

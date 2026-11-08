@@ -32,6 +32,7 @@ public class UserDO {
     private String status;
     private String studentIdEnc;
     private String studentIdHash;
+    private Instant mutedUntil;
     private Boolean verified;
     private Boolean anonymized;
     private Instant deleteAt;

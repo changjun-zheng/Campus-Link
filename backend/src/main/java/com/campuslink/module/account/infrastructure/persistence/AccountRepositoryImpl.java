@@ -152,6 +152,14 @@ public class AccountRepositoryImpl implements AccountRepository {
                 .set(UserDO::getDeleteAt, deleteAt));
     }
 
+    /** 禁言截止时间定向 UPDATE（CR-209）：只 SET muted_until，解除禁言传 null */
+    @Override
+    public void updateMutedUntil(Long accountId, Instant mutedUntil) {
+        userMapper.update(null, new LambdaUpdateWrapper<UserDO>()
+                .eq(UserDO::getId, accountId)
+                .set(UserDO::getMutedUntil, mutedUntil));
+    }
+
     /** 角色定向 UPDATE（CR-196）：条件带当前角色，返回是否真的改动了一行 */
     @Override
     public boolean updateRole(Long accountId, AccountRole expectedRole, AccountRole targetRole) {

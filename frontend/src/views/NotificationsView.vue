@@ -103,12 +103,19 @@ function actionOf(n: NotificationVo): string {
   if (n.type === 'content_restored') {
     return n.targetType === 'POST' ? '恢复了你的帖子' : '恢复了你的回复'
   }
+  if (n.type === 'warning') return '向你发出警告'
+  if (n.type === 'mute') return '对你的账号执行了禁言'
   return n.targetType === 'POST' ? '点赞了你的帖子' : '点赞了你的回复'
 }
 
-/** 内容处置通知的主体是平台，不展示管理员昵称（其余类型展示触发人） */
+/** 平台类通知（下架 / 恢复 / 警告 / 禁言）主体是平台，不展示管理员昵称 */
 function actorOf(n: NotificationVo): string {
-  return n.type === 'content_removed' || n.type === 'content_restored' ? '平台' : n.actorNickname
+  return n.type === 'content_removed' ||
+    n.type === 'content_restored' ||
+    n.type === 'warning' ||
+    n.type === 'mute'
+    ? '平台'
+    : n.actorNickname
 }
 
 /** 楼层类通知带 floor=<replyId> 让详情页定位楼层；原帖已删（服务端不下发 postId）时不给跳转 */
@@ -198,9 +205,13 @@ loadNotifications()
               {{ actionOf(n) }}
               <template v-if="n.floorNo">#{{ n.floorNo }} 楼</template>
             </p>
+            <!-- 平台直发通知（警告 / 禁言）没有帖子目标，正文来自 message（CR-209） -->
+            <p v-if="n.message" class="mt-1 whitespace-pre-wrap text-title-sm text-ink-regular">
+              {{ n.message }}
+            </p>
             <!-- after:inset-0 把点击区拉到整行（定位祖先是 relative 的 li）；hover 因此也覆盖整行 -->
             <RouterLink
-              v-if="targetOf(n)"
+              v-else-if="targetOf(n)"
               :to="targetOf(n)!"
               class="mt-1 block truncate text-title-sm text-link hover:underline after:absolute after:inset-0 after:content-['']"
             >

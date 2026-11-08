@@ -21,8 +21,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.transaction.annotation.Transactional;
 import com.campuslink.module.notification.domain.model.NotificationRequestedV1;
@@ -55,6 +57,9 @@ public class NotificationApplicationService {
     private static final String NICKNAME_FALLBACK = "已注销用户";
     /** 目标帖子 / 楼层已删除时的回落文案 */
     private static final String CONTENT_FALLBACK = "内容已删除";
+    /** 禁言通知正文的截止时间展示（产品面向校内用户，固定东八区） */
+    private static final DateTimeFormatter MUTE_UNTIL_FORMAT =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(ZoneId.of("Asia/Shanghai"));
 
     private final NotificationRepository notificationRepository;
     private final NotificationOutboxGateway outbox;
@@ -131,6 +136,23 @@ public class NotificationApplicationService {
         notify(NotificationType.CONTENT_RESTORED, operatorId, NotificationTargetType.REPLY, replyId, authorId);
     }
 
+    /**
+     * 管理员警告（F-ADMIN-002 / CR-209）：目标是用户本人，正文即警告原因。
+     *
+     * <p>与内容处置通知同理，平台类通知不下发操作人昵称 / 头像；正文是该通知唯一的可读内容，
+     * 因此随行落库（{@code notifications.message}），而不是像标题 / 昵称那样读时组装。
+     */
+    public void userWarned(long operatorId, long targetUserId, String reason) {
+        notify(NotificationType.WARNING, operatorId, NotificationTargetType.USER, targetUserId, targetUserId,
+                reason);
+    }
+
+    /** 管理员禁言（F-ADMIN-002 / CR-209）：正文说明截止时间与原因 */
+    public void userMuted(long operatorId, long targetUserId, Instant mutedUntil, String reason) {
+        notify(NotificationType.MUTE, operatorId, NotificationTargetType.USER, targetUserId, targetUserId,
+                "禁言至 %s。原因：%s".formatted(MUTE_UNTIL_FORMAT.format(mutedUntil), reason));
+    }
+
     /** 我的通知分页；{@code unread} 为 null 不限、true 只未读、false 只已读 */
     public PageResult<NotificationItem> list(long userId, Boolean unread, int page, int size) {
         int currentPage = Math.max(page, 1);
@@ -197,6 +219,15 @@ public class NotificationApplicationService {
 
     private void notify(NotificationType type, long actorId, NotificationTargetType targetType,
             long targetId, long recipientId) {
+        notify(type, actorId, targetType, targetId, recipientId, null);
+    }
+
+    /**
+     * 通知落库统一入口。{@code message} 仅平台直发通知使用（CR-209）——异步通道只承载互动四元组，
+     * 带正文的通知一律同步落库，避免 wire 事件与消费端需要同步扩字段。
+     */
+    private void notify(NotificationType type, long actorId, NotificationTargetType targetType,
+            long targetId, long recipientId, String message) {
         if (actorId == recipientId) {
             return;
         }
@@ -204,12 +235,12 @@ public class NotificationApplicationService {
         if (userBlockApplicationService.isBlocked(recipientId, actorId)) {
             return;
         }
-        if (deliverySettings.asynchronous() && NotificationRequestedV1.supports(type)) {
+        if (message == null && deliverySettings.asynchronous() && NotificationRequestedV1.supports(type)) {
             outbox.append(new NotificationRequestedV1(UUID.randomUUID().toString(), 1, type,
                     actorId, recipientId, targetType, targetId, Instant.now()));
             return;
         }
-        notificationRepository.save(Notification.of(type, actorId, targetType, targetId, recipientId));
+        notificationRepository.save(Notification.of(type, actorId, targetType, targetId, recipientId, message));
         // 只给实时流一个信号；未读数由监听器在事务提交后自取
         eventPublisher.publishEvent(new NotificationCreatedEvent(recipientId));
     }
@@ -218,6 +249,9 @@ public class NotificationApplicationService {
     private static Long postIdOf(Notification notification, Map<Long, ReplyBrief> replyBriefs) {
         if (notification.getTargetType() == NotificationTargetType.POST) {
             return notification.getTargetId();
+        }
+        if (notification.getTargetType() == NotificationTargetType.USER) {
+            return null;
         }
         ReplyBrief brief = replyBriefs.get(notification.getTargetId());
         return brief == null ? null : brief.postId();
@@ -240,17 +274,24 @@ public class NotificationApplicationService {
                 ? replyBriefs.get(notification.getTargetId())
                 : null;
         AuthorBrief actor = authors.get(notification.getActorId());
-        // 平台类通知（下架 / 恢复）界面文案固定「平台」，不下发操作人真实头像（CR-164）
+        // 平台类通知（下架 / 恢复 / 警告 / 禁言）界面文案固定「平台」，不下发操作人真实头像（CR-164 / CR-209）
         boolean platform = notification.getType() == NotificationType.CONTENT_REMOVED
-                || notification.getType() == NotificationType.CONTENT_RESTORED;
+                || notification.getType() == NotificationType.CONTENT_RESTORED
+                || notification.getType() == NotificationType.WARNING
+                || notification.getType() == NotificationType.MUTE;
+        // 面向用户的平台通知没有帖子目标：标题保持 null，由前端改渲染 message，不能回落成「内容已删除」
+        String postTitle = post == null
+                ? (notification.getTargetType() == NotificationTargetType.USER ? null : CONTENT_FALLBACK)
+                : post.title();
         return new NotificationItem(notification.getId(), notification.getType().code(),
                 notification.getActorId(),
                 actor == null ? NICKNAME_FALLBACK : actor.nickname(),
                 platform || actor == null ? null : actor.avatarUrl(),
                 notification.getTargetType().name(), notification.getTargetId(),
                 post == null ? null : resolvedPostId,
-                post == null ? CONTENT_FALLBACK : post.title(),
+                postTitle,
                 reply == null ? null : reply.floorNo(),
+                notification.getMessage(),
                 notification.isRead(), notification.getCreatedAt());
     }
 }

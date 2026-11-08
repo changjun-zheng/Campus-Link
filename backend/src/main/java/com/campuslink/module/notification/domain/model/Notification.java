@@ -22,31 +22,51 @@ public class Notification {
     private final Long actorId;
     private final NotificationTargetType targetType;
     private final Long targetId;
+    /**
+     * 平台通知正文（CR-209）：警告原因 / 禁言说明。互动通知没有可存储的正文（内容由目标读时组装），保持 null；
+     * 这是对「只存事实四元组」口径的一次**有意例外**——警告原因不属于任何一处可回读的业务内容。
+     */
+    private final String message;
     private final boolean read;
     private final Instant createdAt;
 
     private Notification(Long id, Long userId, NotificationType type, Long actorId,
-                         NotificationTargetType targetType, Long targetId, boolean read, Instant createdAt) {
+                         NotificationTargetType targetType, Long targetId, String message, boolean read,
+                         Instant createdAt) {
         this.id = id;
         this.userId = userId;
         this.type = type;
         this.actorId = actorId;
         this.targetType = targetType;
         this.targetId = targetId;
+        this.message = message;
         this.read = read;
         this.createdAt = createdAt;
     }
 
-    /** 新建通知：id 与时间戳由数据库生成，未读 */
+    /** 新建通知：id 与时间戳由数据库生成，未读；互动通知正文为空 */
     public static Notification of(NotificationType type, long actorId, NotificationTargetType targetType,
                                   long targetId, long userId) {
-        return new Notification(null, userId, type, actorId, targetType, targetId, false, null);
+        return of(type, actorId, targetType, targetId, userId, null);
     }
 
-    /** 仓储重建入口（infrastructure 适配器调用） */
+    /** 新建平台通知（CR-209）：正文随行落库 */
+    public static Notification of(NotificationType type, long actorId, NotificationTargetType targetType,
+                                  long targetId, long userId, String message) {
+        return new Notification(null, userId, type, actorId, targetType, targetId, message, false, null);
+    }
+
+    /** 仓储重建入口（infrastructure 适配器调用）；保留旧签名，正文默认为空 */
     public static Notification rehydrate(Long id, Long userId, NotificationType type, Long actorId,
                                          NotificationTargetType targetType, Long targetId, boolean read,
                                          Instant createdAt) {
-        return new Notification(id, userId, type, actorId, targetType, targetId, read, createdAt);
+        return rehydrate(id, userId, type, actorId, targetType, targetId, null, read, createdAt);
+    }
+
+    /** 仓储重建入口（CR-209 起带正文） */
+    public static Notification rehydrate(Long id, Long userId, NotificationType type, Long actorId,
+                                         NotificationTargetType targetType, Long targetId, String message,
+                                         boolean read, Instant createdAt) {
+        return new Notification(id, userId, type, actorId, targetType, targetId, message, read, createdAt);
     }
 }

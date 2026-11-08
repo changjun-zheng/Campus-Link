@@ -20,7 +20,11 @@ public enum NotificationType {
     ACCEPT("accept"),
     QUOTE("quote"),
     CONTENT_REMOVED("content_removed"),
-    CONTENT_RESTORED("content_restored");
+    CONTENT_RESTORED("content_restored"),
+    /** 管理员警告（F-ADMIN-002 / CR-209）：目标是用户本人，正文存于 notifications.message */
+    WARNING("warning"),
+    /** 管理员禁言（F-ADMIN-002 / CR-209）：目标是用户本人，正文存于 notifications.message */
+    MUTE("mute");
 
     private final String code;
 

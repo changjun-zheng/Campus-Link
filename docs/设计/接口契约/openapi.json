@@ -17,12 +17,12 @@
       "description": "内容处置：下架 / 恢复（仅 SUPERADMIN）"
     },
     {
-      "name": "board",
-      "description": "版块"
-    },
-    {
       "name": "admin-user",
       "description": "用户治理（仅 SUPERADMIN）"
+    },
+    {
+      "name": "board",
+      "description": "版块"
     },
     {
       "name": "auth",
@@ -701,7 +701,7 @@
             }
           },
           "403": {
-            "description": "无权限（4002）；账号已被封禁（2006）；账号注销中，请先撤销注销（2013）；无权限（4002）",
+            "description": "无权限（4002）；账号已被封禁（2006）；账号已被禁言，暂时无法发布内容（2019）；账号注销中，请先撤销注销（2013）",
             "content": {
               "application/json": {
                 "schema": {
@@ -1014,6 +1014,188 @@
           },
           "required": true
         },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseVoid"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数错误（1001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未登录（4001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "无权限（4002）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "用户不存在（2007）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "系统繁忙，请稍后再试（9999）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/users/{id}/mute": {
+      "put": {
+        "tags": [
+          "admin-user"
+        ],
+        "summary": "禁言用户（仅 SUPERADMIN）：1~720 小时，期间发帖 / 回帖 / 图片 / 组队写入返回 2019；到期自然解除",
+        "operationId": "mute",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MuteCommand"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseVoid"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数错误（1001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未登录（4001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "无权限（4002）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "用户不存在（2007）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "系统繁忙，请稍后再试（9999）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "admin-user"
+        ],
+        "summary": "解除禁言（仅 SUPERADMIN）：幂等；本来未禁言时直接返回成功",
+        "operationId": "unmute",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -1974,7 +2156,7 @@
             }
           },
           "403": {
-            "description": "账号已被封禁（2006）；账号注销中，请先撤销注销（2013）",
+            "description": "账号已被封禁（2006）；账号已被禁言，暂时无法发布内容（2019）；账号注销中，请先撤销注销（2013）",
             "content": {
               "application/json": {
                 "schema": {
@@ -2176,7 +2358,7 @@
             }
           },
           "403": {
-            "description": "账号已被封禁（2006）；账号注销中，请先撤销注销（2013）",
+            "description": "账号已被封禁（2006）；账号已被禁言，暂时无法发布内容（2019）；账号注销中，请先撤销注销（2013）",
             "content": {
               "application/json": {
                 "schema": {
@@ -2454,7 +2636,7 @@
             }
           },
           "403": {
-            "description": "账号已被封禁（2006）；账号注销中，请先撤销注销（2013）；无权限（4002）",
+            "description": "账号已被封禁（2006）；账号已被禁言，暂时无法发布内容（2019）；账号注销中，请先撤销注销（2013）；无权限（4002）",
             "content": {
               "application/json": {
                 "schema": {
@@ -2651,7 +2833,7 @@
             }
           },
           "403": {
-            "description": "账号已被封禁（2006）；账号注销中，请先撤销注销（2013）",
+            "description": "账号已被封禁（2006）；账号已被禁言，暂时无法发布内容（2019）；账号注销中，请先撤销注销（2013）",
             "content": {
               "application/json": {
                 "schema": {
@@ -3092,7 +3274,7 @@
             }
           },
           "403": {
-            "description": "无权限（4002）；账号已被封禁（2006）；账号注销中，请先撤销注销（2013）",
+            "description": "无权限（4002）；账号已被封禁（2006）；账号已被禁言，暂时无法发布内容（2019）；账号注销中，请先撤销注销（2013）",
             "content": {
               "application/json": {
                 "schema": {
@@ -4112,6 +4294,103 @@
           },
           "422": {
             "description": "内容未通过安全审核（5001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "系统繁忙，请稍后再试（9999）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/users/{id}/warn": {
+      "post": {
+        "tags": [
+          "admin-user"
+        ],
+        "summary": "警告用户（仅 SUPERADMIN）：向目标用户发送带原因的站内通知，不改账号状态；全程审计",
+        "operationId": "warn",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WarnCommand"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseVoid"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数错误（1001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未登录（4001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "无权限（4002）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "用户不存在（2007）",
             "content": {
               "application/json": {
                 "schema": {
@@ -6883,6 +7162,25 @@
           "role"
         ]
       },
+      "MuteCommand": {
+        "type": "object",
+        "properties": {
+          "hours": {
+            "type": "integer",
+            "format": "int32",
+            "maximum": 720,
+            "minimum": 1
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 0
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
       "CloseCommand": {
         "type": "object",
         "properties": {
@@ -7664,6 +7962,19 @@
         },
         "required": [
           "question"
+        ]
+      },
+      "WarnCommand": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 0
+          }
+        },
+        "required": [
+          "reason"
         ]
       },
       "ApiResponseRosterImportResult": {
@@ -8882,6 +9193,9 @@
           "floorNo": {
             "type": "integer",
             "format": "int32"
+          },
+          "message": {
+            "type": "string"
           },
           "read": {
             "type": "boolean"

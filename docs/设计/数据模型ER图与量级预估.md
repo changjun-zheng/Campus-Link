@@ -2,13 +2,15 @@
 
 | 文档信息 | 内容 |
 |---------|------|
-| 版本 | v1.7 |
+| 版本 | v1.8 |
 | 状态 | 已归档（设计门行动项 **A3-5** 交付物，[CR-035](../变更日志/变更台账.md)） |
 | 维护人 | 技术负责人（发起人兼任） |
-| 最后更新 | 2026-11-04 |
+| 最后更新 | 2026-11-08 |
 
 > **变更记录**
 >
+> - **v1.8（2026-11-08）**——同步 `V13__user_mute_and_notification_message.sql`（[CR-209](../变更日志/变更台账.md#cr-209) 用户警告与禁言）：`users` 新增 `muted_until DATETIME NULL`，`notifications` 新增 `message VARCHAR(255) NULL`。§2 两个实体补列、§3 表职责补一句、新增 §8 说明；**表数仍 20 张、索引不变**，事实源扩为 V1~V13。
+
 > - **v1.5（2026-10-25）**——同步 `V9__post_anonymous.sql`（[CR-139](../变更日志/变更台账.md#cr-139) 匿名发帖）：`posts` 新增 `is_anonymous TINYINT(1) NOT NULL DEFAULT 0`。§2 `POSTS` 实体补该列、§3 `posts` 职责补一句；**表数仍 18 张、索引不变、不改任何结构**，事实源扩为 V1~V9。
 > - **v1.4（2026-10-25）**——同步 `V8__teams.sql`（[CR-137](../变更日志/变更台账.md#cr-137) 组队广场）：新建 `teams` / `team_members` 两表。§2 / §3 表数 **16 → 18 张**、§4 索引清单补 `idx_teams_status` / `idx_teams_owner` / `team_members` 联合主键与两条关系索引、§5 补两表量级；**本文不引入任何结构变更**，事实源扩为 V1~V8。
 > - **v1.3（2026-10-24）**——同步 `V7__post_content_fulltext.sql`（[CR-136](../变更日志/变更台账.md#cr-136) 正文全文检索）：`posts` 新增 `ft_posts_content (content_md) WITH PARSER ngram`。§4 索引清单 +1 行、§5 扩容触发点改写；**表数仍 16 张、不改任何表结构**。
@@ -19,7 +21,7 @@
 ## 1. 目的、事实源与边界
 
 - **目的**：为设计门行动项 A3-5 提供两件东西——① 现有数据模型的**实体关系可视化**（文字定义在[技术方案 §4](技术方案.md)，本图为可视化对照）；② 按 PRD 容量基线的**数据量级与索引水位预估**，作为测试阶段造数规模与发布阶段容量验收的参考。
-- **事实源**：`backend/src/main/resources/db/migration/` 下的**全部迁移**（V1 基线 12 张表 + `V2__seed_boards.sql` 仅种入 6 个版块数据、无结构 + `V3__my_content_indexes.sql` 两个作者维度索引 + `V4__post_views_and_follows.sql` 给 `posts` 加两列并新建 `follows` + `V5__user_blocks.sql` 新建 `user_blocks` + `V6__direct_messages.sql` 新建 `conversations` / `messages` + `V7__post_content_fulltext.sql` 给 `posts` 加正文 FULLTEXT 索引 + `V8__teams.sql` 新建 `teams` / `team_members` + `V9__post_anonymous.sql` 给 `posts` 加 `is_anonymous` + `V10__posts_hot_list_index.sql` 热榜复合索引 + `V11__notification_outbox.sql` 通知 Outbox／消费凭证两表；**已执行迁移不可改**）。**表结构、字段、索引以迁移文件为准**——本文与其冲突时，以迁移文件为准并须修正本文。
+- **事实源**：`backend/src/main/resources/db/migration/` 下的**全部迁移**（V1 基线 12 张表 + `V2__seed_boards.sql` 仅种入 6 个版块数据、无结构 + `V3__my_content_indexes.sql` 两个作者维度索引 + `V4__post_views_and_follows.sql` 给 `posts` 加两列并新建 `follows` + `V5__user_blocks.sql` 新建 `user_blocks` + `V6__direct_messages.sql` 新建 `conversations` / `messages` + `V7__post_content_fulltext.sql` 给 `posts` 加正文 FULLTEXT 索引 + `V8__teams.sql` 新建 `teams` / `team_members` + `V9__post_anonymous.sql` 给 `posts` 加 `is_anonymous` + `V10__posts_hot_list_index.sql` 热榜复合索引 + `V11__notification_outbox.sql` 通知 Outbox／消费凭证两表 + `V12__post_images.sql` 帖子图片 + `V13__user_mute_and_notification_message.sql` 给 `users` 加 `muted_until`、给 `notifications` 加 `message`；**已执行迁移不可改**）。**表结构、字段、索引以迁移文件为准**——本文与其冲突时，以迁移文件为准并须修正本文。
 - **边界**：本文**不引入任何表结构 / 索引变更**；量级数字均为工程估算（见 §5 口径），**非性能承诺**——性能承诺以 PRD §4 的 P90 / P95 指标为准，由测试阶段实测验收。
 - **维护约定**：后续新增 `V<n>__*.sql` 结构变更时，**该 CR 必须同步更新本文**（§2 图、§3 表清单、§4 索引清单、§5 水位），否则视为该 CR 的文档同步遗漏。
 
@@ -38,6 +40,7 @@ erDiagram
         char_64 student_id_hash UK "HMAC，一号一账号"
         tinyint verified "是否通过学籍核验"
         tinyint anonymized "注销匿名化标记"
+        datetime muted_until "禁言截止（V13 / CR-209），NULL=未禁言"
     }
     STUDENT_ROSTER {
         bigint id PK
@@ -99,9 +102,10 @@ erDiagram
         bigint id PK
         bigint user_id "接收人，无外键"
         bigint actor_id "触发人，无外键"
-        varchar_16 type "reply/like/favorite/accept/quote"
-        varchar_16 target_type "多态，无外键"
+        varchar_16 type "reply/like/favorite/accept/quote/content_removed/content_restored/warning/mute"
+        varchar_16 target_type "POST/REPLY/USER（多态，无外键）"
         bigint target_id
+        varchar_255 message "平台通知正文（V13 / CR-209），互动通知为 NULL"
         tinyint is_read
     }
     REPORTS {
@@ -232,7 +236,7 @@ erDiagram
 | `replies` | 楼层回复（`floor_no` 帖内自增，发帖服务内分配保证连续） | 无 | 主增长表，试点期 ≤ 40 万（估算见 §5） |
 | `likes` | 点赞去重（PK 即唯一约束） | — | 事件驱动，量最大但行极窄 |
 | `favorites` | 收藏 | — | 事件驱动 |
-| `notifications` | 站内通知（reply / like / favorite / accept / quote） | — | 事件驱动、只追加，读多写多 |
+| `notifications` | 站内通知（reply / like / favorite / accept / quote / content_removed / content_restored / warning / mute）；`message` 仅平台通知有值（V13 / CR-209） | — | 事件驱动、只追加，读多写多 |
 | `reports` | 举报工单（24h 同对象去重靠应用层按索引查询） | detail 可能含举报描述 | 小表 |
 | `audit_logs` | 后台全操作留痕（名册导入、内容处置——生产红线要求） | — | 小表、只追加 |
 | `follows` | 关注关系（V4）——联合主键即"一人对一人只有一行"，重复关注天然幂等 | 无 | 事件驱动，约 1 万用户 × 平均关注数，估 ≤ 10 万 |
@@ -336,3 +340,7 @@ erDiagram
         datetime created_at
     }
 ```
+
+## 8. 用户禁言与通知正文（V13／CR-209）
+
+`users.muted_until` 是**账号级写权限截止时间**（`DATETIME NULL`，NULL 或已过期即未禁言）：禁言不改变 `status`、不影响登录与读取，只让内容 / 组队写路径返回 `403 / 2019`；到期**自然解除**，无定时任务。`notifications.message` 承载平台通知正文（警告原因、禁言截止与原因），互动通知为 NULL；两列均为可空、无索引。语义以 [V13](../../backend/src/main/resources/db/migration/V13__user_mute_and_notification_message.sql) 与[技术方案 §5](技术方案.md) 为准。

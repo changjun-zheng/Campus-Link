@@ -51,6 +51,16 @@ export const setUserStatus = (id: number, status: 'ACTIVE' | 'BANNED') =>
  */
 export const grantOpsRole = (id: number) => put<void>(`/admin/users/${id}/role`, { role: 'OPS' })
 
+/** 警告用户（F-ADMIN-002 / CR-209）：不改账号状态，仅发送带原因的站内通知 */
+export const warnUser = (id: number, reason: string) => post<void>(`/admin/users/${id}/warn`, { reason })
+
+/** 禁言（F-ADMIN-002 / CR-209）：1~720 小时；到期自然解除 */
+export const muteUser = (id: number, hours: number, reason: string) =>
+  put<void>(`/admin/users/${id}/mute`, { hours, reason })
+
+/** 解除禁言（F-ADMIN-002 / CR-209）：幂等 */
+export const unmuteUser = (id: number) => del<void>(`/admin/users/${id}/mute`)
+
 /** 提交举报（F-SAFE-002）：24h 同对象去重 → 429 / 2012 */
 export const submitReport = (payload: {
   targetType: 'POST' | 'REPLY' | 'USER'

@@ -80,6 +80,7 @@ public class NotificationRepositoryImpl implements NotificationRepository {
         d.setActorId(notification.getActorId());
         d.setTargetType(notification.getTargetType().name());
         d.setTargetId(notification.getTargetId());
+        d.setMessage(notification.getMessage());
         d.setIsRead(false);
         d.setCreatedAt(notification.getCreatedAt());
         return d;
@@ -87,7 +88,7 @@ public class NotificationRepositoryImpl implements NotificationRepository {
 
     private static Notification toDomain(NotificationDO d) {
         return Notification.rehydrate(d.getId(), d.getUserId(), NotificationType.fromCode(d.getType()),
-                d.getActorId(), NotificationTargetType.fromName(d.getTargetType()), d.getTargetId(),
+                d.getActorId(), NotificationTargetType.fromName(d.getTargetType()), d.getTargetId(), d.getMessage(),
                 Boolean.TRUE.equals(d.getIsRead()), d.getCreatedAt());
     }
 }

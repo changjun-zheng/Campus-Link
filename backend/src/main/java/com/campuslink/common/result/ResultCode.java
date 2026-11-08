@@ -41,6 +41,8 @@ public enum ResultCode {
     AVATAR_UPDATE_TOO_FREQUENT(2017, 429, "头像修改过于频繁，请稍后再试"),
 
     CAPTCHA_SEND_FAILED(2018, 503, "验证码发送失败，请稍后重试"),
+    /** 禁言（F-ADMIN-002 / CR-209）：与封禁分开，前端据此提示"暂时无法发布内容"而不是"账号已封禁" */
+    USER_MUTED(2019, 403, "账号已被禁言，暂时无法发布内容"),
 
     STUDENT_VERIFY_FAILED(2101, 400, "学籍信息校验未通过"),
     VERIFY_TICKET_INVALID(2102, 400, "核验票据无效或已过期，请重新核验"),

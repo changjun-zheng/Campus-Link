@@ -1,6 +1,8 @@
 package com.campuslink.module.account.application;
 
 import com.campuslink.common.audit.AuditService;
+import com.campuslink.common.event.UserMutedEvent;
+import com.campuslink.common.event.UserWarnedEvent;
 import com.campuslink.common.exception.ApiException;
 import com.campuslink.common.result.ResultCode;
 import com.campuslink.common.security.TokenRevocationGateway;
@@ -44,10 +46,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -478,6 +482,96 @@ class AccountApplicationServiceTest {
         verifyNoInteractions(auditService, tokenRevocationGateway);
     }
 
+    // ── 警告 / 禁言（F-ADMIN-002 / CR-209）──────────────────────────────
+
+    @Test
+    @DisplayName("警告：只记 USER_WARN 审计并发布通知事件，不改账号状态")
+    void adminWarnAuditsAndPublishesEvent() {
+        when(accountRepository.findById(USER_ID)).thenReturn(Optional.of(account(AccountStatus.ACTIVE, null)));
+
+        service.adminWarn(1L, USER_ID, "请勿发布联系方式");
+
+        verify(auditService).record(1L, "USER_WARN", "users", USER_ID, "reason=请勿发布联系方式");
+        verify(eventPublisher).publishEvent(new UserWarnedEvent(1L, USER_ID, "请勿发布联系方式"));
+        verify(accountRepository, never()).updateMutedUntil(anyLong(), any());
+        verifyNoInteractions(tokenRevocationGateway);
+    }
+
+    @Test
+    @DisplayName("警告：目标为超管 → 403，不记审计、不发事件")
+    void adminWarnRefusesSuperadmin() {
+        when(accountRepository.findById(USER_ID)).thenReturn(Optional.of(accountWithRole(AccountRole.SUPERADMIN)));
+
+        assertThatThrownBy(() -> service.adminWarn(1L, USER_ID, "测试"))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.FORBIDDEN));
+
+        verifyNoInteractions(auditService);
+        verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    @DisplayName("禁言：写 muted_until、记 USER_MUTE 并发布事件；不吊销 token")
+    void adminMuteWritesUntilAuditsAndPublishesEvent() {
+        when(accountRepository.findById(USER_ID)).thenReturn(Optional.of(account(AccountStatus.ACTIVE, null)));
+        Instant before = Instant.now();
+
+        Instant until = service.adminMute(1L, USER_ID, 2, "刷屏");
+
+        assertThat(until).isAfter(before.plus(Duration.ofMinutes(119)));
+        verify(accountRepository).updateMutedUntil(USER_ID, until);
+        verify(auditService).record(eq(1L), eq("USER_MUTE"), eq("users"), eq(USER_ID), contains("hours=2"));
+        verify(eventPublisher).publishEvent(new UserMutedEvent(1L, USER_ID, until, "刷屏"));
+        verifyNoInteractions(tokenRevocationGateway);
+    }
+
+    @Test
+    @DisplayName("禁言：时长越界（0 / 721）→ 1001，不写库不记审计")
+    void adminMuteRejectsInvalidHours() {
+        assertThatThrownBy(() -> service.adminMute(1L, USER_ID, 0, "刷屏"))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.INVALID_PARAM));
+        assertThatThrownBy(() -> service.adminMute(1L, USER_ID, 721, "刷屏"))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.INVALID_PARAM));
+
+        verifyNoInteractions(accountRepository, auditService);
+        verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    @DisplayName("解除禁言：清空 muted_until 并记 USER_UNMUTE；本来未禁言时幂等且零审计")
+    void adminUnmuteClearsOrIsIdempotent() {
+        when(accountRepository.findById(USER_ID)).thenReturn(Optional.of(accountMuted(Instant.now().plusSeconds(600))));
+
+        service.adminUnmute(1L, USER_ID);
+
+        verify(accountRepository).updateMutedUntil(USER_ID, null);
+        verify(auditService).record(1L, "USER_UNMUTE", "users", USER_ID, null);
+
+        reset(accountRepository, auditService);
+        when(accountRepository.findById(USER_ID)).thenReturn(Optional.of(account(AccountStatus.ACTIVE, null)));
+
+        service.adminUnmute(1L, USER_ID);
+
+        verify(accountRepository, never()).updateMutedUntil(anyLong(), any());
+        verifyNoInteractions(auditService);
+    }
+
+    @Test
+    @DisplayName("禁言判定：未到期返回 2019，已到期放行；读路径 assertActiveForContent 不拦禁言")
+    void mutedAccountCanReadButCannotWrite() {
+        when(accountRepository.findById(USER_ID)).thenReturn(Optional.of(accountMuted(Instant.now().plusSeconds(600))));
+
+        assertThatThrownBy(() -> service.assertAllowedToWriteContent(USER_ID))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.USER_MUTED));
+        service.assertActiveForContent(USER_ID);
+
+        when(accountRepository.findById(USER_ID)).thenReturn(Optional.of(accountMuted(Instant.now().minusSeconds(1))));
+        service.assertAllowedToWriteContent(USER_ID);
+    }
+
     // ---------- helpers ----------
 
     private static Account accountWithRole(AccountRole role) {
@@ -505,5 +599,11 @@ class AccountApplicationServiceTest {
         return Account.rehydrate(USER_ID, EmailAddress.of(EMAIL), null, StudentId.of(STUDENT_ID),
                 "张三同学", null, null, null, null, null, AccountRole.USER, status,
                 true, false, deleteAt, Instant.parse("2026-09-01T08:00:00Z"), null);
+    }
+
+    private static Account accountMuted(Instant mutedUntil) {
+        return Account.rehydrate(USER_ID, EmailAddress.of(EMAIL), null, StudentId.of(STUDENT_ID),
+                "张三同学", null, null, null, null, null, AccountRole.USER, AccountStatus.ACTIVE,
+                mutedUntil, true, false, null, Instant.parse("2026-09-01T08:00:00Z"), null);
     }
 }

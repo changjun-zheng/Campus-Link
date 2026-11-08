@@ -1,7 +1,7 @@
 import { get, post, put } from './client'
 import type { PageVo } from './forum'
 
-/** 通知类型码，与后端 notifications.type 落库值一致（CR-126 起含内容处置两类） */
+/** 通知类型码，与后端 notifications.type 落库值一致（CR-126 起含内容处置两类，CR-209 起含警告 / 禁言） */
 export type NotificationType =
   | 'reply'
   | 'quote'
@@ -10,6 +10,8 @@ export type NotificationType =
   | 'accept'
   | 'content_removed'
   | 'content_restored'
+  | 'warning'
+  | 'mute'
 
 /**
  * 与后端 web/vo/NotificationVo 一一对应（F-SOC-001）。
@@ -25,14 +27,16 @@ export interface NotificationVo {
   actorNickname: string
   /** 默认头像（CR-164）：平台类通知 / 头像缺失时不下发，前端不渲染 */
   actorAvatarUrl?: string | null
-  /** POST = 目标是帖子（点赞 / 收藏），REPLY = 目标是楼层（回复 / 采纳 / 楼层点赞） */
-  targetType: 'POST' | 'REPLY'
+  /** POST = 帖子，REPLY = 楼层，USER = 平台直接发给用户（警告 / 禁言） */
+  targetType: 'POST' | 'REPLY' | 'USER'
   targetId: number
   /** 目标帖已删除时不下发 */
   postId?: number
   postTitle: string
   /** 仅楼层类通知有值，用于「#N 楼」提示 */
   floorNo?: number
+  /** 平台通知正文（CR-209：警告原因 / 禁言说明）；互动通知不下发 */
+  message?: string | null
   read: boolean
   createdAt: string
 }

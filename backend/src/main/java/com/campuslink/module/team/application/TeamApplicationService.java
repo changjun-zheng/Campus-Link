@@ -62,7 +62,7 @@ public class TeamApplicationService {
     /** 发布招募：发起人同时写一条 OWNER / ACCEPTED 关系，人数含发起人 */
     @Transactional
     public TeamDetail create(long ownerId, CreateTeamCommand command) {
-        accountApplicationService.assertActiveForContent(ownerId);
+        accountApplicationService.assertAllowedToWriteContent(ownerId);
         TeamDirection direction = TeamDirection.parse(command.direction())
                 .orElseThrow(() -> new ApiException(ResultCode.INVALID_PARAM));
         if (command.capacity() == null) {
@@ -139,7 +139,7 @@ public class TeamApplicationService {
     /** 申请加入：待审批；同一人对同一组队已有关系（含被拒）一律 6004 */
     @Transactional
     public TeamApplyResult apply(long userId, long teamId) {
-        accountApplicationService.assertActiveForContent(userId);
+        accountApplicationService.assertAllowedToWriteContent(userId);
         Team team = requireTeam(teamId);
         if (team.getOwnerId() == userId) {
             throw new ApiException(ResultCode.CANNOT_APPLY_OWN_TEAM);

@@ -25,6 +25,7 @@ public final class NotificationResults {
                                    String actorAvatarUrl,
                                    String targetType, Long targetId,
                                    Long postId, String postTitle, Integer floorNo,
+                                   String message,
                                    boolean read, Instant createdAt) {
     }
 

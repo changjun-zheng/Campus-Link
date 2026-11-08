@@ -15,7 +15,9 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -91,6 +93,54 @@ class AdminUserControllerAuthTest {
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.INVALID_PARAM));
         verify(service, never()).adminPromoteToOps(anyLong(), anyLong());
+    }
+
+    @Test
+    @DisplayName("匿名警告 / 禁言 / 解禁 → 4001，且不触达用例")
+    void anonymousModerationIsUnauthorized() {
+        assertThatThrownBy(() -> controller.warn(9L, new AdminUserController.WarnCommand("原因"), null))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_LOGGED_IN));
+        assertThatThrownBy(() -> controller.mute(9L, new AdminUserController.MuteCommand(1, "原因"), null))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_LOGGED_IN));
+        assertThatThrownBy(() -> controller.unmute(9L, null))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_LOGGED_IN));
+
+        verify(service, never()).adminWarn(anyLong(), anyLong(), any());
+        verify(service, never()).adminMute(anyLong(), anyLong(), anyInt(), anyString());
+        verify(service, never()).adminUnmute(anyLong(), anyLong());
+    }
+
+    @Test
+    @DisplayName("OPS 警告 / 禁言 / 解禁 → 4002（仍是 SUPERADMIN 专属）")
+    void opsModerationIsForbidden() {
+        assertThatThrownBy(() -> controller.warn(9L, new AdminUserController.WarnCommand("原因"), auth("ROLE_OPS")))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.FORBIDDEN));
+        assertThatThrownBy(() -> controller.mute(9L, new AdminUserController.MuteCommand(1, "原因"), auth("ROLE_OPS")))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.FORBIDDEN));
+        assertThatThrownBy(() -> controller.unmute(9L, auth("ROLE_OPS")))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.FORBIDDEN));
+
+        verify(service, never()).adminWarn(anyLong(), anyLong(), any());
+        verify(service, never()).adminMute(anyLong(), anyLong(), anyInt(), anyString());
+        verify(service, never()).adminUnmute(anyLong(), anyLong());
+    }
+
+    @Test
+    @DisplayName("SUPERADMIN 警告 / 禁言 / 解禁 → 200，操作人、目标与参数透传")
+    void superadminModerationPassesThrough() {
+        assertThat(controller.warn(9L, new AdminUserController.WarnCommand("原因"), superadmin()).code()).isZero();
+        assertThat(controller.mute(9L, new AdminUserController.MuteCommand(6, "刷屏"), superadmin()).code()).isZero();
+        assertThat(controller.unmute(9L, superadmin()).code()).isZero();
+
+        verify(service).adminWarn(7L, 9L, "原因");
+        verify(service).adminMute(7L, 9L, 6, "刷屏");
+        verify(service).adminUnmute(7L, 9L);
     }
 
     private static Authentication auth(String authority) {

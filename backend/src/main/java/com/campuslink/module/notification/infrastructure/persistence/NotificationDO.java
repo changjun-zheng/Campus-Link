@@ -20,6 +20,7 @@ public class NotificationDO {
     private Long actorId;
     private String targetType;
     private Long targetId;
+    private String message;
     private Boolean isRead;
     private Instant createdAt;
 }

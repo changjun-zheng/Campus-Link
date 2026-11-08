@@ -79,7 +79,7 @@ class TeamApplicationServiceTest {
 
         TeamDetail detail = service.create(OWNER_ID, command("alGorithm", 3, null));
 
-        verify(accountApplicationService).assertActiveForContent(OWNER_ID);
+        verify(accountApplicationService).assertAllowedToWriteContent(OWNER_ID);
         verify(moderationApplicationService).ensureAllowed("蓝桥杯组队", "找队友", null);
         verify(teamMemberRepository).save(any(TeamMember.class));
         assertThat(detail.id()).isEqualTo(TEAM_ID);

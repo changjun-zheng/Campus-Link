@@ -18,8 +18,11 @@ import {
   listReports,
   moderatePost,
   moderateReply,
+  muteUser,
   searchAdminContents,
   setUserStatus,
+  unmuteUser,
+  warnUser,
   type AdminContentItemVo,
   type AdminDashboardVo,
   type AdminReportVo,
@@ -232,6 +235,76 @@ async function doSetUserStatus(status: 'ACTIVE' | 'BANNED') {
     ElMessage.error(e instanceof Error ? e.message : '操作失败')
   } finally {
     banning.value = false
+  }
+}
+
+/* ─── 警告 / 禁言（F-ADMIN-002 / CR-209）：均以 banUserId 为目标，仅 SUPERADMIN ─── */
+const warnReason = ref('')
+const warning = ref(false)
+
+async function doWarn() {
+  const id = Number(banUserId.value)
+  if (!id || id < 1) {
+    ElMessage.warning('请先填写有效的用户 id（正整数）')
+    return
+  }
+  if (!warnReason.value.trim()) {
+    ElMessage.warning('请填写警告原因')
+    return
+  }
+  warning.value = true
+  try {
+    await warnUser(id, warnReason.value.trim())
+    ElMessage.success('警告已发送（站内通知）')
+    warnReason.value = ''
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '警告发送失败')
+  } finally {
+    warning.value = false
+  }
+}
+
+const muteHours = ref(24)
+const muteReason = ref('')
+const muting = ref(false)
+const unmuting = ref(false)
+
+async function doMute() {
+  const id = Number(banUserId.value)
+  if (!id || id < 1) {
+    ElMessage.warning('请先填写有效的用户 id（正整数）')
+    return
+  }
+  if (!muteReason.value.trim()) {
+    ElMessage.warning('请填写禁言原因')
+    return
+  }
+  muting.value = true
+  try {
+    await muteUser(id, muteHours.value, muteReason.value.trim())
+    ElMessage.success(`已禁言 ${muteHours.value} 小时，期间发帖 / 回帖 / 组队写入被拒绝`)
+    muteReason.value = ''
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '禁言失败')
+  } finally {
+    muting.value = false
+  }
+}
+
+async function doUnmute() {
+  const id = Number(banUserId.value)
+  if (!id || id < 1) {
+    ElMessage.warning('请先填写有效的用户 id（正整数）')
+    return
+  }
+  unmuting.value = true
+  try {
+    await unmuteUser(id)
+    ElMessage.success('已解除禁言')
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '解除禁言失败')
+  } finally {
+    unmuting.value = false
   }
 }
 
@@ -967,6 +1040,40 @@ function goLogin() {
           <el-button :loading="banning" @click="doSetUserStatus('ACTIVE')">解封</el-button>
         </el-form-item>
         <el-divider />
+        <el-form-item label="警告原因">
+          <el-input
+            v-model="warnReason"
+            maxlength="200"
+            show-word-limit
+            placeholder="将作为站内通知正文发送给用户（最长 200 字）"
+          />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="warning" :loading="warning" @click="doWarn">发送警告</el-button>
+        </el-form-item>
+        <el-divider />
+        <el-form-item label="禁言时长">
+          <el-select v-model="muteHours" aria-label="禁言时长" class="w-[140px]">
+            <el-option :value="1" label="1 小时" />
+            <el-option :value="6" label="6 小时" />
+            <el-option :value="24" label="24 小时" />
+            <el-option :value="72" label="3 天" />
+            <el-option :value="168" label="7 天" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="禁言原因">
+          <el-input
+            v-model="muteReason"
+            maxlength="200"
+            show-word-limit
+            placeholder="会写入审计与禁言通知（最长 200 字）"
+          />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="danger" :loading="muting" @click="doMute">禁言</el-button>
+          <el-button :loading="unmuting" @click="doUnmute">解除禁言</el-button>
+        </el-form-item>
+        <el-divider />
         <el-form-item label="运营用户 id">
           <el-input v-model="opsUserId" placeholder="用户 id（正整数）" />
         </el-form-item>
@@ -977,6 +1084,7 @@ function goLogin() {
       <p class="px-5 pb-5 text-caption leading-body text-ink-meta">
         <template v-if="isSuperadmin">
           下架即从全站列表 / 搜索 / 热榜 / 详情消失（不碰作者删除墓碑，可恢复）；封禁即时拒绝登录与发帖；
+          警告与禁言使用上方同一个用户 id——警告只发站内通知，禁言期间仅内容写入被拒（浏览与登录不受影响）；
           授予运营角色需目标用户重新登录后生效。全部操作写审计日志。
         </template>
         <template v-else>运营可处理举报工单、查看内容巡查与检索结果；处置与封禁由超级管理员执行。</template>
