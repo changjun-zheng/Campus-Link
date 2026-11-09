@@ -99,6 +99,13 @@ export const get = <T>(path: string): Promise<T> => request<T>(path)
 export const post = <T>(path: string, data?: unknown): Promise<T> =>
   request<T>(path, { method: 'POST', body: data === undefined ? undefined : JSON.stringify(data) })
 
+/**
+ * 纯文本请求体（CR-210 名册 CSV）：`post` 的 JSON.stringify 会转义换行并在首尾加引号，
+ * 后端 `@RequestBody String` 会把整份 CSV 当成一行；这里原样发送并显式声明文本类型。
+ */
+export const postText = <T>(path: string, body: string, contentType = 'text/plain;charset=utf-8'): Promise<T> =>
+  request<T>(path, { method: 'POST', body, headers: { 'Content-Type': contentType } })
+
 export const put = <T>(path: string, data?: unknown): Promise<T> =>
   request<T>(path, { method: 'PUT', body: data === undefined ? undefined : JSON.stringify(data) })
 

@@ -14,6 +14,7 @@ import {
   getAdminDashboard,
   getReviewQueue,
   grantOpsRole,
+  importRoster,
   listAdminTags,
   listReports,
   moderatePost,
@@ -28,6 +29,7 @@ import {
   type AdminReportVo,
   type AdminTagVo,
   type ReviewQueueItemVo,
+  type RosterImportResultVo,
 } from '../api/admin'
 import { useAuthStore } from '../stores/auth'
 import { formatRelativeTime } from '../utils/time'
@@ -40,7 +42,7 @@ const auth = useAuthStore()
 const isSuperadmin = computed(() => auth.user?.role === 'SUPERADMIN')
 const canAccessAdmin = computed(() => isSuperadmin.value || auth.user?.role === 'OPS')
 
-const tab = ref<'reports' | 'moderation' | 'dashboard' | 'tags' | 'review'>('reports')
+const tab = ref<'reports' | 'moderation' | 'dashboard' | 'tags' | 'review' | 'roster'>('reports')
 
 /* ─── 工单 ─── */
 const reportStatus = ref<'PENDING' | 'CLOSED' | ''>('')
@@ -552,6 +554,126 @@ async function onReviewModerate(item: ReviewQueueItemVo) {
   }
 }
 
+/* ─── 名册导入（F-ACC-004 / CR-210）：仅 SUPERADMIN；CSV 原文提交，后端哈希入库并写审计 ─── */
+const rosterFileEl = ref<HTMLInputElement | null>(null)
+const rosterFileName = ref('')
+const rosterFileSize = ref(0)
+const rosterEncoding = ref<'UTF-8' | 'GBK'>('UTF-8')
+const rosterText = ref('')
+const rosterLineCount = ref(0)
+const rosterPreview = ref<string[]>([])
+const rosterBatch = ref(defaultRosterBatch())
+const rosterImporting = ref(false)
+const rosterResult = ref<RosterImportResultVo | null>(null)
+const rosterResultBatch = ref('')
+const rosterError = ref('')
+const rosterReady = computed(() => rosterText.value.trim().length > 0)
+
+function defaultRosterBatch(): string {
+  const now = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `manual-${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+}
+
+function pickRosterFile() {
+  rosterFileEl.value?.click()
+}
+
+function clearRosterFile() {
+  rosterFileName.value = ''
+  rosterFileSize.value = 0
+  rosterEncoding.value = 'UTF-8'
+  rosterText.value = ''
+  rosterLineCount.value = 0
+  rosterPreview.value = []
+  rosterResult.value = null
+  rosterResultBatch.value = ''
+  rosterError.value = ''
+  if (rosterFileEl.value) rosterFileEl.value.value = ''
+}
+
+async function onRosterFileChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  if (file.size > 5 * 1024 * 1024) {
+    clearRosterFile()
+    ElMessage.warning('CSV 文件不能超过 5 MB')
+    return
+  }
+  rosterResult.value = null
+  rosterResultBatch.value = ''
+  rosterError.value = ''
+  try {
+    const buffer = await file.arrayBuffer()
+    let text: string
+    let encoding: 'UTF-8' | 'GBK' = 'UTF-8'
+    try {
+      text = new TextDecoder('utf-8', { fatal: true }).decode(buffer)
+    } catch {
+      // Excel 在中文 Windows 上常把 CSV 存成 GBK；按 GBK 读取后再以 UTF-8 提交，避免姓名入库为乱码
+      text = new TextDecoder('gbk').decode(buffer)
+      encoding = 'GBK'
+    }
+    // UTF-8 BOM 不是表头内容；留着会让「学号」表头识别失败
+    if (text.charCodeAt(0) === 0xfeff) text = text.slice(1)
+    const lines = text.split(/\r\n?|\n/).filter((line) => line.trim())
+    rosterFileName.value = file.name
+    rosterFileSize.value = file.size
+    rosterEncoding.value = encoding
+    rosterText.value = text
+    rosterLineCount.value = lines.length
+    rosterPreview.value = lines.slice(0, 5)
+    if (!lines.length) ElMessage.warning('文件为空或只有空行')
+  } catch {
+    clearRosterFile()
+    ElMessage.error('文件读取失败，请重试')
+  } finally {
+    // 允许重新选择同一个文件（change 事件只在文件变化时触发）
+    input.value = ''
+  }
+}
+
+async function doImportRoster() {
+  if (!rosterReady.value) {
+    ElMessage.warning('请先选择 CSV 文件')
+    return
+  }
+  const batch = rosterBatch.value.trim()
+  if (!batch) {
+    ElMessage.warning('请填写批次号')
+    return
+  }
+  if (batch.length > 64) {
+    ElMessage.warning('批次号最长 64 个字符')
+    return
+  }
+  rosterImporting.value = true
+  rosterError.value = ''
+  rosterResult.value = null
+  rosterResultBatch.value = ''
+  try {
+    const res = await importRoster(rosterText.value, batch)
+    rosterResult.value = res
+    rosterResultBatch.value = batch
+    if (res.failed > 0) {
+      ElMessage.warning(`导入完成：新增 ${res.inserted}，跳过 ${res.skipped}，失败 ${res.failed}`)
+    } else {
+      ElMessage.success(`导入完成：新增 ${res.inserted}，跳过 ${res.skipped}`)
+    }
+  } catch (e) {
+    rosterError.value = e instanceof Error ? e.message : '导入失败'
+  } finally {
+    rosterImporting.value = false
+  }
+}
+
 watch([reportStatus, reportPage], () => loadReports())
 watch(tab, () => {
   if (tab.value === 'reports' && !reports.value.length) loadReports()
@@ -591,7 +713,7 @@ function goLogin() {
     <!-- 页头（CR-203）：本页原先没有标题，直接以 Tab 起头；补上与其余页面一致的页头 -->
     <PageHeader
       title="管理后台"
-      :description="isSuperadmin ? '举报工单、内容处置、运营数据与标签管理；仅运营 / 超级管理员可见' : '举报工单、内容处置与内容巡查；仅运营 / 超级管理员可见'"
+      :description="isSuperadmin ? '举报工单、内容处置、运营数据、标签与名册管理；仅运营 / 超级管理员可见' : '举报工单、内容处置与内容巡查；仅运营 / 超级管理员可见'"
     >
       <el-tabs v-model="tab">
         <el-tab-pane label="举报工单" name="reports" />
@@ -599,6 +721,7 @@ function goLogin() {
         <el-tab-pane v-if="isSuperadmin" label="数据看板" name="dashboard" />
         <el-tab-pane v-if="isSuperadmin" label="标签管理" name="tags" />
         <el-tab-pane label="内容巡查" name="review" />
+        <el-tab-pane v-if="isSuperadmin" label="名册导入" name="roster" />
       </el-tabs>
     </PageHeader>
 
@@ -823,6 +946,125 @@ function goLogin() {
           />
         </div>
       </template>
+    </el-card>
+
+    <!-- ─── 名册导入（F-ACC-004 / CR-210）：仅 SUPERADMIN；CSV 原文提交，后端哈希入库并写审计 ─── -->
+    <el-card v-if="isSuperadmin" v-show="tab === 'roster'" shadow="never">
+      <template #header>
+        <div class="flex flex-wrap items-baseline justify-between gap-2">
+          <span class="font-medium">学籍名册导入</span>
+          <span class="text-caption text-ink-meta">
+            学号哈希入库；导入操作写 ROSTER_IMPORT 审计
+          </span>
+        </div>
+      </template>
+
+      <div class="max-w-[760px]">
+        <el-form label-width="90px">
+          <el-form-item label="CSV 文件">
+            <div class="flex flex-wrap items-center gap-2">
+              <el-button @click="pickRosterFile">选择文件</el-button>
+              <span v-if="rosterFileName" class="text-note text-ink-regular">
+                {{ rosterFileName }} · {{ formatFileSize(rosterFileSize) }} · {{ rosterLineCount }} 行 · {{ rosterEncoding }}
+              </span>
+              <span v-else class="text-note text-ink-meta">UTF-8 / GBK，≤ 5 MB</span>
+              <el-button v-if="rosterFileName" link @click="clearRosterFile">清除</el-button>
+            </div>
+            <input
+              ref="rosterFileEl"
+              type="file"
+              accept=".csv,text/csv"
+              hidden
+              aria-label="名册 CSV 文件"
+              @change="onRosterFileChange"
+            />
+          </el-form-item>
+
+          <el-form-item label="批次号">
+            <div class="flex flex-wrap items-center gap-2">
+              <el-input
+                v-model="rosterBatch"
+                maxlength="64"
+                show-word-limit
+                class="w-[320px]"
+                placeholder="例如 2026级-秋季-20261110"
+              />
+              <span class="text-caption text-ink-meta">写入 source_batch，便于追溯</span>
+            </div>
+          </el-form-item>
+
+          <el-form-item v-if="rosterPreview.length" label="前 5 行">
+            <ul class="w-full rounded-sm border-[0.5px] border-divider bg-code px-3 py-2">
+              <li
+                v-for="(line, index) in rosterPreview"
+                :key="index"
+                class="truncate font-mono text-caption leading-relaxed text-ink-regular"
+              >
+                {{ line }}
+              </li>
+            </ul>
+          </el-form-item>
+
+          <el-form-item>
+            <el-button
+              type="primary"
+              :loading="rosterImporting"
+              :disabled="!rosterReady"
+              @click="doImportRoster"
+            >
+              开始导入
+            </el-button>
+          </el-form-item>
+        </el-form>
+
+        <el-alert
+          v-if="rosterEncoding === 'GBK'"
+          type="warning"
+          :closable="false"
+          show-icon
+          class="mb-3"
+          title="检测到非 UTF-8 编码，已按 GBK 读取；提交时会统一转为 UTF-8。建议后续另存为 UTF-8 CSV。"
+        />
+
+        <el-alert v-if="rosterError" type="error" :closable="false" show-icon class="mb-3" :title="rosterError" />
+
+        <div v-if="rosterResult" role="status" aria-live="polite" class="mb-4 rounded-md border-[0.5px] border-divider p-4">
+          <div class="flex flex-wrap items-baseline justify-between gap-2">
+            <span class="text-body font-medium text-ink">导入完成</span>
+            <span class="text-caption text-ink-meta">批次 {{ rosterResultBatch }}</span>
+          </div>
+          <dl class="mt-3 grid grid-cols-3 gap-3 text-center">
+            <div class="rounded-sm bg-code px-3 py-2">
+              <dt class="text-caption text-ink-meta">新增</dt>
+              <dd class="mt-1 text-hero font-medium tabular-nums text-ink">{{ rosterResult.inserted }}</dd>
+            </div>
+            <div class="rounded-sm bg-code px-3 py-2">
+              <dt class="text-caption text-ink-meta">跳过（学号已存在）</dt>
+              <dd class="mt-1 text-hero font-medium tabular-nums text-ink">{{ rosterResult.skipped }}</dd>
+            </div>
+            <div class="rounded-sm bg-code px-3 py-2">
+              <dt class="text-caption text-ink-meta">失败（格式不合规）</dt>
+              <dd class="mt-1 text-hero font-medium tabular-nums text-ink">{{ rosterResult.failed }}</dd>
+            </div>
+          </dl>
+          <p class="mt-3 text-caption leading-body text-ink-meta">
+            失败行未入库，可修正后重新导入；重复学号按跳过处理，不会覆盖已有记录。本次操作已写入 ROSTER_IMPORT 审计。
+          </p>
+        </div>
+
+        <div class="rounded-md border-[0.5px] border-divider p-4 text-caption leading-body text-ink-meta">
+          <p class="font-medium text-ink-regular">CSV 格式</p>
+          <p class="mt-1">
+            每行 <code class="font-mono">学号,姓名[,年级[,专业]]</code>；学号必须 9 位数字，姓名必填，年级 / 专业可空。
+          </p>
+          <p class="mt-1">
+            首行表头可写「学号,姓名」或 Student ID，后端自动跳过；UTF-8 / GBK 均可，逗号分隔，不支持引号包裹的字段。
+          </p>
+          <p class="mt-1">
+            导入始终写名册，不受 <code class="font-mono">campuslink.roster.bypass</code> 开关影响；注册核验是否走名册由后端配置决定。
+          </p>
+        </div>
+      </div>
     </el-card>
 
     <!-- ─── 举报工单 ─── -->

@@ -1,4 +1,4 @@
-import { del, get, post, put } from './client'
+import { del, get, post, postText, put } from './client'
 
 /** 举报工单（F-SAFE-002 / CR-082、CR-196）：OPS / SUPERADMIN 可读写列表与处理 */
 export interface AdminReportVo {
@@ -216,4 +216,26 @@ export const searchAdminContents = (
   query.set('page', String(params.page ?? 1))
   query.set('size', String(params.size ?? 20))
   return get<AdminContentSearchVo>(`/admin/contents?${query.toString()}`)
+}
+
+/**
+ * 名册 CSV 导入（F-ACC-004 / CR-210，仅 SUPERADMIN）。
+ *
+ * body 为 CSV 原文（`学号,姓名[,年级[,专业]]`，后端自动跳过中文 / 英文表头），
+ * batch 写入 `student_roster.source_batch` 并进入 `ROSTER_IMPORT` 审计。
+ * `skipped` 是学号已存在（幂等跳过），`failed` 是格式不合规（不入库），均不是请求失败。
+ */
+export interface RosterImportResultVo {
+  inserted: number
+  skipped: number
+  failed: number
+}
+
+export const importRoster = (csv: string, batch: string) => {
+  const query = new URLSearchParams({ batch })
+  return postText<RosterImportResultVo>(
+    `/admin/roster/import?${query.toString()}`,
+    csv,
+    'text/csv;charset=utf-8',
+  )
 }
