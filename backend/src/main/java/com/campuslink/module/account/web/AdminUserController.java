@@ -103,6 +103,17 @@ public class AdminUserController {
         return ApiResponse.ok();
     }
 
+    @Operation(summary = "撤销运营角色（仅 SUPERADMIN）：仅允许 OPS → USER，幂等；撤销即时吊销目标旧 token，"
+            + "重新登录后为普通用户")
+    @SecurityRequirement(name = ApiDocs.BEARER_AUTH)
+    @ErrorCodes({ResultCode.NOT_LOGGED_IN, ResultCode.FORBIDDEN, ResultCode.USER_NOT_FOUND})
+    @DeleteMapping("/{id}/role")
+    public ApiResponse<Void> demoteToUser(@PathVariable("id") long id, Authentication authentication) {
+        long operatorId = CurrentUser.requireRole(authentication, "ROLE_SUPERADMIN");
+        accountApplicationService.adminDemoteToUser(operatorId, id);
+        return ApiResponse.ok();
+    }
+
     @Operation(summary = "警告用户（仅 SUPERADMIN）：向目标用户发送带原因的站内通知，不改账号状态；全程审计")
     @SecurityRequirement(name = ApiDocs.BEARER_AUTH)
     @ErrorCodes({ResultCode.NOT_LOGGED_IN, ResultCode.FORBIDDEN, ResultCode.USER_NOT_FOUND})

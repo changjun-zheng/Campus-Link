@@ -482,6 +482,57 @@ class AccountApplicationServiceTest {
         verifyNoInteractions(auditService, tokenRevocationGateway);
     }
 
+    // ── 运营角色降级（CR-212）──────────────────────────────────────────
+
+    @Test
+    @DisplayName("撤销 OPS：OPS → USER 定向更新，吊销 token 并记 USER_ROLE_UPDATE")
+    void adminDemoteToUserWritesRoleRevokesAndAudits() {
+        when(accountRepository.findById(USER_ID)).thenReturn(Optional.of(accountWithRole(AccountRole.OPS)));
+        when(accountRepository.updateRole(USER_ID, AccountRole.OPS, AccountRole.USER)).thenReturn(true);
+
+        service.adminDemoteToUser(1L, USER_ID);
+
+        verify(accountRepository).updateRole(USER_ID, AccountRole.OPS, AccountRole.USER);
+        verify(tokenRevocationGateway).revokeAllBefore(eq(USER_ID), any(Instant.class));
+        verify(auditService).record(1L, "USER_ROLE_UPDATE", "users", USER_ID, "role=USER");
+    }
+
+    @Test
+    @DisplayName("本来就是 USER：撤销幂等成功，不发 UPDATE、不记审计、不吊销 token")
+    void adminDemoteToUserIsIdempotentForUser() {
+        when(accountRepository.findById(USER_ID)).thenReturn(Optional.of(account(AccountStatus.ACTIVE, null)));
+
+        service.adminDemoteToUser(1L, USER_ID);
+
+        verify(accountRepository, never()).updateRole(anyLong(), any(), any());
+        verifyNoInteractions(auditService, tokenRevocationGateway);
+    }
+
+    @Test
+    @DisplayName("超管不可经撤销入口降级 → 4002，且不发 UPDATE")
+    void adminDemoteToUserRefusesSuperadmin() {
+        when(accountRepository.findById(USER_ID)).thenReturn(Optional.of(accountWithRole(AccountRole.SUPERADMIN)));
+
+        assertThatThrownBy(() -> service.adminDemoteToUser(1L, USER_ID))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.FORBIDDEN));
+
+        verify(accountRepository, never()).updateRole(anyLong(), any(), any());
+        verifyNoInteractions(auditService, tokenRevocationGateway);
+    }
+
+    @Test
+    @DisplayName("并发窗口内已被降级、条件更新落空：静默返回，不吊销、不记审计")
+    void adminDemoteToUserSkipsSideEffectsWhenUpdateLosesRace() {
+        when(accountRepository.findById(USER_ID)).thenReturn(Optional.of(accountWithRole(AccountRole.OPS)));
+        when(accountRepository.updateRole(USER_ID, AccountRole.OPS, AccountRole.USER)).thenReturn(false);
+
+        service.adminDemoteToUser(1L, USER_ID);
+
+        verify(accountRepository).updateRole(USER_ID, AccountRole.OPS, AccountRole.USER);
+        verifyNoInteractions(auditService, tokenRevocationGateway);
+    }
+
     // ── 警告 / 禁言（F-ADMIN-002 / CR-209）──────────────────────────────
 
     @Test

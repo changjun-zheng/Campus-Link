@@ -20,6 +20,7 @@ import {
   moderatePost,
   moderateReply,
   muteUser,
+  revokeOpsRole,
   searchAdminContents,
   searchAdminUsers,
   setUserStatus,
@@ -334,6 +335,32 @@ async function doGrantOps() {
     ElMessage.error(e instanceof Error ? e.message : '授予失败')
   } finally {
     grantingOps.value = false
+  }
+}
+
+/* ─── 撤销运营角色（CR-212）：仅 SUPERADMIN；仅 OPS → USER，撤销后旧 token 即时失效 ─── */
+const revokingOps = ref(false)
+
+async function doRevokeOps(user: AdminUserItemVo) {
+  try {
+    await ElMessageBox.confirm(
+      `确定撤销「${user.nickname}」的运营角色？撤销后其旧登录立即失效，重新登录为普通用户。`,
+      '撤销运营',
+      { type: 'warning', confirmButtonText: '撤销', cancelButtonText: '取消' },
+    )
+  } catch {
+    // 用户取消 / 关闭弹窗：不撤销、不提示
+    return
+  }
+  revokingOps.value = true
+  try {
+    await revokeOpsRole(user.id)
+    ElMessage.success('已撤销运营角色；目标旧登录已失效，重新登录后为普通用户')
+    await refreshUserResults()
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '撤销失败')
+  } finally {
+    revokingOps.value = false
   }
 }
 
@@ -1457,6 +1484,13 @@ function goLogin() {
                   link
                   @click="selectOpsTarget(row as AdminUserItemVo)"
                 >填入运营授予</el-button>
+                <el-button
+                  v-if="row.role === 'OPS'"
+                  link
+                  type="danger"
+                  :loading="revokingOps"
+                  @click="doRevokeOps(row as AdminUserItemVo)"
+                >撤销运营</el-button>
               </template>
             </el-table-column>
           </el-table>

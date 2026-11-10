@@ -361,8 +361,8 @@ public class AccountApplicationService {
     /**
      * 授予运营角色（F-ADMIN-001 / CR-196）：只允许 **ACTIVE + USER → OPS**，幂等；超管与注销 / 封禁账号拒绝。
      *
-     * <p>刻意不提供降级。升权后立即吊销目标用户旧 token（CR-208）：目标须重新登录才会拿到带 OPS
-     * 的新 token，旧 token 不会以 USER 身份继续使用；这也为将来的降级接口预留了同一套会话失效机制。
+     * <p>升权后立即吊销目标用户旧 token（CR-208）：目标须重新登录才会拿到带 OPS
+     * 的新 token，旧 token 不会以 USER 身份继续使用；降级见 {@link #adminDemoteToUser}（CR-212）。
      */
     @Transactional
     public void adminPromoteToOps(long operatorId, long targetId) {
@@ -377,6 +377,27 @@ public class AccountApplicationService {
             // 升权须重新登录才能拿到带 OPS 的新 token；旧 token 的 USER 角色不再可用
             tokenRevocationGateway.revokeAllBefore(targetId, Instant.now());
             auditService.record(operatorId, "USER_ROLE_UPDATE", "users", targetId, "role=OPS");
+        }
+    }
+
+    /**
+     * 撤销运营角色（CR-212）：只允许 **OPS → USER**，幂等；SUPERADMIN 不可经本入口降级。
+     *
+     * <p>撤权后立即吊销目标用户旧 token（复用 CR-208 水位）：旧 token 下一请求即失效，
+     * 重新登录后为普通用户；条件更新带当前角色，避免与并发升权互相覆盖。
+     */
+    @Transactional
+    public void adminDemoteToUser(long operatorId, long targetId) {
+        Account a = accountOf(targetId);
+        if (a.getRole() == AccountRole.USER) {
+            return;
+        }
+        if (a.getRole() != AccountRole.OPS) {
+            throw new ApiException(ResultCode.FORBIDDEN);
+        }
+        if (accountRepository.updateRole(targetId, AccountRole.OPS, AccountRole.USER)) {
+            tokenRevocationGateway.revokeAllBefore(targetId, Instant.now());
+            auditService.record(operatorId, "USER_ROLE_UPDATE", "users", targetId, "role=USER");
         }
     }
 

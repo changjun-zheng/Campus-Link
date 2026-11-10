@@ -126,6 +126,31 @@ class AdminUserControllerAuthTest {
     }
 
     @Test
+    @DisplayName("匿名撤销运营 → 4001，且不触达用例")
+    void anonymousDemoteIsUnauthorized() {
+        assertThatThrownBy(() -> controller.demoteToUser(9L, null))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_LOGGED_IN));
+        verify(service, never()).adminDemoteToUser(anyLong(), anyLong());
+    }
+
+    @Test
+    @DisplayName("OPS 撤销运营 → 4002（撤销仍是 SUPERADMIN 专属）")
+    void opsDemoteIsForbidden() {
+        assertThatThrownBy(() -> controller.demoteToUser(9L, auth("ROLE_OPS")))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.FORBIDDEN));
+        verify(service, never()).adminDemoteToUser(anyLong(), anyLong());
+    }
+
+    @Test
+    @DisplayName("SUPERADMIN 撤销运营 → 200，操作人与目标透传")
+    void superadminDemotesToUser() {
+        assertThat(controller.demoteToUser(9L, superadmin()).code()).isZero();
+        verify(service).adminDemoteToUser(7L, 9L);
+    }
+
+    @Test
     @DisplayName("非法角色值 → 1001，且不触达用例")
     void invalidRoleIsRejected() {
         assertThatThrownBy(() -> controller.promoteToOps(9L, new AdminUserController.RoleCommand("SUPERADMIN"), superadmin()))

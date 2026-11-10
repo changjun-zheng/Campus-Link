@@ -68,9 +68,15 @@ export const setUserStatus = (id: number, status: 'ACTIVE' | 'BANNED') =>
 
 /**
  * 授予运营角色（F-ADMIN-001 / CR-196，仅 SUPERADMIN）：只允许 USER → OPS，幂等。
- * 目标用户须重新登录后才拿到 OPS 权限；本批不提供降级接口。
+ * 目标用户须重新登录后才拿到 OPS 权限；撤销见 `revokeOpsRole`。
  */
 export const grantOpsRole = (id: number) => put<void>(`/admin/users/${id}/role`, { role: 'OPS' })
+
+/**
+ * 撤销运营角色（CR-212，仅 SUPERADMIN）：只允许 OPS → USER，幂等；
+ * 撤销即时吊销目标旧 token，重新登录后为普通用户。
+ */
+export const revokeOpsRole = (id: number) => del<void>(`/admin/users/${id}/role`)
 
 /** 警告用户（F-ADMIN-002 / CR-209）：不改账号状态，仅发送带原因的站内通知 */
 export const warnUser = (id: number, reason: string) => post<void>(`/admin/users/${id}/warn`, { reason })
