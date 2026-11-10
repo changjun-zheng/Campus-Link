@@ -422,7 +422,8 @@ watch(userId, () => void loadAll(), { immediate: true })
               <span class="font-medium text-ink">{{ profile.reputation }}</span>
               声望
             </span>
-            <template v-if="profile.nextLevelAt !== null">
+            <!-- NON_NULL 序列化 ⇒ 满级时该字段是「缺省」而非 null，须用宽松判空 -->
+            <template v-if="profile.nextLevelAt != null">
               <div
                 class="h-1 w-24 overflow-hidden rounded-full bg-line"
                 role="progressbar"

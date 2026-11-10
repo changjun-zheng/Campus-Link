@@ -301,8 +301,9 @@ async function loadPost() {
     post.value = await getPost(postId.value)
     // 关注状态随帖拉取（CR-074）：非作者 + 已登录才查；失败静默（按钮回落「＋ 关注」）
     following.value = false
-    // 匿名帖对非作者 authorId 为 null（CR-139）：没有可关注的目标，也不该去猜
-    if (post.value.authorId !== null && auth.isLoggedIn && auth.user?.id !== post.value.authorId) {
+    // 匿名帖对非作者 authorId 为 null（CR-139）：没有可关注的目标，也不该去猜。
+    // 响应体按 NON_NULL 序列化 ⇒ 匿名时该字段是 **缺省（undefined）** 而非 null，故用 != null（宽松判空）
+    if (post.value.authorId != null && auth.isLoggedIn && auth.user?.id !== post.value.authorId) {
       getFollowState(post.value.authorId)
         .then((s) => (following.value = s.following))
         .catch(() => {})
@@ -476,7 +477,7 @@ watch(
             <!-- 作者名可点（F-ACC-002）：头像与昵称同在一个 RouterLink 里，保留 href 供中键新开 / 键盘聚焦。
                  匿名帖对非作者 authorId 为 null（CR-139）：不给链接，只显示「匿名用户」 -->
             <RouterLink
-              v-if="post.authorId !== null"
+              v-if="post.authorId != null"
               :to="`/u/${post.authorId}`"
               class="inline-flex items-center gap-1.5 hover:text-link hover:underline"
             >
@@ -499,7 +500,7 @@ watch(
               {{ post.viewCount }}
             </span>
             <el-button
-              v-if="post.authorId !== null && auth.isLoggedIn && auth.user?.id !== post.authorId"
+              v-if="post.authorId != null && auth.isLoggedIn && auth.user?.id !== post.authorId"
               link
               size="small"
               :type="following ? 'default' : 'primary'"
@@ -649,7 +650,7 @@ watch(
                   </RouterLink>
                   <!-- 匿名帖 authorId 对非作者为 null（CR-139）：不能拿它和楼层作者比对，否则会反推出楼主 -->
                   <el-tag
-                    v-if="post.authorId !== null && post.authorId === r.authorId"
+                    v-if="post.authorId != null && post.authorId === r.authorId"
                     type="primary"
                     effect="light"
                     size="small"
