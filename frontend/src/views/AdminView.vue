@@ -17,6 +17,7 @@ import {
   grantOpsRole,
   importRoster,
   listAdminTags,
+  listAuditLogs,
   listReports,
   moderatePost,
   moderateReply,
@@ -27,6 +28,7 @@ import {
   setUserStatus,
   unmuteUser,
   warnUser,
+  type AdminAuditLogVo,
   type AdminContentItemVo,
   type AdminDashboardVo,
   type AdminReportVo,
@@ -36,6 +38,7 @@ import {
   type RosterImportResultVo,
 } from '../api/admin'
 import { useAuthStore } from '../stores/auth'
+import { AUDIT_ACTION_LABELS, AUDIT_ACTIONS } from '../constants/audit'
 import { formatRelativeTime, formatTime } from '../utils/time'
 import DonutChart from '../components/DonutChart.vue'
 import PageHeader from '../components/PageHeader.vue'
@@ -46,7 +49,9 @@ const auth = useAuthStore()
 const isSuperadmin = computed(() => auth.user?.role === 'SUPERADMIN')
 const canAccessAdmin = computed(() => isSuperadmin.value || auth.user?.role === 'OPS')
 
-const tab = ref<'reports' | 'moderation' | 'dashboard' | 'tags' | 'review' | 'roster'>('reports')
+const tab = ref<
+  'reports' | 'moderation' | 'dashboard' | 'tags' | 'review' | 'roster' | 'audit'
+>('reports')
 
 /* ─── 工单 ─── */
 const reportStatus = ref<'PENDING' | 'PROCESSING' | 'CLOSED' | ''>('')
@@ -706,6 +711,59 @@ async function onReviewModerate(item: ReviewQueueItemVo) {
   }
 }
 
+/* ─── 操作审计（CR-215）：仅 SUPERADMIN；进入 Tab 才加载，只读 ─── */
+const auditAction = ref('')
+const auditActorId = ref('')
+const auditDays = ref<7 | 30 | 90 | '' | undefined>('')
+const auditItems = ref<AdminAuditLogVo[]>([])
+const auditTotal = ref(0)
+const auditPage = ref(1)
+const auditSize = 20
+const auditLoading = ref(false)
+const auditError = ref('')
+
+async function loadAuditLogs(next = auditPage.value) {
+  auditLoading.value = true
+  auditError.value = ''
+  try {
+    const actorKeyword = auditActorId.value.trim()
+    const actorId = actorKeyword === '' ? undefined : Number(actorKeyword)
+    if (actorId !== undefined && (!Number.isInteger(actorId) || actorId < 1)) {
+      auditItems.value = []
+      auditTotal.value = 0
+      auditError.value = '操作者 id 需为正整数'
+      return
+    }
+    const res = await listAuditLogs({
+      action: auditAction.value.trim() || undefined,
+      actorId,
+      days: auditDays.value === '' ? undefined : auditDays.value,
+      page: next,
+      size: auditSize,
+    })
+    auditItems.value = res.list
+    auditTotal.value = res.total
+    auditPage.value = res.page
+  } catch (e) {
+    auditItems.value = []
+    auditTotal.value = 0
+    auditError.value = e instanceof Error ? e.message : '审计记录加载失败'
+  } finally {
+    auditLoading.value = false
+  }
+}
+
+function onAuditSearch() {
+  void loadAuditLogs(1)
+}
+
+function resetAuditFilters() {
+  auditAction.value = ''
+  auditActorId.value = ''
+  auditDays.value = ''
+  void loadAuditLogs(1)
+}
+
 /* ─── 名册导入（F-ACC-004 / CR-210）：仅 SUPERADMIN；CSV 原文提交，后端哈希入库并写审计 ─── */
 const rosterFileEl = ref<HTMLInputElement | null>(null)
 const rosterFileName = ref('')
@@ -833,6 +891,7 @@ watch(tab, () => {
   if (tab.value === 'moderation' && !contents.value.length) loadContents()
   if (tab.value === 'tags' && isSuperadmin.value && !tags.value.length) loadTags()
   if (tab.value === 'review' && !reviewItems.value.length) loadReviewQueue()
+  if (tab.value === 'audit' && isSuperadmin.value && !auditItems.value.length) loadAuditLogs()
 })
 onMounted(() => {
   if (canAccessAdmin.value) loadReports()
@@ -865,7 +924,7 @@ function goLogin() {
     <!-- 页头（CR-203）：本页原先没有标题，直接以 Tab 起头；补上与其余页面一致的页头 -->
     <PageHeader
       title="管理后台"
-      :description="isSuperadmin ? '举报工单、内容处置、运营数据、标签与名册管理；仅运营 / 超级管理员可见' : '举报工单、内容处置与内容巡查；仅运营 / 超级管理员可见'"
+      :description="isSuperadmin ? '举报工单、内容处置、运营数据、标签、名册与操作审计；仅运营 / 超级管理员可见' : '举报工单、内容处置与内容巡查；仅运营 / 超级管理员可见'"
     >
       <el-tabs v-model="tab">
         <el-tab-pane label="举报工单" name="reports" />
@@ -874,6 +933,7 @@ function goLogin() {
         <el-tab-pane v-if="isSuperadmin" label="标签管理" name="tags" />
         <el-tab-pane label="内容巡查" name="review" />
         <el-tab-pane v-if="isSuperadmin" label="名册导入" name="roster" />
+        <el-tab-pane v-if="isSuperadmin" label="操作审计" name="audit" />
       </el-tabs>
     </PageHeader>
 
@@ -1612,6 +1672,103 @@ function goLogin() {
         </template>
         <template v-else>运营可处理举报工单、查看内容巡查与检索结果；处置与封禁由超级管理员执行。</template>
       </p>
+    </el-card>
+
+    <!-- ─── 操作审计（CR-215）：仅 SUPERADMIN；只读，进入 Tab 才加载 ─── -->
+    <el-card v-if="isSuperadmin" v-show="tab === 'audit'" shadow="never">
+      <template #header>
+        <div class="flex flex-wrap items-baseline justify-between gap-2">
+          <span class="font-medium">操作审计</span>
+          <span class="text-caption text-ink-meta">
+            只读；动作可按候选搜索，也可直接输入未收录的动作名
+          </span>
+        </div>
+      </template>
+
+      <div class="mb-4 flex flex-wrap items-center gap-2">
+        <el-select
+          v-model="auditAction"
+          filterable
+          allow-create
+          clearable
+          default-first-option
+          placeholder="动作（如 USER_BAN）"
+          aria-label="审计动作"
+          style="width: 220px"
+        >
+          <el-option
+            v-for="action in AUDIT_ACTIONS"
+            :key="action"
+            :label="AUDIT_ACTION_LABELS[action]"
+            :value="action"
+          />
+        </el-select>
+        <el-input
+          v-model="auditActorId"
+          placeholder="操作者 id（正整数）"
+          clearable
+          style="width: 180px"
+          @keyup.enter="onAuditSearch"
+        />
+        <el-select
+          v-model="auditDays"
+          aria-label="时间范围"
+          placeholder="全部时间"
+          clearable
+          style="width: 140px"
+        >
+          <el-option label="近 7 天" :value="7" />
+          <el-option label="近 30 天" :value="30" />
+          <el-option label="近 90 天" :value="90" />
+        </el-select>
+        <el-button type="primary" :loading="auditLoading" @click="onAuditSearch">查询</el-button>
+        <el-button @click="resetAuditFilters">重置</el-button>
+      </div>
+
+      <el-skeleton v-if="auditLoading" :rows="4" animated />
+      <div v-else-if="auditError" class="py-2">
+        <el-alert type="error" :closable="false" show-icon :title="auditError">
+          <el-button size="small" @click="loadAuditLogs()">重新加载</el-button>
+        </el-alert>
+      </div>
+      <template v-else>
+        <el-table :data="auditItems" empty-text="没有匹配的审计记录">
+          <el-table-column label="时间" width="160">
+            <template #default="{ row }">{{ formatTime(row.createdAt) }}</template>
+          </el-table-column>
+          <el-table-column label="操作者" width="150" show-overflow-tooltip>
+            <template #default="{ row }">
+              <span v-if="row.actorId == null">{{ row.actorNickname }}</span>
+              <span v-else>#{{ row.actorId }} {{ row.actorNickname }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="动作" width="150">
+            <template #default="{ row }">
+              <el-tag size="small" effect="plain">
+                {{ AUDIT_ACTION_LABELS[row.action] ?? row.action }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="对象" width="140">
+            <template #default="{ row }">
+              <span v-if="row.targetType">
+                {{ row.targetType }}<template v-if="row.targetId != null"> #{{ row.targetId }}</template>
+              </span>
+              <span v-else>—</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="detail" label="详情" min-width="240" show-overflow-tooltip />
+        </el-table>
+        <div v-if="auditTotal > auditSize" class="flex justify-center pt-3">
+          <el-pagination
+            layout="prev, pager, next, total"
+            :total="auditTotal"
+            :page-size="auditSize"
+            :current-page="auditPage"
+            @current-change="(next: number) => loadAuditLogs(next)"
+          />
+        </div>
+      </template>
     </el-card>
 
     <!-- 工单处置确认弹窗：CR-103 接入 ESLint 时检出「按钮点了没反应」——

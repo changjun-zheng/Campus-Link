@@ -128,6 +128,37 @@ export interface AdminDashboardVo {
 export const getAdminDashboard = () => get<AdminDashboardVo>('/admin/dashboard')
 
 /**
+ * 操作审计（CR-215，仅 SUPERADMIN）：`audit_logs` 只读查询，按时间倒序。
+ *
+ * `actorNickname` 由服务端 LEFT JOIN users 给出——`actorId` 为空时是「系统」，
+ * 账号行缺失时是「已注销用户」，前端不自行推断；`detail` 原样展示（列宽 2048）。
+ */
+export interface AdminAuditLogVo {
+  id: number
+  actorId?: number | null
+  actorNickname: string
+  action: string
+  targetType?: string | null
+  targetId?: number | null
+  detail?: string | null
+  createdAt: string
+}
+
+/** 审计分页：action 精确匹配、actorId 精确匹配、days 只接受 7 / 30 / 90 */
+export const listAuditLogs = (
+  params: { action?: string; actorId?: number; days?: 7 | 30 | 90; page?: number; size?: number } = {},
+) => {
+  const query = new URLSearchParams()
+  if (params.action) query.set('action', params.action)
+  if (params.actorId != null) query.set('actorId', String(params.actorId))
+  if (params.days) query.set('days', String(params.days))
+  query.set('page', String(params.page ?? 1))
+  query.set('size', String(params.size ?? 20))
+  return get<PageVo<AdminAuditLogVo>>(`/admin/audit-logs?${query.toString()}`)
+}
+
+
+/**
  * 管理端标签（F-ADMIN-004 标签侧 / CR-132，仅 SUPERADMIN）。
  *
  * ⚠️ `useCount` 是**累计挂载次数**（`tags.use_count`，软删帖子不回退），不是"当前可见帖子数"；

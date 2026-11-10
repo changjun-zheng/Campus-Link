@@ -2,13 +2,14 @@
 
 | 文档信息 | 内容 |
 |---------|------|
-| 版本 | v1.8 |
+| 版本 | v1.9 |
 | 状态 | 已归档（设计门行动项 **A3-5** 交付物，[CR-035](../变更日志/变更台账.md)） |
 | 维护人 | 技术负责人（发起人兼任） |
-| 最后更新 | 2026-11-08 |
+| 最后更新 | 2026-11-10 |
 
 > **变更记录**
 >
+> - **v1.9（2026-11-10）**——同步 `V14__audit_log_indexes.sql`（[CR-215](../变更日志/变更台账.md#cr-215) 操作审计只读查询）：`audit_logs` 新增 `idx_audit_created (created_at)` 与 `idx_audit_action (action, created_at)`；表结构 / 字段零变化。§4 索引清单与 §1 事实源同步。
 > - **v1.8（2026-11-08）**——同步 `V13__user_mute_and_notification_message.sql`（[CR-209](../变更日志/变更台账.md#cr-209) 用户警告与禁言）：`users` 新增 `muted_until DATETIME NULL`，`notifications` 新增 `message VARCHAR(255) NULL`。§2 两个实体补列、§3 表职责补一句、新增 §8 说明；**表数仍 20 张、索引不变**，事实源扩为 V1~V13。
 
 > - **v1.5（2026-10-25）**——同步 `V9__post_anonymous.sql`（[CR-139](../变更日志/变更台账.md#cr-139) 匿名发帖）：`posts` 新增 `is_anonymous TINYINT(1) NOT NULL DEFAULT 0`。§2 `POSTS` 实体补该列、§3 `posts` 职责补一句；**表数仍 18 张、索引不变、不改任何结构**，事实源扩为 V1~V9。
@@ -21,7 +22,7 @@
 ## 1. 目的、事实源与边界
 
 - **目的**：为设计门行动项 A3-5 提供两件东西——① 现有数据模型的**实体关系可视化**（文字定义在[技术方案 §4](技术方案.md)，本图为可视化对照）；② 按 PRD 容量基线的**数据量级与索引水位预估**，作为测试阶段造数规模与发布阶段容量验收的参考。
-- **事实源**：`backend/src/main/resources/db/migration/` 下的**全部迁移**（V1 基线 12 张表 + `V2__seed_boards.sql` 仅种入 6 个版块数据、无结构 + `V3__my_content_indexes.sql` 两个作者维度索引 + `V4__post_views_and_follows.sql` 给 `posts` 加两列并新建 `follows` + `V5__user_blocks.sql` 新建 `user_blocks` + `V6__direct_messages.sql` 新建 `conversations` / `messages` + `V7__post_content_fulltext.sql` 给 `posts` 加正文 FULLTEXT 索引 + `V8__teams.sql` 新建 `teams` / `team_members` + `V9__post_anonymous.sql` 给 `posts` 加 `is_anonymous` + `V10__posts_hot_list_index.sql` 热榜复合索引 + `V11__notification_outbox.sql` 通知 Outbox／消费凭证两表 + `V12__post_images.sql` 帖子图片 + `V13__user_mute_and_notification_message.sql` 给 `users` 加 `muted_until`、给 `notifications` 加 `message`；**已执行迁移不可改**）。**表结构、字段、索引以迁移文件为准**——本文与其冲突时，以迁移文件为准并须修正本文。
+- **事实源**：`backend/src/main/resources/db/migration/` 下的**全部迁移**（V1 基线 12 张表 + `V2__seed_boards.sql` 仅种入 6 个版块数据、无结构 + `V3__my_content_indexes.sql` 两个作者维度索引 + `V4__post_views_and_follows.sql` 给 `posts` 加两列并新建 `follows` + `V5__user_blocks.sql` 新建 `user_blocks` + `V6__direct_messages.sql` 新建 `conversations` / `messages` + `V7__post_content_fulltext.sql` 给 `posts` 加正文 FULLTEXT 索引 + `V8__teams.sql` 新建 `teams` / `team_members` + `V9__post_anonymous.sql` 给 `posts` 加 `is_anonymous` + `V10__posts_hot_list_index.sql` 热榜复合索引 + `V11__notification_outbox.sql` 通知 Outbox／消费凭证两表 + `V12__post_images.sql` 帖子图片 + `V13__user_mute_and_notification_message.sql` 给 `users` 加 `muted_until`、给 `notifications` 加 `message` + `V14__audit_log_indexes.sql` 给 `audit_logs` 加两条索引（[CR-215](../变更日志/变更台账.md#cr-215)）；**已执行迁移不可改**）。**表结构、字段、索引以迁移文件为准**——本文与其冲突时，以迁移文件为准并须修正本文。
 - **边界**：本文**不引入任何表结构 / 索引变更**；量级数字均为工程估算（见 §5 口径），**非性能承诺**——性能承诺以 PRD §4 的 P90 / P95 指标为准，由测试阶段实测验收。
 - **维护约定**：后续新增 `V<n>__*.sql` 结构变更时，**该 CR 必须同步更新本文**（§2 图、§3 表清单、§4 索引清单、§5 水位），否则视为该 CR 的文档同步遗漏。
 
@@ -271,7 +272,7 @@ erDiagram
 | `favorites` | PK `(user_id, post_id)` | 复合主键 | 收藏去重 + "我的收藏" |
 | `notifications` | `idx_notifications_user (user_id, is_read, created_at)` | 复合 | 通知列表 / 未读数（未读计数可上 Redis 缓存，见技术方案 §7.2） |
 | `reports` | `idx_reports_target (target_type, target_id, created_at)`；`idx_reports_status (status, created_at)` | 复合 ×2 | 24h 去重查询；处置台队列 |
-| `audit_logs` | `idx_audit_actor (actor_id, created_at)` | 复合 | 按操作人审计回溯 |
+| `audit_logs` | `idx_audit_actor (actor_id, created_at)`；`idx_audit_created (created_at)`；`idx_audit_action (action, created_at)` | 复合 ×3 | 按操作人审计回溯；后台默认按时间倒序分页；按动作筛选（后两条 V14 / [CR-215](../变更日志/变更台账.md#cr-215)） |
 | `follows` | PK `(follower_id, followee_id)`；`idx_followee (followee_id)` | 复合主键 + 普通 | 关注去重 / "我关注的人"；`idx_followee` 支撑粉丝数与粉丝列表（V4 / [CR-074](../变更日志/变更台账.md)） |
 | `user_blocks` | PK `(blocker_id, blocked_id)`；`idx_blocked (blocked_id)` | 复合主键 + 普通 | 拉黑去重 / 屏蔽过滤；`idx_blocked` 支撑反向查询（V5 / [CR-129](../变更日志/变更台账.md)，本期未消费） |
 | `conversations` | `uk_conversations_pair (pair_low_id, pair_high_id)`；`idx_conversations_low (pair_low_id, last_message_at)`；`idx_conversations_high (pair_high_id, last_message_at)` | UNIQUE + 复合 ×2 | 会话去重 / 会话列表按最后消息时间倒序（两侧各一条，V6 / [CR-135](../变更日志/变更台账.md#cr-135)） |
