@@ -82,7 +82,7 @@ class ForumQueryApplicationServicePublicTimelineTest {
         service = new ForumQueryApplicationService(boardRepository, postRepository, postSearchGateway, replyRepository,
                 likeRepository, favoriteRepository, accountApplicationService, userBlockApplicationService,
                 followApplicationService, reportRepository, new MarkdownRenderer(), new AppProperties());
-        lenient().when(reportRepository.findPendingTargetsByReporter(anyLong()))
+        lenient().when(reportRepository.findUnclosedTargetsByReporter(anyLong()))
                 .thenReturn(com.campuslink.module.forum.domain.model.ReportedTargets.EMPTY);
     }
 

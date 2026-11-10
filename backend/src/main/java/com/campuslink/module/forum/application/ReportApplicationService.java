@@ -50,19 +50,41 @@ public class ReportApplicationService {
             throw new ApiException(ResultCode.REPORT_DUPLICATED);
         }
         Report report = reportRepository.save(new Report(null, reporterId, targetType, targetId, reason,
-                detail, "PENDING", null, null, Instant.now(), null));
+                detail, Report.STATUS_PENDING, null, null, Instant.now(), null));
         auditService.record(reporterId, "REPORT_SUBMIT", targetType, targetId, "reportId=" + report.id());
         return report;
     }
 
-    /** 工单分页（运营）：status 可选 PENDING / CLOSED，缺省全部 */
+    /** 工单分页（运营）：status 可选 PENDING / PROCESSING / CLOSED，缺省全部 */
     public PageResult<Report> adminPage(String status, int page, int size) {
         return reportRepository.findPage(status, Math.max(page, 1), Math.min(Math.max(size, 1), 100));
     }
 
     /**
+     * 认领工单（CR-214 / F-ADMIN-003）：{@code PENDING → PROCESSING}，写 handler 并审计。
+     *
+     * <p>幂等语义：工单已是 PROCESSING / CLOSED 时直接 200 返回，不再写库、不重复审计——
+     * 与 {@link #close} 的「已闭环重复处理」同一条纪律；并发两人同时认领时只有一个条件 UPDATE 生效，
+     * 输的一方同样静默收场（handler 保持先到者）。
+     */
+    @Transactional
+    public void claim(long operatorId, long reportId) {
+        Report report = reportRepository.findById(reportId)
+                .orElseThrow(() -> new ApiException(ResultCode.NOT_FOUND));
+        if (!report.isClaimable()) {
+            return;
+        }
+        if (!reportRepository.claim(reportId, operatorId)) {
+            return;
+        }
+        auditService.record(operatorId, "REPORT_CLAIM", report.targetType(), report.targetId(),
+                "reportId=" + reportId);
+    }
+
+    /**
      * 工单处理（运营 / 超管）：REMOVE = 对目标执行处置（帖子 / 楼层下架走 CR-066 定向 UPDATE，
-     * 用户走封禁），DISMISS = 驳回；随后工单闭环 + 审计。重复处理（已 CLOSED）幂等 200、零审计。
+     * 用户走封禁），DISMISS = 驳回；随后工单闭环 + 审计。待处理可直接闭环（不必先认领），
+     * 处理中也可直接闭环；重复处理（已 CLOSED）幂等 200、零审计。
      */
     @Transactional
     public void close(long operatorId, long reportId, String action, String note) {

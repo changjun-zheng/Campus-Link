@@ -9,6 +9,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import {
+  claimReport,
   closeReport,
   deleteAdminTag,
   getAdminDashboard,
@@ -48,7 +49,7 @@ const canAccessAdmin = computed(() => isSuperadmin.value || auth.user?.role === 
 const tab = ref<'reports' | 'moderation' | 'dashboard' | 'tags' | 'review' | 'roster'>('reports')
 
 /* ─── 工单 ─── */
-const reportStatus = ref<'PENDING' | 'CLOSED' | ''>('')
+const reportStatus = ref<'PENDING' | 'PROCESSING' | 'CLOSED' | ''>('')
 const reports = ref<AdminReportVo[]>([])
 const reportTotal = ref(0)
 const reportPage = ref(1)
@@ -69,6 +70,16 @@ const REASON_LABELS: Record<string, string> = {
   OTHER: '其他',
 }
 const TARGET_LABELS: Record<string, string> = { POST: '帖子', REPLY: '回复', USER: '用户' }
+const REPORT_STATUS_LABELS: Record<string, string> = {
+  PENDING: '待处理',
+  PROCESSING: '处理中',
+  CLOSED: '已闭环',
+}
+const REPORT_STATUS_TAG_TYPES: Record<string, 'warning' | 'primary' | 'info'> = {
+  PENDING: 'warning',
+  PROCESSING: 'primary',
+  CLOSED: 'info',
+}
 
 async function loadReports() {
   reportsLoading.value = true
@@ -100,6 +111,19 @@ function openClose(r: AdminReportVo, action: 'REMOVE' | 'DISMISS') {
   closeAction.value = action
   closeNote.value = ''
   closeDialogVisible.value = true
+}
+
+async function claimReportRow(r: AdminReportVo) {
+  processingId.value = r.id
+  try {
+    await claimReport(r.id)
+    ElMessage.success('已认领，工单进入处理中')
+    await loadReports()
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '认领失败')
+  } finally {
+    processingId.value = null
+  }
 }
 
 async function confirmClose() {
@@ -522,6 +546,7 @@ const dashboardKpis = computed(() => {
       total: d.reportTotal,
       items: [
         { label: '待处理', value: d.reportPending, color: warning },
+        { label: '处理中', value: d.reportProcessing, color: primary },
         { label: '已闭环', value: d.reportClosed, color: success },
       ],
       extra: null,
@@ -1202,6 +1227,7 @@ function goLogin() {
           <el-radio-group v-model="reportStatus" size="small">
             <el-radio-button value="">全部</el-radio-button>
             <el-radio-button value="PENDING">待处理</el-radio-button>
+            <el-radio-button value="PROCESSING">处理中</el-radio-button>
             <el-radio-button value="CLOSED">已闭环</el-radio-button>
           </el-radio-group>
         </div>
@@ -1223,7 +1249,7 @@ function goLogin() {
       </div>
 
       <p v-else-if="!reports.length" class="py-10 text-center text-body text-ink-regular">
-        暂无{{ reportStatus === 'PENDING' ? '待处理' : '' }}工单
+        暂无{{ reportStatus ? REPORT_STATUS_LABELS[reportStatus] : '' }}工单
       </p>
 
       <template v-else>
@@ -1234,8 +1260,8 @@ function goLogin() {
             class="border-b-[0.5px] border-divider px-5 py-3 transition-colors duration-fast ease-standard last:border-b-0"
           >
             <div class="flex flex-wrap items-center gap-2 text-caption text-ink-meta">
-              <el-tag size="small" :type="r.status === 'PENDING' ? 'warning' : 'info'" effect="light">
-                {{ r.status === 'PENDING' ? '待处理' : '已闭环' }}
+              <el-tag size="small" :type="REPORT_STATUS_TAG_TYPES[r.status]" effect="light">
+                {{ REPORT_STATUS_LABELS[r.status] || r.status }}
               </el-tag>
               <span class="text-ink-regular">{{ TARGET_LABELS[r.targetType] || r.targetType }}</span>
               <span>#{{ r.targetId }}</span>
@@ -1256,7 +1282,18 @@ function goLogin() {
             <p v-if="r.status === 'CLOSED'" class="mt-1 text-note text-ink-meta">
               处理结论：{{ r.resolution || '—' }}
             </p>
-            <div v-if="r.status === 'PENDING'" class="mt-2 flex gap-2">
+            <p v-else-if="r.handlerId" class="mt-1 text-note text-ink-meta">
+              处理人 #{{ r.handlerId }}
+            </p>
+            <div v-if="r.status !== 'CLOSED'" class="mt-2 flex gap-2">
+              <el-button
+                v-if="r.status === 'PENDING'"
+                size="small"
+                :loading="processingId === r.id"
+                @click="claimReportRow(r)"
+              >
+                认领
+              </el-button>
               <el-button
                 type="danger"
                 size="small"

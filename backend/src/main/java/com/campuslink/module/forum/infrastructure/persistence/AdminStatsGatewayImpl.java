@@ -27,7 +27,8 @@ public class AdminStatsGatewayImpl implements AdminStatsGateway {
     @Override
     public ReportStats reportStats() {
         ReportStatsRow row = adminStatsMapper.reportStats();
-        return new ReportStats(value(row.getTotal()), value(row.getPending()), value(row.getClosed()));
+        return new ReportStats(value(row.getTotal()), value(row.getPending()),
+                value(row.getProcessing()), value(row.getClosed()));
     }
 
     private static ContentStats toContent(ContentStatsRow row) {

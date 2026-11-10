@@ -35,8 +35,9 @@ import static org.mockito.Mockito.when;
  *
  * <p>守三条口径：① 24h 去重的 WHERE 必须同时含举报人 / 目标类型 / 目标 id / 时间窗起点，
  * 少任何一条都会退化成「全站维度去重」；② 运营分页的 status 是**可选**条件，空白串不得拼进 WHERE
- * （否则「全部」页会变成「status=''」的空页）；③ 闭环 UPDATE 的 WHERE 带 {@code status='PENDING'}——
- * 这是「两次运营同时处理同一工单只生效一次」的唯一依据，返回 false 时应用层必须跳过审计。
+ * （否则「全部」页会变成「status=''」的空页）；③ 认领与闭环 UPDATE 的 WHERE 都带状态守卫——
+ * 认领只认 {@code PENDING}、闭环认 {@code PENDING / PROCESSING}——这是「两个运营同时操作同一工单
+ * 只生效一次」的唯一依据，返回 false 时应用层必须跳过审计（CR-214）。
  *
  * <p>本类不证明数据库执行结果：断言落在 wrapper 的 SQL 片段与参数值上。
  */
@@ -109,9 +110,9 @@ class ReportRepositoryImplTest {
     }
 
     @Test
-    @DisplayName("待处理举报目标：WHERE 带举报人 + PENDING，只归并 POST / REPLY，USER 类不入集合（CR-140）")
+    @DisplayName("未闭环举报目标：WHERE 带举报人 + PENDING/PROCESSING，只归并 POST / REPLY，USER 类不入集合（CR-140 / CR-214）")
     @SuppressWarnings("unchecked")
-    void findPendingTargetsGroupsPostAndReplyOnly() {
+    void findUnclosedTargetsGroupsPostAndReplyOnly() {
         ReportDO post = doRow();
         ReportDO reply = doRow();
         reply.setTargetType(Report.TARGET_REPLY);
@@ -121,7 +122,7 @@ class ReportRepositoryImplTest {
         user.setTargetId(77L);
         when(reportMapper.selectList(any(Wrapper.class))).thenReturn(List.of(post, reply, user));
 
-        ReportedTargets targets = repository.findPendingTargetsByReporter(REPORTER_ID);
+        ReportedTargets targets = repository.findUnclosedTargetsByReporter(REPORTER_ID);
 
         assertThat(targets.postIds()).containsExactly(TARGET_ID);
         assertThat(targets.replyIds()).containsExactly(8L);
@@ -130,16 +131,16 @@ class ReportRepositoryImplTest {
         verify(reportMapper).selectList(captor.capture());
         LambdaQueryWrapper<ReportDO> query = (LambdaQueryWrapper<ReportDO>) captor.getValue();
         assertThat(query.getSqlSegment()).contains("reporter_id", "status");
-        assertThat(query.getParamNameValuePairs().values()).contains(REPORTER_ID, "PENDING");
+        assertThat(query.getParamNameValuePairs().values()).contains(REPORTER_ID, "PENDING", "PROCESSING");
     }
 
     @Test
-    @DisplayName("待处理举报目标：空结果与匿名（null 举报人）均回 EMPTY，不查库")
-    void findPendingTargetsReturnsEmpty() {
+    @DisplayName("未闭环举报目标：空结果与匿名（null 举报人）均回 EMPTY，不查库")
+    void findUnclosedTargetsReturnsEmpty() {
         when(reportMapper.selectList(any(Wrapper.class))).thenReturn(List.of());
-        assertThat(repository.findPendingTargetsByReporter(REPORTER_ID)).isSameAs(ReportedTargets.EMPTY);
+        assertThat(repository.findUnclosedTargetsByReporter(REPORTER_ID)).isSameAs(ReportedTargets.EMPTY);
 
-        assertThat(repository.findPendingTargetsByReporter(null)).isSameAs(ReportedTargets.EMPTY);
+        assertThat(repository.findUnclosedTargetsByReporter(null)).isSameAs(ReportedTargets.EMPTY);
         verify(reportMapper, org.mockito.Mockito.times(1)).selectList(any(Wrapper.class));
     }
 
@@ -179,9 +180,36 @@ class ReportRepositoryImplTest {
     }
 
     @Test
-    @DisplayName("闭环：WHERE 带 id + status=PENDING（并发只生效一次），SET 写 CLOSED / resolution / handler / closed_at")
+    @DisplayName("认领：WHERE 带 id + status=PENDING（并发只认领一次），SET 写 PROCESSING / handler_id")
     @SuppressWarnings("unchecked")
-    void closeIsGuardedByPendingStatus() {
+    void claimIsGuardedByPendingStatus() {
+        when(reportMapper.update(isNull(), any(Wrapper.class))).thenReturn(1);
+
+        assertThat(repository.claim(REPORT_ID, HANDLER_ID)).isTrue();
+
+        ArgumentCaptor<Wrapper<ReportDO>> captor = ArgumentCaptor.forClass(Wrapper.class);
+        verify(reportMapper).update(isNull(), captor.capture());
+        LambdaUpdateWrapper<ReportDO> update = (LambdaUpdateWrapper<ReportDO>) captor.getValue();
+
+        assertThat(update.getSqlSet()).contains("status", "handler_id");
+        assertThat(update.getSqlSegment()).contains("id", "status");
+        assertThat(update.getParamNameValuePairs().values())
+                .contains("PENDING", "PROCESSING", HANDLER_ID);
+    }
+
+    @Test
+    @DisplayName("认领返回 false（工单已被别人先认领 / 已闭环）：调用方据此幂等返回、不写审计")
+    @SuppressWarnings("unchecked")
+    void claimReturnsFalseWhenNoRowMatches() {
+        when(reportMapper.update(isNull(), any(Wrapper.class))).thenReturn(0);
+
+        assertThat(repository.claim(REPORT_ID, HANDLER_ID)).isFalse();
+    }
+
+    @Test
+    @DisplayName("闭环：WHERE 带 id + status IN (PENDING, PROCESSING)（并发只生效一次），SET 写 CLOSED / resolution / handler / closed_at")
+    @SuppressWarnings("unchecked")
+    void closeIsGuardedByUnclosedStatus() {
         when(reportMapper.update(isNull(), any(Wrapper.class))).thenReturn(1);
 
         assertThat(repository.close(REPORT_ID, "REMOVE", HANDLER_ID)).isTrue();
@@ -193,7 +221,7 @@ class ReportRepositoryImplTest {
         assertThat(update.getSqlSet()).contains("status", "resolution", "handler_id", "closed_at");
         assertThat(update.getSqlSegment()).contains("id", "status");
         assertThat(update.getParamNameValuePairs().values())
-                .contains("PENDING", "CLOSED", "REMOVE", HANDLER_ID);
+                .contains("PENDING", "PROCESSING", "CLOSED", "REMOVE", HANDLER_ID);
         assertThat(update.getParamNameValuePairs().values().stream()
                 .filter(Instant.class::isInstance)).isNotEmpty();
     }

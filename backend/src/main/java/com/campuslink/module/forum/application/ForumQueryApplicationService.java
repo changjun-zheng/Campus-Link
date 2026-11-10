@@ -550,13 +550,13 @@ public class ForumQueryApplicationService {
     }
 
     /**
-     * 本人待处理举报目标（F-SAFE-002 / CR-140）：匿名不查库；登录态一次取齐帖子 / 楼层两组 id。
+     * 本人未闭环举报目标（F-SAFE-002 / CR-140 / CR-214）：匿名不查库；登录态一次取齐帖子 / 楼层两组 id。
      *
-     * <p>只返回工单 {@code PENDING} 的目标——闭环后（驳回）内容恢复可见；处置（下架 / 封禁）的内容
+     * <p>待处理与处理中都算未闭环——驳回后内容恢复可见；处置（下架 / 封禁）的内容
      * 本身已由状态机挡住，不靠本集合。
      */
     private ReportedTargets reportedTargetsOf(Long viewerId) {
-        return viewerId == null ? ReportedTargets.EMPTY : reportRepository.findPendingTargetsByReporter(viewerId);
+        return viewerId == null ? ReportedTargets.EMPTY : reportRepository.findUnclosedTargetsByReporter(viewerId);
     }
 
     /** Shared viewer-specific gate for post content and its local images. */

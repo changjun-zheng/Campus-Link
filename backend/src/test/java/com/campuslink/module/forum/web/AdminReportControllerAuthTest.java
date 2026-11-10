@@ -74,6 +74,32 @@ class AdminReportControllerAuthTest {
     }
 
     @Test
+    @DisplayName("匿名认领工单 → 4001，且不触达用例")
+    void anonymousClaimIsUnauthorized() {
+        assertThatThrownBy(() -> controller.claim(1L, null))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_LOGGED_IN));
+        verify(service, never()).claim(anyLong(), anyLong());
+    }
+
+    @Test
+    @DisplayName("普通用户认领工单 → 4002，且不触达用例")
+    void ordinaryUserClaimIsForbidden() {
+        assertThatThrownBy(() -> controller.claim(1L, auth("ROLE_USER")))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.FORBIDDEN));
+        verify(service, never()).claim(anyLong(), anyLong());
+    }
+
+    @Test
+    @DisplayName("OPS 认领工单 → 200，操作人取自 principal")
+    void opsClaimPassesThrough() {
+        assertThat(controller.claim(1L, auth("ROLE_OPS")).code()).isZero();
+
+        verify(service).claim(8L, 1L);
+    }
+
+    @Test
     @DisplayName("匿名处理工单 → 4001，且不触达用例")
     void anonymousCloseIsUnauthorized() {
         assertThatThrownBy(() -> controller.close(1L, new AdminReportController.CloseCommand("DISMISS", "误报"), null))

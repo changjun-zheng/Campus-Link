@@ -18,14 +18,14 @@ public interface AdminStatsGateway {
     /** 楼层组：与帖子组同形状、同口径 */
     ContentStats replyStats(Instant todayStart);
 
-    /** 举报组：全部工单（含待处理与已闭环） */
+    /** 举报组：全部工单（待处理 + 处理中 + 已闭环） */
     ReportStats reportStats();
 
     /** 内容组（帖子 / 楼层共用）：total 只含未删内容 */
     record ContentStats(long total, long published, long removed, long todayCreated) {
     }
 
-    /** 举报组：total = pending + closed */
-    record ReportStats(long total, long pending, long closed) {
+    /** 举报组：total = pending + processing + closed（CR-214 起有「处理中」） */
+    record ReportStats(long total, long pending, long processing, long closed) {
     }
 }

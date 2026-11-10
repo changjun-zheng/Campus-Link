@@ -8,7 +8,7 @@ export interface AdminReportVo {
   targetId: number
   reason: string
   detail?: string
-  status: 'PENDING' | 'CLOSED'
+  status: 'PENDING' | 'PROCESSING' | 'CLOSED'
   resolution?: string
   handlerId?: number
   createdAt: string
@@ -28,6 +28,9 @@ export const listReports = (opts: { status?: string; page?: number; size?: numbe
   if (opts.status) query.set('status', opts.status)
   return get<PageVo<AdminReportVo>>(`/admin/reports?${query.toString()}`)
 }
+
+/** 认领工单（CR-214）：PENDING → PROCESSING 并记录处理人；已处理中 / 已闭环时幂等 200 */
+export const claimReport = (id: number) => post<void>(`/admin/reports/${id}/claim`)
 
 /** 工单处理：action=REMOVE 联动目标处置（下架/封禁），DISMISS 驳回；note 为处理结论 */
 export const closeReport = (id: number, action: 'REMOVE' | 'DISMISS', note?: string) =>
@@ -117,6 +120,7 @@ export interface AdminDashboardVo {
   replyTodayCreated: number
   reportTotal: number
   reportPending: number
+  reportProcessing: number
   reportClosed: number
 }
 

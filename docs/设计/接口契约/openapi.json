@@ -4635,6 +4635,93 @@
         ]
       }
     },
+    "/api/v1/admin/reports/{id}/claim": {
+      "post": {
+        "tags": [
+          "admin-report"
+        ],
+        "summary": "认领工单（OPS / SUPERADMIN，CR-214）：PENDING → PROCESSING 并记录处理人；已处理中 / 已闭环时幂等 200",
+        "operationId": "claim",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseVoid"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数错误（1001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未登录（4001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "无权限（4002）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "资源不存在（3001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "系统繁忙，请稍后再试（9999）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/v1/users/{targetId}/following": {
       "get": {
         "tags": [
@@ -6765,7 +6852,7 @@
         "tags": [
           "admin-report"
         ],
-        "summary": "工单分页（OPS / SUPERADMIN）：status 可选 PENDING / CLOSED，缺省全部",
+        "summary": "工单分页（OPS / SUPERADMIN）：status 可选 PENDING / PROCESSING / CLOSED，缺省全部",
         "operationId": "page",
         "parameters": [
           {
@@ -10019,6 +10106,10 @@
             "format": "int64"
           },
           "reportPending": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "reportProcessing": {
             "type": "integer",
             "format": "int64"
           },

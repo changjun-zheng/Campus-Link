@@ -40,6 +40,7 @@ public interface AdminStatsMapper {
     @Select("""
             SELECT COUNT(*) AS total,
                    COALESCE(SUM(status = 'PENDING'), 0) AS pending,
+                   COALESCE(SUM(status = 'PROCESSING'), 0) AS processing,
                    COALESCE(SUM(status = 'CLOSED'), 0) AS closed
             FROM reports
             """)

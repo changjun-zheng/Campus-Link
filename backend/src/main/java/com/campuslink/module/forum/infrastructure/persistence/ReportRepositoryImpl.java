@@ -42,15 +42,16 @@ public class ReportRepositoryImpl implements ReportRepository {
     }
 
     @Override
-    public ReportedTargets findPendingTargetsByReporter(Long reporterId) {
+    public ReportedTargets findUnclosedTargetsByReporter(Long reporterId) {
         if (reporterId == null) {
             return ReportedTargets.EMPTY;
         }
-        // 只取两列：读侧过滤只需要类型与目标 id，不装配工单聚合（同 CR-077 Warning #7 的窄载体纪律）
+        // 只取两列：读侧过滤只需要类型与目标 id，不装配工单聚合（同 CR-077 Warning #7 的窄载体纪律）。
+        // CR-214：处理中（PROCESSING）仍属未闭环，举报人继续看不到被举报内容，直到 DISMISS / REMOVE 闭环。
         List<ReportDO> rows = reportMapper.selectList(new LambdaQueryWrapper<ReportDO>()
                 .select(ReportDO::getTargetType, ReportDO::getTargetId)
                 .eq(ReportDO::getReporterId, reporterId)
-                .eq(ReportDO::getStatus, "PENDING"));
+                .in(ReportDO::getStatus, Report.STATUS_PENDING, Report.STATUS_PROCESSING));
         Set<Long> postIds = new HashSet<>();
         Set<Long> replyIds = new HashSet<>();
         for (ReportDO row : rows) {
@@ -88,11 +89,20 @@ public class ReportRepositoryImpl implements ReportRepository {
     }
 
     @Override
+    public boolean claim(Long id, Long handlerId) {
+        return reportMapper.update(null, new LambdaUpdateWrapper<ReportDO>()
+                .eq(ReportDO::getId, id)
+                .eq(ReportDO::getStatus, Report.STATUS_PENDING)
+                .set(ReportDO::getStatus, Report.STATUS_PROCESSING)
+                .set(ReportDO::getHandlerId, handlerId)) > 0;
+    }
+
+    @Override
     public boolean close(Long id, String resolution, Long handlerId) {
         return reportMapper.update(null, new LambdaUpdateWrapper<ReportDO>()
                 .eq(ReportDO::getId, id)
-                .eq(ReportDO::getStatus, "PENDING")
-                .set(ReportDO::getStatus, "CLOSED")
+                .in(ReportDO::getStatus, Report.STATUS_PENDING, Report.STATUS_PROCESSING)
+                .set(ReportDO::getStatus, Report.STATUS_CLOSED)
                 .set(ReportDO::getResolution, resolution)
                 .set(ReportDO::getHandlerId, handlerId)
                 .set(ReportDO::getClosedAt, Instant.now())) > 0;

@@ -61,13 +61,13 @@ class AdminDashboardControllerAuthTest {
     }
 
     @Test
-    @DisplayName("SUPERADMIN 看板 → 200，15 个字段按组映射")
+    @DisplayName("SUPERADMIN 看板 → 200，16 个字段按组映射")
     void superadminDashboardMapsAllFields() {
         when(service.dashboard()).thenReturn(new AdminStatsApplicationService.Dashboard(
                 new AccountApplicationService.AccountStats(45, 43, 1, 1),
                 new AdminStatsGateway.ContentStats(26, 25, 1, 0),
                 new AdminStatsGateway.ContentStats(40, 39, 1, 2),
-                new AdminStatsGateway.ReportStats(3, 1, 2)));
+                new AdminStatsGateway.ReportStats(4, 1, 1, 2)));
 
         ApiResponse<AdminDashboardVo> response = controller.dashboard(user("ROLE_SUPERADMIN"));
 
@@ -80,8 +80,9 @@ class AdminDashboardControllerAuthTest {
         assertThat(vo.postTotal()).isEqualTo(26);
         assertThat(vo.postRemoved()).isEqualTo(1);
         assertThat(vo.replyTodayCreated()).isEqualTo(2);
-        assertThat(vo.reportTotal()).isEqualTo(3);
+        assertThat(vo.reportTotal()).isEqualTo(4);
         assertThat(vo.reportPending()).isEqualTo(1);
+        assertThat(vo.reportProcessing()).isEqualTo(1);
         assertThat(vo.reportClosed()).isEqualTo(2);
     }
 
