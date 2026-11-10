@@ -12,6 +12,7 @@ import com.campuslink.module.account.application.cmd.AccountCommands.LoginResult
 import com.campuslink.module.account.application.cmd.AccountCommands.RegisterCommand;
 import com.campuslink.module.account.application.cmd.AccountCommands.VerifyStudentCommand;
 import com.campuslink.module.account.application.cmd.AccountCommands.VerifyStudentResult;
+import com.campuslink.module.account.application.cmd.AdminUserSearchResult;
 import com.campuslink.module.account.domain.event.AccountRegisteredEvent;
 import com.campuslink.module.account.domain.model.DefaultAvatar;
 import com.campuslink.module.account.domain.exception.AccountConflictException;
@@ -37,6 +38,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collection;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -63,6 +66,12 @@ public class AccountApplicationService {
     private final ApplicationEventPublisher eventPublisher;
     private final ModerationApplicationService moderationService;
     private final TokenRevocationGateway tokenRevocationGateway;
+
+    /** 后台用户检索最多返回条数（CR-211）；多取 1 条用于判断是否被截断 */
+    private static final int ADMIN_USER_SEARCH_LIMIT = 50;
+
+    /** 后台用户检索关键字长度上限：昵称最长 32、用户 id 最长 19，留出余量后统一拦 50 */
+    private static final int ADMIN_USER_SEARCH_KEYWORD_MAX = 50;
 
     /** 学籍核验（F-ACC-004）：IP 限流 → 比对 → 签发一次性票据（payload 为加密学号） */
     public VerifyStudentResult verifyStudent(VerifyStudentCommand command, String ip) {
@@ -235,6 +244,50 @@ public class AccountApplicationService {
             return List.of();
         }
         return accountRepository.findIdsByNicknameLike(kw, 50);
+    }
+
+    /**
+     * 后台用户检索（CR-211，仅 SUPERADMIN）：纯数字关键字先按 id 精确命中，再按昵称 LIKE；
+     * 结果按「精确 id 优先、其余 id 倒序」返回，最多 50 条。
+     *
+     * <p>只查昵称与 id：邮箱 / 手机号 / 学号是敏感字段，等值查询会扩大后台的枚举面，
+     * 本 CR 明确不做。查不到不是错误，返回空列表即可；空关键字才是调用方参数错误。
+     */
+    public AdminUserSearchResult adminSearchUsers(String keyword) {
+        String kw = keyword == null ? "" : keyword.trim();
+        if (kw.isEmpty() || kw.length() > ADMIN_USER_SEARCH_KEYWORD_MAX) {
+            throw new ApiException(ResultCode.INVALID_PARAM);
+        }
+
+        Map<Long, Account> matched = new LinkedHashMap<>();
+        if (kw.chars().allMatch(Character::isDigit) && kw.length() <= 19) {
+            try {
+                accountRepository.findById(Long.parseLong(kw))
+                        .ifPresent(account -> matched.put(account.getId(), account));
+            } catch (NumberFormatException ignored) {
+                // 19 位以内仍可能溢出 long：按昵称关键字继续查，不把输入判成参数错误
+            }
+        }
+
+        List<Long> nicknameIds = accountRepository.findIdsByNicknameLike(
+                kw, ADMIN_USER_SEARCH_LIMIT + 1);
+        boolean truncated = nicknameIds.size() > ADMIN_USER_SEARCH_LIMIT;
+        List<Long> pageIds = truncated
+                ? nicknameIds.subList(0, ADMIN_USER_SEARCH_LIMIT)
+                : nicknameIds;
+        accountRepository.findByIds(pageIds).stream()
+                .sorted(Comparator.comparing(Account::getId).reversed())
+                .forEach(account -> matched.putIfAbsent(account.getId(), account));
+
+        // 精确 id 命中会叠加在 50 条昵称命中之上：合并后再兜一次上限，避免返回 51 条
+        boolean mergedOverflow = matched.size() > ADMIN_USER_SEARCH_LIMIT;
+        List<AdminUserSearchResult.Item> items = matched.values().stream()
+                .limit(ADMIN_USER_SEARCH_LIMIT)
+                .map(account -> new AdminUserSearchResult.Item(account.getId(), account.getNickname(),
+                        account.getRole(), account.getStatus(), account.getMutedUntil(),
+                        account.getCreatedAt()))
+                .toList();
+        return new AdminUserSearchResult(items, truncated || mergedOverflow);
     }
 
     /**

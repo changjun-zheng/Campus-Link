@@ -41,6 +41,27 @@ export const moderatePost = (id: number, status: 'PUBLISHED' | 'REMOVED', reason
 export const moderateReply = (id: number, status: 'PUBLISHED' | 'REMOVED', reason?: string) =>
   put<void>(`/admin/replies/${id}/status`, { status, reason })
 
+/**
+ * 后台用户检索（CR-211，仅 SUPERADMIN）：纯数字关键字按用户 id 精确查，否则按昵称 LIKE；
+ * 最多返回 50 条，`truncated=true` 表示还有更多。只含账号基础状态，不含邮箱 / 学号。
+ */
+export interface AdminUserItemVo {
+  id: number
+  nickname: string
+  role: 'USER' | 'OPS' | 'SUPERADMIN'
+  status: 'ACTIVE' | 'BANNED' | 'DEACTIVATED'
+  mutedUntil?: string | null
+  createdAt: string
+}
+
+export interface AdminUserSearchVo {
+  items: AdminUserItemVo[]
+  truncated: boolean
+}
+
+export const searchAdminUsers = (keyword: string) =>
+  get<AdminUserSearchVo>(`/admin/users?${new URLSearchParams({ keyword }).toString()}`)
+
 /** 封禁 / 解封（CR-082）：BANNED 即时生效 */
 export const setUserStatus = (id: number, status: 'ACTIVE' | 'BANNED') =>
   put<void>(`/admin/users/${id}/status`, { status })

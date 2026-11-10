@@ -3,7 +3,10 @@ package com.campuslink.module.account.web;
 import com.campuslink.common.exception.ApiException;
 import com.campuslink.common.result.ResultCode;
 import com.campuslink.module.account.application.AccountApplicationService;
+import com.campuslink.module.account.application.cmd.AdminUserSearchResult;
+import com.campuslink.module.account.domain.model.AccountRole;
 import com.campuslink.module.account.domain.model.AccountStatus;
+import com.campuslink.module.account.web.vo.AdminUserItemVo;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -21,6 +24,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * 用户治理端点（CR-082 / CR-196）：封禁 / 解封与角色授予均仅 SUPERADMIN。
@@ -32,6 +36,41 @@ class AdminUserControllerAuthTest {
 
     private final AccountApplicationService service = mock(AccountApplicationService.class);
     private final AdminUserController controller = new AdminUserController(service);
+
+    @Test
+    @DisplayName("匿名用户检索 → 4001，且不触达用例")
+    void anonymousSearchIsUnauthorized() {
+        assertThatThrownBy(() -> controller.searchUsers("张三", null))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_LOGGED_IN));
+        verify(service, never()).adminSearchUsers(anyString());
+    }
+
+    @Test
+    @DisplayName("OPS 用户检索 → 4002（用户检索仍仅 SUPERADMIN）")
+    void opsSearchIsForbidden() {
+        assertThatThrownBy(() -> controller.searchUsers("张三", auth("ROLE_OPS")))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.FORBIDDEN));
+        verify(service, never()).adminSearchUsers(anyString());
+    }
+
+    @Test
+    @DisplayName("SUPERADMIN 用户检索 → 200，关键字透传且枚举映射为字符串")
+    void superadminSearchPassesThrough() {
+        when(service.adminSearchUsers("张三")).thenReturn(new AdminUserSearchResult(
+                List.of(new AdminUserSearchResult.Item(9L, "张三", AccountRole.USER,
+                        AccountStatus.ACTIVE, null, null)), false));
+
+        var response = controller.searchUsers("张三", superadmin());
+
+        assertThat(response.code()).isZero();
+        assertThat(response.data().truncated()).isFalse();
+        assertThat(response.data().items()).extracting(AdminUserItemVo::id).containsExactly(9L);
+        assertThat(response.data().items().get(0).role()).isEqualTo("USER");
+        assertThat(response.data().items().get(0).status()).isEqualTo("ACTIVE");
+        verify(service).adminSearchUsers("张三");
+    }
 
     @Test
     @DisplayName("匿名封禁 → 4001，且不触达用例")

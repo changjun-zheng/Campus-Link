@@ -8,6 +8,7 @@ import com.campuslink.common.web.ApiDocs;
 import com.campuslink.common.web.CurrentUser;
 import com.campuslink.module.account.application.AccountApplicationService;
 import com.campuslink.module.account.domain.model.AccountStatus;
+import com.campuslink.module.account.web.vo.AdminUserSearchVo;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -19,11 +20,13 @@ import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -55,6 +58,17 @@ public class AdminUserController {
                               int hours,
                               @NotBlank(message = "禁言原因不能为空") @Size(max = 200, message = "禁言原因最长 200 字")
                               String reason) {
+    }
+
+    @Operation(summary = "用户检索（仅 SUPERADMIN）：keyword 为纯数字时按用户 id 精确查，否则按昵称关键字；"
+            + "最多 50 条，truncated 表示还有更多；只返回账号基础状态")
+    @SecurityRequirement(name = ApiDocs.BEARER_AUTH)
+    @ErrorCodes({ResultCode.NOT_LOGGED_IN, ResultCode.FORBIDDEN})
+    @GetMapping
+    public ApiResponse<AdminUserSearchVo> searchUsers(@RequestParam("keyword") String keyword,
+                                                      Authentication authentication) {
+        CurrentUser.requireRole(authentication, "ROLE_SUPERADMIN");
+        return ApiResponse.ok(AdminUserSearchVo.from(accountApplicationService.adminSearchUsers(keyword)));
     }
 
     @Operation(summary = "封禁 / 解封（仅 SUPERADMIN）：BANNED 即时生效（登录拒绝、发帖回帖拒绝），全程审计")

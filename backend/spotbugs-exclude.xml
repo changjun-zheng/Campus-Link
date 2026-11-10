@@ -121,6 +121,11 @@
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.application.AdminContentSearchApplicationService$AdminContentPage"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.module.forum.web.vo.AdminContentSearchVo"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.forum.web.vo.AdminContentSearchVo"/></Match>
+  <!-- CR-211 后台用户检索载体：同型（record + List.copyOf，构造后不再变更） -->
+  <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.module.account.application.cmd.AdminUserSearchResult"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.account.application.cmd.AdminUserSearchResult"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.module.account.web.vo.AdminUserSearchVo"/></Match>
+  <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.account.web.vo.AdminUserSearchVo"/></Match>
   <!-- CR-135 私信分页载体：同型（record + 只读 List），构造后不再变更 -->
   <Match><Bug pattern="EI_EXPOSE_REP"/><Class name="com.campuslink.module.messaging.application.cmd.MessagingResults$ConversationPage"/></Match>
   <Match><Bug pattern="EI_EXPOSE_REP2"/><Class name="com.campuslink.module.messaging.application.cmd.MessagingResults$ConversationPage"/></Match>

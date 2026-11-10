@@ -21,6 +21,7 @@ import {
   moderateReply,
   muteUser,
   searchAdminContents,
+  searchAdminUsers,
   setUserStatus,
   unmuteUser,
   warnUser,
@@ -28,11 +29,12 @@ import {
   type AdminDashboardVo,
   type AdminReportVo,
   type AdminTagVo,
+  type AdminUserItemVo,
   type ReviewQueueItemVo,
   type RosterImportResultVo,
 } from '../api/admin'
 import { useAuthStore } from '../stores/auth'
-import { formatRelativeTime } from '../utils/time'
+import { formatRelativeTime, formatTime } from '../utils/time'
 import DonutChart from '../components/DonutChart.vue'
 import PageHeader from '../components/PageHeader.vue'
 
@@ -329,6 +331,73 @@ async function doGrantOps() {
   } finally {
     grantingOps.value = false
   }
+}
+
+/* ─── 用户检索（CR-211，仅 SUPERADMIN）：按 id 或昵称找账号，一键填入下方处置目标 ─── */
+const userKeyword = ref('')
+const userResults = ref<AdminUserItemVo[]>([])
+const userTruncated = ref(false)
+const userSearched = ref(false)
+const usersLoading = ref(false)
+const usersError = ref('')
+
+async function loadUsers() {
+  const keyword = userKeyword.value.trim()
+  if (!keyword) {
+    ElMessage.warning('请输入用户 id 或昵称关键字')
+    return
+  }
+  usersLoading.value = true
+  usersError.value = ''
+  try {
+    const res = await searchAdminUsers(keyword)
+    userResults.value = res.items
+    userTruncated.value = res.truncated
+    userSearched.value = true
+  } catch (e) {
+    userResults.value = []
+    userTruncated.value = false
+    userSearched.value = true
+    usersError.value = e instanceof Error ? e.message : '用户检索失败'
+  } finally {
+    usersLoading.value = false
+  }
+}
+
+function resetUserSearch() {
+  userKeyword.value = ''
+  userResults.value = []
+  userTruncated.value = false
+  userSearched.value = false
+  usersError.value = ''
+}
+
+function fillUserTarget(id: number, nickname: string) {
+  banUserId.value = String(id)
+  ElMessage.success(`已填入用户 #${id}（${nickname}），可在下方执行封禁 / 警告 / 禁言`)
+  document.getElementById('admin-user-actions')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+function selectUserTarget(user: AdminUserItemVo) {
+  fillUserTarget(user.id, user.nickname)
+}
+
+function selectOpsTarget(user: AdminUserItemVo) {
+  opsUserId.value = String(user.id)
+  ElMessage.success(`已填入运营授予目标 #${user.id}（${user.nickname}）`)
+  document.getElementById('admin-user-actions')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+function selectAuthorTarget(item: AdminContentItemVo) {
+  fillUserTarget(item.authorId, item.authorNickname)
+}
+
+function isMuted(user: AdminUserItemVo): boolean {
+  return !!user.mutedUntil && new Date(user.mutedUntil).getTime() > Date.now()
+}
+
+function mutedLabel(user: AdminUserItemVo): string {
+  return user.mutedUntil ? formatTime(user.mutedUntil) : '—'
 }
 
 /* ─── 数据看板（F-ADMIN-005 / CR-131）：进入 Tab 才加载，不在首屏多打一次聚合 ─── */
@@ -1215,8 +1284,11 @@ function goLogin() {
           <el-table-column prop="title" label="标题" min-width="160" show-overflow-tooltip />
           <el-table-column prop="summary" label="摘要" min-width="240" show-overflow-tooltip />
           <el-table-column prop="boardName" label="版块" width="110" />
-          <el-table-column label="作者" width="120">
-            <template #default="{ row }">{{ row.authorNickname }}</template>
+          <el-table-column label="作者" width="150">
+            <template #default="{ row }">
+              {{ row.authorNickname }}
+              <span class="text-caption text-ink-meta">#{{ row.authorId }}</span>
+            </template>
           </el-table-column>
           <el-table-column label="状态" width="90">
             <template #default="{ row }">
@@ -1228,8 +1300,14 @@ function goLogin() {
           <el-table-column label="时间" width="110">
             <template #default="{ row }">{{ formatRelativeTime(row.createdAt) }}</template>
           </el-table-column>
-          <el-table-column v-if="isSuperadmin" label="操作" width="100" fixed="right">
+          <el-table-column v-if="isSuperadmin" label="操作" width="190" fixed="right">
             <template #default="{ row }">
+              <el-button
+                v-if="row.authorId"
+                type="primary"
+                link
+                @click="selectAuthorTarget(row as AdminContentItemVo)"
+              >处置作者</el-button>
               <el-button
                 v-if="row.status === 'PUBLISHED'"
                 type="danger"
@@ -1258,8 +1336,99 @@ function goLogin() {
         </div>
       </div>
 
+      <!-- ─── 用户检索（F-ADMIN-002 / CR-211）：按 id 或昵称找账号，点击填入下方处置目标 ─── -->
+      <template v-if="isSuperadmin">
+        <el-divider>用户检索</el-divider>
+        <div class="px-5">
+          <p class="mb-3 text-caption text-ink-meta">
+            纯数字按用户 id 精确查，其余按昵称关键字模糊查；最多 50 条，只显示账号基础状态（不含邮箱 / 学号）。
+          </p>
+          <el-form inline class="gap-y-2">
+            <el-form-item label="用户 id / 昵称">
+              <el-input
+                v-model="userKeyword"
+                placeholder="如 123 或 张三"
+                clearable
+                class="w-[200px]"
+                @keyup.enter="loadUsers"
+              />
+            </el-form-item>
+            <el-form-item>
+              <el-button type="primary" :loading="usersLoading" @click="loadUsers">检索</el-button>
+              <el-button @click="resetUserSearch">重置</el-button>
+            </el-form-item>
+          </el-form>
+          <el-alert v-if="usersError" type="error" :closable="false" :title="usersError" class="mb-3" />
+          <el-alert
+            v-else-if="userTruncated"
+            type="warning"
+            :closable="false"
+            title="匹配超过 50 条，仅显示前 50 条；请输入更精确的关键字"
+            class="mb-3"
+          />
+          <el-table
+            v-if="userSearched && userResults.length"
+            v-loading="usersLoading"
+            :data="userResults"
+            size="small"
+            class="mb-3"
+          >
+            <el-table-column prop="id" label="用户 id" width="90" />
+            <el-table-column prop="nickname" label="昵称" min-width="120" show-overflow-tooltip />
+            <el-table-column label="角色" width="100">
+              <template #default="{ row }">
+                <el-tag
+                  :type="row.role === 'SUPERADMIN' ? 'danger' : row.role === 'OPS' ? 'warning' : 'info'"
+                  size="small"
+                >
+                  {{ row.role === 'SUPERADMIN' ? '超级管理员' : row.role === 'OPS' ? '运营' : '用户' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="状态" width="100">
+              <template #default="{ row }">
+                <el-tag
+                  :type="row.status === 'ACTIVE' ? 'success' : row.status === 'BANNED' ? 'danger' : 'info'"
+                  size="small"
+                >
+                  {{ row.status === 'ACTIVE' ? '正常' : row.status === 'BANNED' ? '已封禁' : '已注销' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="禁言" width="150">
+              <template #default="{ row }">
+                <span v-if="isMuted(row as AdminUserItemVo)" class="text-[var(--cl-color-danger-strong)]">
+                  至 {{ mutedLabel(row as AdminUserItemVo) }}
+                </span>
+                <span v-else class="text-ink-meta">—</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="注册时间" width="120">
+              <template #default="{ row }">{{ formatRelativeTime(row.createdAt) }}</template>
+            </el-table-column>
+            <el-table-column label="操作" width="190" fixed="right">
+              <template #default="{ row }">
+                <el-button type="primary" link @click="selectUserTarget(row as AdminUserItemVo)">
+                  设为处置目标
+                </el-button>
+                <el-button
+                  v-if="row.role === 'USER' && row.status === 'ACTIVE'"
+                  link
+                  @click="selectOpsTarget(row as AdminUserItemVo)"
+                >填入运营授予</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <el-empty
+            v-else-if="userSearched && !usersLoading"
+            description="未找到匹配用户"
+            :image-size="56"
+          />
+        </div>
+      </template>
+
       <el-divider v-if="isSuperadmin">按 id 直达</el-divider>
-      <el-form v-if="isSuperadmin" label-width="90px" class="max-w-[560px]">
+      <el-form v-if="isSuperadmin" id="admin-user-actions" label-width="90px" class="max-w-[560px]">
         <el-form-item label="目标类型">
           <el-radio-group v-model="targetType">
             <el-radio-button value="POST">帖子</el-radio-button>
