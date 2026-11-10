@@ -235,6 +235,7 @@ async function doSetUserStatus(status: 'ACTIVE' | 'BANNED') {
   try {
     await setUserStatus(id, status)
     ElMessage.success(status === 'BANNED' ? '已封禁（登录与发帖即时拒绝）' : '已解封')
+    await refreshUserResults()
   } catch (e) {
     ElMessage.error(e instanceof Error ? e.message : '操作失败')
   } finally {
@@ -288,6 +289,7 @@ async function doMute() {
     await muteUser(id, muteHours.value, muteReason.value.trim())
     ElMessage.success(`已禁言 ${muteHours.value} 小时，期间发帖 / 回帖 / 组队写入被拒绝`)
     muteReason.value = ''
+    await refreshUserResults()
   } catch (e) {
     ElMessage.error(e instanceof Error ? e.message : '禁言失败')
   } finally {
@@ -305,6 +307,7 @@ async function doUnmute() {
   try {
     await unmuteUser(id)
     ElMessage.success('已解除禁言')
+    await refreshUserResults()
   } catch (e) {
     ElMessage.error(e instanceof Error ? e.message : '解除禁言失败')
   } finally {
@@ -326,6 +329,7 @@ async function doGrantOps() {
   try {
     await grantOpsRole(id)
     ElMessage.success('已授予运营角色；目标用户需重新登录后生效')
+    await refreshUserResults()
   } catch (e) {
     ElMessage.error(e instanceof Error ? e.message : '授予失败')
   } finally {
@@ -335,6 +339,7 @@ async function doGrantOps() {
 
 /* ─── 用户检索（CR-211，仅 SUPERADMIN）：按 id 或昵称找账号，一键填入下方处置目标 ─── */
 const userKeyword = ref('')
+const lastUserKeyword = ref('')
 const userResults = ref<AdminUserItemVo[]>([])
 const userTruncated = ref(false)
 const userSearched = ref(false)
@@ -347,6 +352,7 @@ async function loadUsers() {
     ElMessage.warning('请输入用户 id 或昵称关键字')
     return
   }
+  lastUserKeyword.value = keyword
   usersLoading.value = true
   usersError.value = ''
   try {
@@ -366,10 +372,35 @@ async function loadUsers() {
 
 function resetUserSearch() {
   userKeyword.value = ''
+  lastUserKeyword.value = ''
   userResults.value = []
   userTruncated.value = false
   userSearched.value = false
   usersError.value = ''
+}
+
+/** 处置成功后静默刷新当前检索结果：角色 / 状态 / 禁言截止要立刻反映在表里 */
+async function refreshUserResults() {
+  if (!userSearched.value || !lastUserKeyword.value) return
+  try {
+    const res = await searchAdminUsers(lastUserKeyword.value)
+    userResults.value = res.items
+    userTruncated.value = res.truncated
+  } catch {
+    // 处置已成功，刷新失败不二次报错；下次检索会重新拉取
+  }
+}
+
+/** 把内容搜索收窄到该用户并滚到结果区，便于继续查看其近期帖子 */
+function openUserContent(user: AdminUserItemVo) {
+  contentType.value = 'post'
+  contentKeyword.value = ''
+  contentUserId.value = String(user.id)
+  contentAuthorKeyword.value = ''
+  contentDays.value = ''
+  contentPage.value = 1
+  void loadContents()
+  document.getElementById('admin-content-search')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
 function fillUserTarget(id: number, nickname: string) {
@@ -1227,7 +1258,7 @@ function goLogin() {
     </el-card>
 
     <!-- ─── 内容处置台：搜索（F-ADMIN-002 / CR-141）+ 按 id 直达 ─── -->
-    <el-card v-show="tab === 'moderation'" shadow="never">
+    <el-card id="admin-content-search" v-show="tab === 'moderation'" shadow="never">
       <template #header>
         <div class="flex flex-wrap items-baseline justify-between gap-2">
           <span class="font-medium">{{ isSuperadmin ? '内容处置台' : '内容检索' }}</span>
@@ -1374,7 +1405,16 @@ function goLogin() {
             class="mb-3"
           >
             <el-table-column prop="id" label="用户 id" width="90" />
-            <el-table-column prop="nickname" label="昵称" min-width="120" show-overflow-tooltip />
+            <el-table-column label="昵称" min-width="120" show-overflow-tooltip>
+              <template #default="{ row }">
+                <RouterLink
+                  :to="`/u/${row.id}`"
+                  target="_blank"
+                  rel="noopener"
+                  class="text-link hover:underline"
+                >{{ row.nickname }}</RouterLink>
+              </template>
+            </el-table-column>
             <el-table-column label="角色" width="100">
               <template #default="{ row }">
                 <el-tag
@@ -1406,11 +1446,12 @@ function goLogin() {
             <el-table-column label="注册时间" width="120">
               <template #default="{ row }">{{ formatRelativeTime(row.createdAt) }}</template>
             </el-table-column>
-            <el-table-column label="操作" width="190" fixed="right">
+            <el-table-column label="操作" width="270" fixed="right">
               <template #default="{ row }">
                 <el-button type="primary" link @click="selectUserTarget(row as AdminUserItemVo)">
                   设为处置目标
                 </el-button>
+                <el-button link @click="openUserContent(row as AdminUserItemVo)">查看帖子</el-button>
                 <el-button
                   v-if="row.role === 'USER' && row.status === 'ACTIVE'"
                   link
