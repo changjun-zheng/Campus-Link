@@ -179,7 +179,7 @@ async function onUnblock(target: BlockedUserVo) {
 }
 
 function logout() {
-  auth.logout()
+  auth.logout(true)
   router.push('/')
 }
 

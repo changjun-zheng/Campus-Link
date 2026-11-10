@@ -86,6 +86,16 @@ public class AccountController {
                 accountApplicationService.refresh(CurrentUser.requireId(authentication))));
     }
 
+    @Operation(summary = "退出登录（CR-213）：吊销当前用户全部旧 token（全端退出），"
+            + "旧 token 下一请求返回 401 / 4001")
+    @SecurityRequirement(name = ApiDocs.BEARER_AUTH)
+    @ErrorCodes({ ResultCode.NOT_LOGGED_IN })
+    @PostMapping("/logout")
+    public ApiResponse<Void> logout(Authentication authentication) {
+        accountApplicationService.logout(CurrentUser.requireId(authentication));
+        return ApiResponse.ok();
+    }
+
     /** web 响应模型：对前端契约与重构前一致 */
     public record AuthResponse(String token, long expiresAtEpochSecond, UserVo user) {
 

@@ -216,6 +216,15 @@ public class AccountApplicationService {
     }
 
     /**
+     * 退出登录（CR-213）：把该用户的吊销水位推到当前时刻，所有旧 token 下一请求即失效。
+     *
+     * <p>项目没有逐设备会话模型，退出 = 全端退出；不记审计（非业务状态变更，避免每次退出刷一条）。
+     */
+    public void logout(long userId) {
+        tokenRevocationGateway.revokeAllBefore(userId, Instant.now());
+    }
+
+    /**
      * 批量取作者摘要（昵称 + 头像）：其他上下文（forum / notification）展示作者的唯一入口
      * （ADR-012 跨上下文只调对方 application）。一次查询取齐整页作者，不做 N+1；
      * 查不到的 id 不出现在结果中，由调用方决定回落文案。

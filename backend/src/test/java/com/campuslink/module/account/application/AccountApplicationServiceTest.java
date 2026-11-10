@@ -397,6 +397,20 @@ class AccountApplicationServiceTest {
     }
 
     @Test
+    @DisplayName("退出登录：只把吊销水位推到当前时刻，不写审计、不触达仓储")
+    void logoutRevokesTokensWithoutAudit() {
+        Instant before = Instant.now();
+
+        service.logout(USER_ID);
+
+        Instant after = Instant.now();
+        ArgumentCaptor<Instant> cutoff = ArgumentCaptor.forClass(Instant.class);
+        verify(tokenRevocationGateway).revokeAllBefore(eq(USER_ID), cutoff.capture());
+        assertThat(cutoff.getValue()).isBetween(before, after);
+        verifyNoInteractions(auditService, accountRepository);
+    }
+
+    @Test
     @DisplayName("管理员封禁：updateStatus(BANNED, null) 清掉残留 delete_at，审计动作名为 USER_BAN")
     void adminBanWritesStatusAndAuditsBan() {
         when(accountRepository.findById(USER_ID)).thenReturn(Optional.of(account(AccountStatus.ACTIVE, null)));

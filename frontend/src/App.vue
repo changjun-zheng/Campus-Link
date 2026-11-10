@@ -40,7 +40,7 @@ onMounted(() => {
 onBeforeUnmount(() => window.removeEventListener('scroll', onScroll))
 
 function logout() {
-  auth.logout()
+  auth.logout(true)
   router.push('/')
 }
 

@@ -1,5 +1,11 @@
 import { defineStore } from 'pinia'
-import { fetchMe, login as loginApi, refreshSession as refreshSessionApi, register as registerApi } from '../api/auth'
+import {
+  fetchMe,
+  login as loginApi,
+  logout as logoutApi,
+  refreshSession as refreshSessionApi,
+  register as registerApi,
+} from '../api/auth'
 import { ApiError } from '../api/client'
 import type { UserInfo } from '../types'
 
@@ -115,7 +121,16 @@ export const useAuthStore = defineStore('auth', {
       }
       return this.refresh()
     },
-    logout() {
+    /**
+     * 清本地会话。显式退出传 `notifyServer=true`（CR-213）：先尽力调用服务端吊销，
+     * 失败也不阻塞本地退出；401 / 过期 / 注销路径保持 false，避免对已失效令牌再发请求。
+     */
+    logout(notifyServer = false) {
+      if (notifyServer) {
+        void logoutApi().catch(() => {
+          // 网络或服务端失败不阻塞本地退出；本地清理照常执行
+        })
+      }
       this.token = ''
       this.user = null
       this.expiresAt = 0
