@@ -1,4 +1,4 @@
-import { del, get, post, postText, put } from './client'
+import { del, get, getBinary, post, postText, put } from './client'
 
 /** 举报工单（F-SAFE-002 / CR-082、CR-196）：OPS / SUPERADMIN 可读写列表与处理 */
 export interface AdminReportVo {
@@ -144,17 +144,38 @@ export interface AdminAuditLogVo {
   createdAt: string
 }
 
-/** 审计分页：action 精确匹配、actorId 精确匹配、days 只接受 7 / 30 / 90 */
-export const listAuditLogs = (
-  params: { action?: string; actorId?: number; days?: 7 | 30 | 90; page?: number; size?: number } = {},
-) => {
+/** 审计分页（CR-215 / CR-216）：action / targetType 精确匹配、actorId / targetId 精确匹配、days 只接受 7 / 30 / 90 */
+export interface AuditQueryParams {
+  action?: string
+  actorId?: number
+  targetType?: string
+  targetId?: number
+  days?: 7 | 30 | 90
+}
+
+function auditQuery(params: AuditQueryParams): URLSearchParams {
   const query = new URLSearchParams()
   if (params.action) query.set('action', params.action)
   if (params.actorId != null) query.set('actorId', String(params.actorId))
+  if (params.targetType) query.set('targetType', params.targetType)
+  if (params.targetId != null) query.set('targetId', String(params.targetId))
   if (params.days) query.set('days', String(params.days))
+  return query
+}
+
+export const listAuditLogs = (
+  params: AuditQueryParams & { page?: number; size?: number } = {},
+) => {
+  const query = auditQuery(params)
   query.set('page', String(params.page ?? 1))
   query.set('size', String(params.size ?? 20))
   return get<PageVo<AdminAuditLogVo>>(`/admin/audit-logs?${query.toString()}`)
+}
+
+/** 审计 CSV 导出（CR-216）：与分页同筛选，后端上限 5000 行（超出 1001）；返回 Blob 供浏览器下载 */
+export const exportAuditLogs = (params: AuditQueryParams = {}) => {
+  const query = auditQuery(params)
+  return getBinary(`/admin/audit-logs/export?${query.toString()}`)
 }
 
 

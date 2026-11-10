@@ -34,3 +34,24 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
 
 /** 动作筛选项（可搜索下拉的候选集；仍允许手动输入未收录动作） */
 export const AUDIT_ACTIONS = Object.keys(AUDIT_ACTION_LABELS)
+
+/**
+ * 审计目标类型标签（CR-216）。
+ *
+ * 库里并存两套命名：管理动作写小写复数（`users` / `posts` / `replies`），
+ * 举报提交 / 处理直接落举报目标类型的**大写单数**（`POST` / `REPLY` / `USER`）。
+ * 两者按字面精确匹配，页面不合并、不改写；未收录值原样显示。
+ */
+export const AUDIT_TARGET_LABELS: Record<string, string> = {
+  users: '用户',
+  posts: '帖子',
+  replies: '楼层',
+  tags: '标签',
+  student_roster: '学籍名册',
+  POST: '举报对象 · 帖子',
+  REPLY: '举报对象 · 楼层',
+  USER: '举报对象 · 用户',
+}
+
+/** 目标类型筛选项（可搜索下拉的候选集；仍允许手动输入未收录值） */
+export const AUDIT_TARGET_TYPES = Object.keys(AUDIT_TARGET_LABELS)

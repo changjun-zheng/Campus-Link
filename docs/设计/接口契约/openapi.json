@@ -7139,7 +7139,7 @@
         "tags": [
           "admin-audit"
         ],
-        "summary": "操作审计分页（仅 SUPERADMIN）：action 精确筛选、actorId 筛选、days 限 7/30/90；按时间倒序，含操作者昵称与目标对象",
+        "summary": "操作审计分页（仅 SUPERADMIN）：action / targetType 精确筛选、actorId / targetId 筛选、days 限 7/30/90；按时间倒序，含操作者昵称与目标对象",
         "operationId": "page_1",
         "parameters": [
           {
@@ -7152,6 +7152,23 @@
           },
           {
             "name": "actorId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "targetType",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "targetId",
             "in": "query",
             "required": false,
             "schema": {
@@ -7196,6 +7213,118 @@
               "*/*": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiResponsePageVoAdminAuditVo"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数错误（1001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未登录（4001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "无权限（4002）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "系统繁忙，请稍后再试（9999）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/audit-logs/export": {
+      "get": {
+        "tags": [
+          "admin-audit"
+        ],
+        "summary": "操作审计 CSV 导出（仅 SUPERADMIN）：与分页同筛选；UTF-8 BOM、最多 5000 行，超出 1001",
+        "operationId": "export",
+        "parameters": [
+          {
+            "name": "action",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "actorId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "targetType",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "targetId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string",
+                  "format": "byte"
                 }
               }
             }

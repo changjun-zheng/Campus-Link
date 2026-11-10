@@ -8,7 +8,9 @@ import com.campuslink.module.forum.infrastructure.persistence.mapper.AdminAuditM
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
-/** 适配器：AdminAuditGateway 的 MyBatis-Plus 实现（CR-215，只读） */
+import java.util.List;
+
+/** 适配器：AdminAuditGateway 的 MyBatis-Plus 实现（CR-215 / CR-216，只读） */
 @Repository
 @RequiredArgsConstructor
 public class AdminAuditGatewayImpl implements AdminAuditGateway {
@@ -16,11 +18,20 @@ public class AdminAuditGatewayImpl implements AdminAuditGateway {
     private final AdminAuditMapper adminAuditMapper;
 
     @Override
-    public PageResult<AuditRow> page(String action, Long actorId, Integer days, int page, int size) {
-        IPage<AdminAuditRowDO> result =
-                adminAuditMapper.page(new Page<>(page, size), action, actorId, days);
+    public PageResult<AuditRow> page(String action, Long actorId, String targetType, Long targetId,
+                                     Integer days, int page, int size) {
+        IPage<AdminAuditRowDO> result = adminAuditMapper.page(
+                new Page<>(page, size), action, actorId, targetType, targetId, days);
         return new PageResult<>(result.getRecords().stream().map(AdminAuditGatewayImpl::toRow).toList(),
                 result.getTotal(), page, size);
+    }
+
+    @Override
+    public List<AuditRow> list(String action, Long actorId, String targetType, Long targetId,
+                               Integer days, int limit) {
+        return adminAuditMapper.list(action, actorId, targetType, targetId, days, limit).stream()
+                .map(AdminAuditGatewayImpl::toRow)
+                .toList();
     }
 
     private static AuditRow toRow(AdminAuditRowDO row) {

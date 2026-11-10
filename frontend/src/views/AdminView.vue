@@ -12,6 +12,7 @@ import {
   claimReport,
   closeReport,
   deleteAdminTag,
+  exportAuditLogs,
   getAdminDashboard,
   getReviewQueue,
   grantOpsRole,
@@ -38,7 +39,7 @@ import {
   type RosterImportResultVo,
 } from '../api/admin'
 import { useAuthStore } from '../stores/auth'
-import { AUDIT_ACTION_LABELS, AUDIT_ACTIONS } from '../constants/audit'
+import { AUDIT_ACTION_LABELS, AUDIT_ACTIONS, AUDIT_TARGET_LABELS, AUDIT_TARGET_TYPES } from '../constants/audit'
 import { formatRelativeTime, formatTime } from '../utils/time'
 import DonutChart from '../components/DonutChart.vue'
 import PageHeader from '../components/PageHeader.vue'
@@ -711,32 +712,59 @@ async function onReviewModerate(item: ReviewQueueItemVo) {
   }
 }
 
-/* ─── 操作审计（CR-215）：仅 SUPERADMIN；进入 Tab 才加载，只读 ─── */
+/* ─── 操作审计（CR-215 / CR-216）：仅 SUPERADMIN；进入 Tab 才加载，只读 + CSV 导出 ─── */
 const auditAction = ref('')
 const auditActorId = ref('')
+const auditTargetType = ref('')
+const auditTargetId = ref('')
 const auditDays = ref<7 | 30 | 90 | '' | undefined>('')
 const auditItems = ref<AdminAuditLogVo[]>([])
 const auditTotal = ref(0)
 const auditPage = ref(1)
 const auditSize = 20
 const auditLoading = ref(false)
+const auditExporting = ref(false)
 const auditError = ref('')
+
+/** 空串 → 不筛选；非正整数 → null（由调用方提示，不把 NaN 发给后端） */
+function parseAuditId(raw: string): number | undefined | null {
+  const keyword = raw.trim()
+  if (keyword === '') return undefined
+  const value = Number(keyword)
+  return Number.isInteger(value) && value >= 1 ? value : null
+}
+
+function auditFilters() {
+  return {
+    action: auditAction.value.trim() || undefined,
+    actorId: parseAuditId(auditActorId.value),
+    targetType: auditTargetType.value.trim() || undefined,
+    targetId: parseAuditId(auditTargetId.value),
+  }
+}
 
 async function loadAuditLogs(next = auditPage.value) {
   auditLoading.value = true
   auditError.value = ''
   try {
-    const actorKeyword = auditActorId.value.trim()
-    const actorId = actorKeyword === '' ? undefined : Number(actorKeyword)
-    if (actorId !== undefined && (!Number.isInteger(actorId) || actorId < 1)) {
+    const filters = auditFilters()
+    if (filters.actorId === null) {
       auditItems.value = []
       auditTotal.value = 0
       auditError.value = '操作者 id 需为正整数'
       return
     }
+    if (filters.targetId === null) {
+      auditItems.value = []
+      auditTotal.value = 0
+      auditError.value = '目标 id 需为正整数'
+      return
+    }
     const res = await listAuditLogs({
-      action: auditAction.value.trim() || undefined,
-      actorId,
+      action: filters.action,
+      actorId: filters.actorId,
+      targetType: filters.targetType,
+      targetId: filters.targetId,
       days: auditDays.value === '' ? undefined : auditDays.value,
       page: next,
       size: auditSize,
@@ -760,8 +788,53 @@ function onAuditSearch() {
 function resetAuditFilters() {
   auditAction.value = ''
   auditActorId.value = ''
+  auditTargetType.value = ''
+  auditTargetId.value = ''
   auditDays.value = ''
   void loadAuditLogs(1)
+}
+
+function auditExportFilename(): string {
+  const now = new Date()
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return `audit-logs-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`
+    + `-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.csv`
+}
+
+/** 导出遵循当前筛选（不分页）；后端上限 5000 行，超出返回 1001 并透出提示 */
+async function onAuditExport() {
+  const filters = auditFilters()
+  if (filters.actorId === null) {
+    ElMessage.warning('操作者 id 需为正整数')
+    return
+  }
+  if (filters.targetId === null) {
+    ElMessage.warning('目标 id 需为正整数')
+    return
+  }
+  auditExporting.value = true
+  try {
+    const blob = await exportAuditLogs({
+      action: filters.action,
+      actorId: filters.actorId,
+      targetType: filters.targetType,
+      targetId: filters.targetId,
+      days: auditDays.value === '' ? undefined : auditDays.value,
+    })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = auditExportFilename()
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+    ElMessage.success('审计记录已导出')
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '导出失败')
+  } finally {
+    auditExporting.value = false
+  }
 }
 
 /* ─── 名册导入（F-ACC-004 / CR-210）：仅 SUPERADMIN；CSV 原文提交，后端哈希入库并写审计 ─── */
@@ -1680,7 +1753,7 @@ function goLogin() {
         <div class="flex flex-wrap items-baseline justify-between gap-2">
           <span class="font-medium">操作审计</span>
           <span class="text-caption text-ink-meta">
-            只读；动作可按候选搜索，也可直接输入未收录的动作名
+            只读；动作与目标类型可按候选搜索，也可直接输入未收录值；导出遵循当前筛选（上限 5000 行）
           </span>
         </div>
       </template>
@@ -1711,6 +1784,30 @@ function goLogin() {
           @keyup.enter="onAuditSearch"
         />
         <el-select
+          v-model="auditTargetType"
+          filterable
+          allow-create
+          clearable
+          default-first-option
+          placeholder="目标类型（如 users）"
+          aria-label="审计目标类型"
+          style="width: 200px"
+        >
+          <el-option
+            v-for="targetType in AUDIT_TARGET_TYPES"
+            :key="targetType"
+            :label="AUDIT_TARGET_LABELS[targetType]"
+            :value="targetType"
+          />
+        </el-select>
+        <el-input
+          v-model="auditTargetId"
+          placeholder="目标 id（正整数）"
+          clearable
+          style="width: 170px"
+          @keyup.enter="onAuditSearch"
+        />
+        <el-select
           v-model="auditDays"
           aria-label="时间范围"
           placeholder="全部时间"
@@ -1723,6 +1820,7 @@ function goLogin() {
         </el-select>
         <el-button type="primary" :loading="auditLoading" @click="onAuditSearch">查询</el-button>
         <el-button @click="resetAuditFilters">重置</el-button>
+        <el-button :loading="auditExporting" @click="onAuditExport">导出 CSV</el-button>
       </div>
 
       <el-skeleton v-if="auditLoading" :rows="4" animated />
@@ -1749,10 +1847,11 @@ function goLogin() {
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="对象" width="140">
+          <el-table-column label="对象" width="160" show-overflow-tooltip>
             <template #default="{ row }">
               <span v-if="row.targetType">
-                {{ row.targetType }}<template v-if="row.targetId != null"> #{{ row.targetId }}</template>
+                {{ AUDIT_TARGET_LABELS[row.targetType] ?? row.targetType
+                }}<template v-if="row.targetId != null"> #{{ row.targetId }}</template>
               </span>
               <span v-else>—</span>
             </template>
