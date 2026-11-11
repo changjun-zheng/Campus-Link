@@ -20,9 +20,11 @@ import {
   listAdminTags,
   listAuditLogs,
   listReports,
+  mergeAdminTag,
   moderatePost,
   moderateReply,
   muteUser,
+  renameAdminTag,
   revokeOpsRole,
   searchAdminContents,
   searchAdminUsers,
@@ -656,6 +658,107 @@ async function onDeleteTag(tag: AdminTagVo) {
   }
 }
 
+/* ─── 标签重命名 / 合并（CR-217）：仅 SUPERADMIN；两个动作都不可撤销 ─── */
+const renameVisible = ref(false)
+const renameTarget = ref<AdminTagVo | null>(null)
+const renameName = ref('')
+const renameSubmitting = ref(false)
+
+function openRenameTag(tag: AdminTagVo) {
+  renameTarget.value = tag
+  renameName.value = tag.name
+  renameVisible.value = true
+}
+
+async function submitRenameTag() {
+  const target = renameTarget.value
+  if (!target) return
+  const name = renameName.value.trim()
+  if (!name) {
+    ElMessage.warning('标签名不能为空')
+    return
+  }
+  if (name.length > 32) {
+    ElMessage.warning('标签名最长 32 字')
+    return
+  }
+  // 新旧同名：后端视为幂等成功，这里直接关窗、不打多余请求
+  if (name === target.name) {
+    renameVisible.value = false
+    return
+  }
+  renameSubmitting.value = true
+  try {
+    await renameAdminTag(target.id, name)
+    ElMessage.success(`已将「${target.name}」重命名为「${name}」`)
+    renameVisible.value = false
+    await loadTags()
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '重命名失败')
+  } finally {
+    renameSubmitting.value = false
+  }
+}
+
+const mergeVisible = ref(false)
+const mergeSource = ref<AdminTagVo | null>(null)
+const mergeTargetId = ref<number | null>(null)
+const mergeOptions = ref<AdminTagVo[]>([])
+const mergeSearching = ref(false)
+const mergeSubmitting = ref(false)
+
+function openMergeTag(tag: AdminTagVo) {
+  mergeSource.value = tag
+  mergeTargetId.value = null
+  mergeOptions.value = []
+  mergeVisible.value = true
+  void searchMergeTargets('')
+}
+
+/** 目标标签远程搜索：只取前 20 条按名称排序（排除源标签自身） */
+async function searchMergeTargets(keyword: string) {
+  mergeSearching.value = true
+  try {
+    const res = await listAdminTags({ keyword: keyword.trim() || undefined, sort: 'name', page: 1, size: 20 })
+    mergeOptions.value = res.items.filter((t) => t.id !== mergeSource.value?.id)
+  } catch {
+    mergeOptions.value = []
+  } finally {
+    mergeSearching.value = false
+  }
+}
+
+async function submitMergeTag() {
+  const source = mergeSource.value
+  const targetId = mergeTargetId.value
+  if (!source || targetId == null) {
+    ElMessage.warning('请选择要并入的目标标签')
+    return
+  }
+  const targetName = mergeOptions.value.find((t) => t.id === targetId)?.name ?? `#${targetId}`
+  try {
+    await ElMessageBox.confirm(
+      `确定把「${source.name}」并入「${targetName}」？源标签会被删除，其帖子将改挂目标标签，且该操作不可撤销。`,
+      '合并标签',
+      { type: 'warning', confirmButtonText: '合并', cancelButtonText: '取消' },
+    )
+  } catch {
+    return
+  }
+  mergeSubmitting.value = true
+  try {
+    await mergeAdminTag(source.id, targetId)
+    ElMessage.success(`已将「${source.name}」并入「${targetName}」`)
+    mergeVisible.value = false
+    const nextPage = tagPage.value > 1 && tags.value.length === 1 ? tagPage.value - 1 : tagPage.value
+    await loadTags(nextPage)
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '合并失败')
+  } finally {
+    mergeSubmitting.value = false
+  }
+}
+
 /* ─── 内容巡查（F-SAFE-004 / CR-133）：进入 Tab 才加载；处置复用既有端点 ─── */
 const reviewKind = ref<'post' | 'reply'>('post')
 const reviewItems = ref<ReviewQueueItemVo[]>([])
@@ -1149,6 +1252,8 @@ function goLogin() {
             </div>
             <div class="flex flex-none items-center gap-3">
               <span class="text-caption text-ink-meta">{{ formatRelativeTime(tag.createdAt) }}</span>
+              <el-button size="small" plain @click="openRenameTag(tag)">重命名</el-button>
+              <el-button size="small" plain @click="openMergeTag(tag)">合并</el-button>
               <el-button size="small" type="danger" plain @click="onDeleteTag(tag)">删除</el-button>
             </div>
           </li>
@@ -1163,6 +1268,53 @@ function goLogin() {
           />
         </div>
       </template>
+
+      <!-- 重命名（CR-217）：同步 tags.name 与受影响帖子的 posts.tags 冗余列 -->
+      <el-dialog v-model="renameVisible" title="重命名标签" width="420px">
+        <p class="mb-3 text-body text-ink-meta">
+          会把所有帖子上的「{{ renameTarget?.name }}」同步改成新名称；名称 1~32 字，不能与其它标签重名。
+        </p>
+        <el-input
+          v-model="renameName"
+          maxlength="32"
+          show-word-limit
+          placeholder="新标签名"
+          @keyup.enter="submitRenameTag"
+        />
+        <template #footer>
+          <el-button @click="renameVisible = false">取消</el-button>
+          <el-button type="primary" :loading="renameSubmitting" @click="submitRenameTag">保存</el-button>
+        </template>
+      </el-dialog>
+
+      <!-- 合并（CR-217）：帖子关联 / 冗余列 / 使用次数并入目标后删除源标签 -->
+      <el-dialog v-model="mergeVisible" title="合并标签" width="460px">
+        <p class="mb-3 text-body text-ink-meta">
+          将「{{ mergeSource?.name }}」的帖子与使用次数并入目标标签，随后删除源标签。该操作不可撤销。
+        </p>
+        <el-select
+          v-model="mergeTargetId"
+          filterable
+          remote
+          clearable
+          :remote-method="searchMergeTargets"
+          :loading="mergeSearching"
+          placeholder="搜索目标标签（按名称）"
+          aria-label="目标标签"
+          style="width: 100%"
+        >
+          <el-option
+            v-for="opt in mergeOptions"
+            :key="opt.id"
+            :label="`${opt.name}（使用 ${opt.useCount} 次）`"
+            :value="opt.id"
+          />
+        </el-select>
+        <template #footer>
+          <el-button @click="mergeVisible = false">取消</el-button>
+          <el-button type="primary" :loading="mergeSubmitting" @click="submitMergeTag">合并</el-button>
+        </template>
+      </el-dialog>
     </el-card>
 
     <!-- ─── 内容巡查（F-SAFE-004 / CR-133）：仅 SUPERADMIN；进入 Tab 才加载 ─── -->

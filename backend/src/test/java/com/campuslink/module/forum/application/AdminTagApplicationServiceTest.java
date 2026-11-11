@@ -10,6 +10,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DuplicateKeyException;
 
 import java.time.Instant;
 import java.util.List;
@@ -17,12 +18,11 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -101,5 +101,116 @@ class AdminTagApplicationServiceTest {
         assertThat(result.size()).isEqualTo(10);
         assertThat(result.items()).isEmpty();
         verify(tagRepository).pageTags(null, "use_count", 20, 10);
+    }
+
+    @Test
+    @DisplayName("重命名：去首尾空白后写库，记 TAG_RENAME 审计（detail 含旧名 -> 新名与受影响帖子数）")
+    void renameTrimsAndRecordsAudit() {
+        when(tagRepository.findTag(TAG_ID))
+                .thenReturn(Optional.of(new TagRepository.TagSummary(TAG_ID, "java", 1, Instant.now())));
+        when(tagRepository.findTagByName("JVM")).thenReturn(Optional.empty());
+        when(tagRepository.renameTag(TAG_ID, "JVM")).thenReturn(3);
+
+        service.rename(OPERATOR_ID, TAG_ID, "  JVM  ");
+
+        verify(tagRepository).renameTag(TAG_ID, "JVM");
+        verify(auditService).record(OPERATOR_ID, "TAG_RENAME", "tags", TAG_ID, "tagName=java->JVM, affectedPosts=3");
+    }
+
+    @Test
+    @DisplayName("重命名：与其它标签重名 → 409 / 3008，不写库、不记审计")
+    void renameCollisionIsRejected() {
+        when(tagRepository.findTag(TAG_ID))
+                .thenReturn(Optional.of(new TagRepository.TagSummary(TAG_ID, "java", 1, Instant.now())));
+        when(tagRepository.findTagByName("JVM"))
+                .thenReturn(Optional.of(new TagRepository.TagSummary(9L, "JVM", 1, Instant.now())));
+
+        assertThatThrownBy(() -> service.rename(OPERATOR_ID, TAG_ID, "JVM"))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.TAG_NAME_TAKEN));
+
+        verify(tagRepository, never()).renameTag(anyLong(), anyString());
+        verify(auditService, never()).record(anyLong(), anyString(), anyString(), anyLong(), anyString());
+    }
+
+    @Test
+    @DisplayName("重命名：放开空格 / 超 32 字 → 1001")
+    void renameRejectsBlankAndTooLong() {
+        assertThatThrownBy(() -> service.rename(OPERATOR_ID, TAG_ID, "   "))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.INVALID_PARAM));
+        assertThatThrownBy(() -> service.rename(OPERATOR_ID, TAG_ID, "x".repeat(33)))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.INVALID_PARAM));
+
+        verifyNoInteractions(tagRepository, auditService);
+    }
+
+    @Test
+    @DisplayName("重命名：标签不存在 → 3001；新旧同名 → 幂等成功且不记审计")
+    void renameMissingOrUnchanged() {
+        when(tagRepository.findTag(9L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.rename(OPERATOR_ID, 9L, "JVM"))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
+
+        when(tagRepository.findTag(TAG_ID))
+                .thenReturn(Optional.of(new TagRepository.TagSummary(TAG_ID, "JVM", 1, Instant.now())));
+        service.rename(OPERATOR_ID, TAG_ID, "JVM");
+
+        verify(tagRepository, never()).renameTag(anyLong(), anyString());
+        verify(auditService, never()).record(anyLong(), anyString(), anyString(), anyLong(), anyString());
+    }
+
+    @Test
+    @DisplayName("重命名：并发撞唯一键 → 兜底为 3008")
+    void renameDuplicateKeyFallsBackToTaken() {
+        when(tagRepository.findTag(TAG_ID))
+                .thenReturn(Optional.of(new TagRepository.TagSummary(TAG_ID, "java", 1, Instant.now())));
+        when(tagRepository.findTagByName("JVM")).thenReturn(Optional.empty());
+        when(tagRepository.renameTag(TAG_ID, "JVM"))
+                .thenThrow(new DuplicateKeyException("uk_tags_name"));
+
+        assertThatThrownBy(() -> service.rename(OPERATOR_ID, TAG_ID, "JVM"))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.TAG_NAME_TAKEN));
+    }
+
+    @Test
+    @DisplayName("合并：记 TAG_MERGE 审计（detail 含源 / 目标名与受影响帖子数）")
+    void mergeRecordsAudit() {
+        when(tagRepository.findTag(5L))
+                .thenReturn(Optional.of(new TagRepository.TagSummary(5L, "Java", 3, Instant.now())));
+        when(tagRepository.findTag(9L))
+                .thenReturn(Optional.of(new TagRepository.TagSummary(9L, "后端", 2, Instant.now())));
+        when(tagRepository.mergeTag(5L, 9L)).thenReturn(4);
+
+        service.merge(OPERATOR_ID, 5L, 9L);
+
+        verify(auditService).record(OPERATOR_ID, "TAG_MERGE", "tags", 5L,
+                "source=Java, target=后端, affectedPosts=4");
+    }
+
+    @Test
+    @DisplayName("合并：源与目标相同 → 1001；任一不存在 → 3001；均不写库、不记审计")
+    void mergeRejectsSelfAndMissing() {
+        assertThatThrownBy(() -> service.merge(OPERATOR_ID, 5L, 5L))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.INVALID_PARAM));
+
+        when(tagRepository.findTag(5L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.merge(OPERATOR_ID, 5L, 9L))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
+
+        when(tagRepository.findTag(5L))
+                .thenReturn(Optional.of(new TagRepository.TagSummary(5L, "Java", 3, Instant.now())));
+        when(tagRepository.findTag(9L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.merge(OPERATOR_ID, 5L, 9L))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
+
+        verify(tagRepository, never()).mergeTag(anyLong(), anyLong());
+        verify(auditService, never()).record(anyLong(), anyString(), anyString(), anyLong(), anyString());
     }
 }

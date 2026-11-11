@@ -120,6 +120,64 @@ public class TagRepositoryImpl implements TagRepository {
         return postIds.size();
     }
 
+    @Override
+    public Optional<TagSummary> findTagByName(String name) {
+        return Optional.ofNullable(tagMapper.findTagByName(name)).map(TagRepositoryImpl::toSummary);
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.REQUIRED)
+    public int renameTag(long tagId, String newName) {
+        TagDO tag = tagMapper.selectById(tagId);
+        if (tag == null) {
+            return 0;
+        }
+        String oldName = tag.getName();
+        tagMapper.update(null, new LambdaUpdateWrapper<TagDO>()
+                .eq(TagDO::getId, tagId)
+                .set(TagDO::getName, newName));
+        List<Long> postIds = postTagMapper.findPostIdsByTagId(tagId);
+        for (Long postId : postIds) {
+            replaceInRedundancy(postId, oldName, newName);
+        }
+        return postIds.size();
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.REQUIRED)
+    public int mergeTag(long sourceId, long targetId) {
+        TagDO source = tagMapper.selectById(sourceId);
+        TagDO target = tagMapper.selectById(targetId);
+        if (source == null || target == null) {
+            return 0;
+        }
+        List<Long> postIds = postTagMapper.findPostIdsByTagId(sourceId);
+        for (Long postId : postIds) {
+            boolean alreadyLinked = postTagMapper.selectCount(new LambdaQueryWrapper<PostTagDO>()
+                    .eq(PostTagDO::getPostId, postId)
+                    .eq(PostTagDO::getTagId, targetId)) > 0;
+            if (alreadyLinked) {
+                // 同帖已挂目标：只清源关联，避免复合主键冲突与重复计数
+                postTagMapper.delete(new LambdaQueryWrapper<PostTagDO>()
+                        .eq(PostTagDO::getPostId, postId)
+                        .eq(PostTagDO::getTagId, sourceId));
+            } else {
+                postTagMapper.update(null, new LambdaUpdateWrapper<PostTagDO>()
+                        .eq(PostTagDO::getPostId, postId)
+                        .eq(PostTagDO::getTagId, sourceId)
+                        .set(PostTagDO::getTagId, targetId));
+            }
+            replaceInRedundancy(postId, source.getName(), target.getName());
+        }
+        int sourceUseCount = source.getUseCount() == null ? 0 : source.getUseCount();
+        tagMapper.update(null, new LambdaUpdateWrapper<TagDO>()
+                .eq(TagDO::getId, targetId)
+                .setSql("use_count = use_count + {0}", sourceUseCount));
+        // 外键 fk_pt_tag 已在上面解干净，此处只删 tags 行
+        tagMapper.deleteById(sourceId);
+        return postIds.size();
+    }
+
     /** 从单帖的 posts.tags 冗余列里移除指定标签名（保留其余标签；清空则置 NULL） */
     private void removeTagFromRedundancy(Long postId, String tagName) {
         com.campuslink.module.forum.infrastructure.persistence.PostDO post = postMapper.selectById(postId);
@@ -134,6 +192,24 @@ public class TagRepositoryImpl implements TagRepository {
                 .eq(com.campuslink.module.forum.infrastructure.persistence.PostDO::getId, postId)
                 .set(com.campuslink.module.forum.infrastructure.persistence.PostDO::getTags,
                         remaining.isEmpty() ? null : remaining));
+    }
+
+    /** 把冗余列里的 {@code oldName} 换成 {@code newName}：去重、保序，清空则置 NULL */
+    private void replaceInRedundancy(Long postId, String oldName, String newName) {
+        com.campuslink.module.forum.infrastructure.persistence.PostDO post = postMapper.selectById(postId);
+        if (post == null || post.getTags() == null || post.getTags().isBlank()) {
+            return;
+        }
+        String replaced = java.util.Arrays.stream(post.getTags().split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .map(s -> s.equals(oldName) ? newName : s)
+                .distinct()
+                .collect(java.util.stream.Collectors.joining(","));
+        postMapper.update(null, new LambdaUpdateWrapper<com.campuslink.module.forum.infrastructure.persistence.PostDO>()
+                .eq(com.campuslink.module.forum.infrastructure.persistence.PostDO::getId, postId)
+                .set(com.campuslink.module.forum.infrastructure.persistence.PostDO::getTags,
+                        replaced.isEmpty() ? null : replaced));
     }
 
     private static TagSummary toSummary(AdminTagRow row) {

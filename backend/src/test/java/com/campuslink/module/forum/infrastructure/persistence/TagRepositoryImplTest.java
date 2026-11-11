@@ -197,7 +197,91 @@ class TagRepositoryImplTest {
         verify(postTagMapper).insert(any(PostTagDO.class));
     }
 
+    @Test
+    @DisplayName("重命名：改 tags.name，并把受影响帖子的冗余列旧名换成新名（保序）")
+    void renameUpdatesTagAndRedundancy() {
+        when(tagMapper.selectById(TAG_ID)).thenReturn(tag(TAG_ID, "Java"));
+        when(postTagMapper.findPostIdsByTagId(TAG_ID)).thenReturn(List.of(POST_ID));
+        when(postMapper.selectById(POST_ID)).thenReturn(postWithTags(POST_ID, "Java,Vue"));
+
+        int affected = repository.renameTag(TAG_ID, "JVM");
+
+        assertThat(affected).isEqualTo(1);
+        LambdaUpdateWrapper<TagDO> tagUpdate = capturedTagUpdate();
+        assertThat(tagUpdate.getSqlSet()).contains("name");
+        assertThat(tagUpdate.getParamNameValuePairs().values()).contains("JVM");
+        LambdaUpdateWrapper<PostDO> postUpdate = capturedPostUpdate();
+        assertThat(postUpdate.getParamNameValuePairs().values()).contains("JVM,Vue");
+    }
+
+    @Test
+    @DisplayName("重命名：标签已不存在 → 返回 0，不发任何写")
+    void renameMissingTagDoesNothing() {
+        when(tagMapper.selectById(TAG_ID)).thenReturn(null);
+
+        assertThat(repository.renameTag(TAG_ID, "JVM")).isZero();
+
+        verify(tagMapper, never()).update(isNull(), any(Wrapper.class));
+        verifyNoInteractions(postTagMapper);
+    }
+
+    @Test
+    @DisplayName("合并：同帖已挂目标时只删源关联；否则把关联改挂目标；冗余列改目标名；use_count 相加；最后删源行")
+    void mergeMovesLinksAndMergesCounts() {
+        TagDO source = tag(5L, "Java");
+        source.setUseCount(3);
+        TagDO target = tag(9L, "后端");
+        when(tagMapper.selectById(5L)).thenReturn(source);
+        when(tagMapper.selectById(9L)).thenReturn(target);
+        when(postTagMapper.findPostIdsByTagId(5L)).thenReturn(List.of(7L, 8L));
+        when(postTagMapper.selectCount(any(Wrapper.class))).thenReturn(1L, 0L);
+        when(postMapper.selectById(7L)).thenReturn(postWithTags(7L, "Java,Vue"));
+        when(postMapper.selectById(8L)).thenReturn(postWithTags(8L, "Java,MySQL"));
+
+        int affected = repository.mergeTag(5L, 9L);
+
+        assertThat(affected).isEqualTo(2);
+        verify(postTagMapper, times(1)).delete(any(Wrapper.class));
+        verify(postTagMapper, times(1)).update(isNull(), any(Wrapper.class));
+        assertThat(capturedTagUpdate().getSqlSet()).contains("use_count = use_count +");
+        assertThat(capturedTagUpdate().getParamNameValuePairs().values()).contains(3);
+        verify(tagMapper).deleteById(5L);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Wrapper<PostDO>> postUpdates = ArgumentCaptor.forClass(Wrapper.class);
+        verify(postMapper, times(2)).update(isNull(), postUpdates.capture());
+        List<List<String>> writtenTags = postUpdates.getAllValues().stream()
+                .map(w -> {
+                    w.getSqlSegment();
+                    return ((LambdaUpdateWrapper<PostDO>) w).getParamNameValuePairs().values().stream()
+                            .map(String::valueOf)
+                            .toList();
+                })
+                .toList();
+        assertThat(writtenTags.get(0)).contains("后端,Vue");
+        assertThat(writtenTags.get(1)).contains("后端,MySQL");
+    }
+
+    @Test
+    @DisplayName("合并：源或目标已不存在 → 返回 0，不发任何写")
+    void mergeMissingTagDoesNothing() {
+        when(tagMapper.selectById(5L)).thenReturn(null);
+        when(tagMapper.selectById(9L)).thenReturn(tag(9L, "后端"));
+
+        assertThat(repository.mergeTag(5L, 9L)).isZero();
+
+        verify(tagMapper, never()).deleteById(5L);
+        verifyNoInteractions(postTagMapper);
+    }
+
     // ---------- helpers ----------
+
+    private static PostDO postWithTags(long id, String tags) {
+        PostDO p = new PostDO();
+        p.setId(id);
+        p.setTags(tags);
+        return p;
+    }
 
     private static TagDO tag(long id, String name) {
         TagDO t = new TagDO();

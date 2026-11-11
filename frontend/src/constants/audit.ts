@@ -24,6 +24,8 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   REPORT_CLOSE: '处理工单',
   ROSTER_IMPORT: '名册导入',
   TAG_DELETE: '删除标签',
+  TAG_MERGE: '合并标签',
+  TAG_RENAME: '重命名标签',
   USER_BAN: '封禁用户',
   USER_UNBAN: '解封用户',
   USER_WARN: '警告用户',

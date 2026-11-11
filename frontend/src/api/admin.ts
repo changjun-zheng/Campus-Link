@@ -218,6 +218,20 @@ export const listAdminTags = (
 export const deleteAdminTag = (id: number) => del<void>(`/admin/tags/${id}`)
 
 /**
+ * 重命名标签（仅 SUPERADMIN，CR-217）：服务端同步 `tags.name` 与受影响帖子的 `posts.tags`
+ * 冗余列，记 `TAG_RENAME` 审计；名称 1~32 字，与其它标签重名 → 409 / `3008`。
+ */
+export const renameAdminTag = (id: number, name: string) =>
+  put<void>(`/admin/tags/${id}`, { name })
+
+/**
+ * 合并标签（仅 SUPERADMIN，CR-217，不可撤销）：把源标签的帖子关联、冗余列与使用次数并入目标，
+ * 再删除源标签，记 `TAG_MERGE` 审计；源与目标相同 → `1001`，任一不存在 → `3001`。
+ */
+export const mergeAdminTag = (id: number, targetId: number) =>
+  post<void>(`/admin/tags/${id}/merge`, { targetId })
+
+/**
  * 内容巡查队列（F-SAFE-004 / CR-133、CR-196）：OPS / SUPERADMIN 可读。
  *
  * 只列未删内容、**已下架仍列出**（可恢复）；`kind=reply` 时 `title` 是楼层正文纯文本前 60 字（不含 HTML）。
