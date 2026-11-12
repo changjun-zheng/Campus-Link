@@ -35,6 +35,11 @@
     <!-- Jackson 2 不在 Boot 4 的 BOM 里（它托管的是 tools.jackson 3.x）：2.21.5 由 jjwt-jackson 0.13.0 带进来，
          注入点因此是 dependencyManagement 而不是属性。补丁版 2.21.7 修掉 5×HIGH + 2×MODERATE。 -->
     <jackson2.version>2.21.7</jackson2.version>
+    <!-- 依赖漏洞修复（CR-218，OSV 扫描 2026-11-12）：Boot 4.1.1 托管 amqp-client 5.30.0，
+         有 10 条公告（4×HIGH：帧级 OOM、JSON-RPC Class.forName 任意类加载等；5×MODERATE；1×LOW）。
+         5.37.1 是当前最新稳定版（公告修复版最高 5.36.1）；属性覆盖是 Boot 官方支持的升级方式，不新增依赖。
+         移除时机：Boot 托管版本 ≥5.37.1 时删掉本行。 -->
+    <rabbit-amqp-client.version>5.37.1</rabbit-amqp-client.version>
     <!-- 风格门禁（问题清单 E-003 最后一块，CR-151）：插件 3.6.0 显式配 10.x 规则引擎，
          不追 14.x（插件兼容面未验证）；规则集见 config/checkstyle/checkstyle.xml -->
     <checkstyle.version>10.26.1</checkstyle.version>
