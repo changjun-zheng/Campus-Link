@@ -594,7 +594,6 @@ watch(userId, () => void loadAll(), { immediate: true })
           <ul>
             <li v-for="r in replies" :key="r.id" class="border-b-[0.5px] border-divider px-5 py-3 last:border-b-0">
               <div class="flex items-center gap-2">
-                <span class="flex-none text-caption text-ink-meta tabular-nums">第 {{ r.floorNo }} 楼</span>
                 <RouterLink
                   :to="linkToPost(r.postId)"
                   class="min-w-0 flex-1 truncate text-body text-ink hover:text-link"

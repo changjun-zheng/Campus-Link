@@ -111,7 +111,7 @@ const togglingLike = ref(false)
 const togglingFavorite = ref(false)
 const likingReplyId = ref<number | null>(null)
 /** 引用回复（F-009 / CR-085）：当前引用目标；null = 未在引用态。切换帖子时随 watch 重置 */
-const quoting = ref<{ replyId: number; floorNo: number; authorNickname: string } | null>(null)
+const quoting = ref<{ replyId: number; authorNickname: string } | null>(null)
 /** 从通知跳入时被点名的楼层 id（?floor=），命中则滚动 + 高亮 */
 const focusedFloorId = ref('')
 
@@ -274,8 +274,8 @@ function canAccept(r: ReplyVo): boolean {
 async function adopt(r: ReplyVo) {
   if (!post.value) return
   const tip = post.value.accepted
-    ? `更换采纳为 #${r.floorNo} 楼？原最佳答案将被替换`
-    : `采纳 #${r.floorNo} 楼为最佳答案？`
+    ? '更换最佳答案为这条回复？原最佳答案将被替换'
+    : '采纳这条回复为最佳答案？'
   try {
     await ElMessageBox.confirm(tip, '采纳最佳答案', { confirmButtonText: '采纳', cancelButtonText: '取消' })
   } catch {
@@ -356,7 +356,7 @@ async function submitReply() {
   submitting.value = true
   try {
     const res = await publishReply(postId.value, contentMd, quoting.value?.replyId)
-    ElMessage.success(`回复成功，你在 ${res.floorNo} 楼`)
+    ElMessage.success('回复成功')
     replyMd.value = ''
     quoting.value = null
     page.value = Math.max(1, Math.ceil(res.floorNo / size))
@@ -374,7 +374,7 @@ async function submitReply() {
  */
 function quoteReply(r: ReplyVo) {
   if (!requireLoginOrRedirect()) return
-  quoting.value = { replyId: r.id, floorNo: r.floorNo, authorNickname: r.authorNickname }
+  quoting.value = { replyId: r.id, authorNickname: r.authorNickname }
   document.getElementById('replyComposer')?.scrollIntoView({ block: 'center' })
 }
 
@@ -614,14 +614,14 @@ watch(
         </div>
 
         <template v-else>
-          <!-- 回复空态（CR-201 批次 A）：图标 + 文案 + 主操作，把「来占一楼」从一句话变成一个入口 -->
+          <!-- 回复空态（CR-201 批次 A）：图标 + 文案 + 主操作，把「来写第一条回复」从一句话变成一个入口 -->
           <div v-if="!replies.length" class="flex flex-col items-center px-5 py-10 text-center">
             <span class="flex h-12 w-12 items-center justify-center rounded-full bg-bg-subtle text-ink-meta">
               <SvgIcon name="message-2" :size="20" />
             </span>
-            <p class="mt-3 text-body text-ink-regular">还没有回复，来占一楼</p>
+            <p class="mt-3 text-body text-ink-regular">还没有回复，来写第一条回复</p>
             <el-button class="mt-4" type="primary" size="small" @click="focusComposer">
-              写下第一回复
+              写下第一条回复
             </el-button>
           </div>
           <ul v-else ref="repliesListRef">
@@ -637,9 +637,7 @@ watch(
             >
               <div class="mx-auto max-w-reading">
                 <div class="cl-reply-actions mb-1.5 flex flex-wrap items-center gap-1.5 text-caption text-ink-meta">
-                  <span class="inline-flex items-center rounded-sm bg-code px-1.5 py-px text-ink-regular">
-                    #{{ r.floorNo }} 楼
-                  </span>
+                  <!-- 楼层号不再展示（CR-219）：跳转与排序仍由回复 id / floorNo 承担，号码对读者没有信息量 -->
                   <!-- 楼层作者同样可点进主页：回复区里“这人还答过什么”是主页最自然的入口 -->
                   <RouterLink
                     :to="`/u/${r.authorId}`"
@@ -707,7 +705,7 @@ watch(
                   v-if="r.quoted"
                   class="mb-1.5 rounded-sm border-[0.5px] border-divider bg-code px-2.5 py-1.5 text-caption text-ink-meta"
                 >
-                  <span class="text-ink-regular">引用 #{{ r.quoted.floorNo }} 楼 · {{ r.quoted.authorNickname }}</span>
+                  <span class="text-ink-regular">引用 @{{ r.quoted.authorNickname }}</span>
                   <span class="ml-1.5">{{ r.quoted.excerpt }}</span>
                 </div>
                 <div class="markdown-body" v-highlight v-html="r.contentHtml" />
@@ -734,7 +732,7 @@ watch(
                   class="mb-2 flex items-center gap-2 rounded-sm border-[0.5px] border-divider bg-code px-2.5 py-1.5 text-caption text-ink-meta"
                 >
                   <span>
-                    回复 <span class="text-ink-regular">#{{ quoting.floorNo }} 楼 · {{ quoting.authorNickname }}</span>
+                    回复 <span class="text-ink-regular">@{{ quoting.authorNickname }}</span>
                   </span>
                   <el-button link size="small" class="ml-auto" @click="cancelQuote">取消引用</el-button>
                 </div>

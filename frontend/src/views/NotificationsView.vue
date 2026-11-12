@@ -203,7 +203,6 @@ loadNotifications()
             <p class="text-body text-ink-regular">
               <span class="font-medium text-ink">{{ actorOf(n) }}</span>
               {{ actionOf(n) }}
-              <template v-if="n.floorNo">#{{ n.floorNo }} 楼</template>
             </p>
             <!-- 平台直发通知（警告 / 禁言）没有帖子目标，正文来自 message（CR-209） -->
             <p v-if="n.message" class="mt-1 whitespace-pre-wrap text-title-sm text-ink-regular">

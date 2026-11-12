@@ -33,7 +33,7 @@ export interface NotificationVo {
   /** 目标帖已删除时不下发 */
   postId?: number
   postTitle: string
-  /** 仅楼层类通知有值，用于「#N 楼」提示 */
+  /** 仅楼层类通知有值；界面不再展示楼层号（CR-219），跳转定位用 targetId（回复 id） */
   floorNo?: number
   /** 平台通知正文（CR-209：警告原因 / 禁言说明）；互动通知不下发 */
   message?: string | null

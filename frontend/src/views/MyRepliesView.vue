@@ -91,7 +91,6 @@ loadReplies()
             <el-tag v-if="r.status === 'REMOVED'" type="danger" effect="light" size="small" class="flex-none">
               已下架
             </el-tag>
-            <span class="flex-none text-caption text-ink-meta">第 {{ r.floorNo }} 楼</span>
             <RouterLink
               :to="`/post/${r.postId}`"
               class="min-w-0 flex-1 truncate text-body text-ink hover:text-link"

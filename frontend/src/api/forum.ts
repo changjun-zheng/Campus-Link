@@ -75,7 +75,7 @@ export interface PostDetailVo {
 
 export interface ReplyVo {
   id: number
-  /** 楼层 = 回复序号（第一条回复为 1 楼，帖子本体不占楼层号，设计 §4.1） */
+  /** 楼层 = 回复序号（第一条回复为 1，帖子本体不占楼层号）；仅用于排序与分页定位，界面不展示（CR-219） */
   floorNo: number
   contentHtml: string
   authorId: number
@@ -89,8 +89,8 @@ export interface ReplyVo {
   /** 当前登录用户是否已点赞该楼层（F-FORUM-005）；匿名请求恒 false */
   likedByMe: boolean
   /**
-   * 被引用楼层摘要（F-009 / CR-085）：服务端组装的楼层号 + 昵称 + 120 字纯文本摘要。
-   * 无引用、或被引楼层已不可见（下架 / 已删除）时为 null——null 即不渲染引用块。
+   * 被引用楼层摘要（F-009 / CR-085）：服务端组装的昵称 + 120 字纯文本摘要（楼层号仍在契约里，
+   * 但界面不展示，CR-219）。无引用、或被引楼层已不可见（下架 / 已删除）时为 null——null 即不渲染引用块。
    */
   quoted?: QuotedReplyVo | null
   createdAt: string
