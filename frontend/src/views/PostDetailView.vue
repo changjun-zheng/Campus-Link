@@ -355,11 +355,13 @@ async function submitReply() {
   }
   submitting.value = true
   try {
-    const res = await publishReply(postId.value, contentMd, quoting.value?.replyId)
+    await publishReply(postId.value, contentMd, quoting.value?.replyId)
     ElMessage.success('回复成功')
     replyMd.value = ''
     quoting.value = null
-    page.value = Math.max(1, Math.ceil(res.floorNo / size))
+    // 新回复永远排在列表最后（最佳答案置顶、其余按 floorNo 升序），用总条数定位末页。
+    // 不能用 floorNo 猜页：软删楼层会留下空洞，floorNo 可能远大于可见条数，猜出来会落到空页。
+    page.value = Math.max(1, Math.ceil((total.value + 1) / size))
     await Promise.all([loadReplies(), loadPost()])
   } catch (e) {
     ElMessage.error(e instanceof Error ? e.message : '回复失败')
