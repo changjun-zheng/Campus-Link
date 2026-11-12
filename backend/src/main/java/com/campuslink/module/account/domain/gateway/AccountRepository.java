@@ -72,6 +72,12 @@ public interface AccountRepository {
     void updateStatus(Long accountId, AccountStatus status, java.time.Instant deleteAt);
 
     /**
+     * 禁言截止时间定向 UPDATE（F-ADMIN-002 / CR-209）：只 SET {@code muted_until} 一列；
+     * 传 {@code null} 即解除禁言。与 updateStatus 同理不整行回写。
+     */
+    void updateMutedUntil(Long accountId, java.time.Instant mutedUntil);
+
+    /**
      * 角色定向 UPDATE（CR-196）：只 SET {@code role} 一列，条件同时带当前角色
      * （{@code expectedRole}）——并发窗口内若角色已被他人改动，本次更新落空、返回 {@code false}，
      * 调用方不得据此记审计。与 {@link #updateStatus} 同理不整行回写。

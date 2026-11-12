@@ -40,7 +40,7 @@ onMounted(() => {
 onBeforeUnmount(() => window.removeEventListener('scroll', onScroll))
 
 function logout() {
-  auth.logout()
+  auth.logout(true)
   router.push('/')
 }
 
@@ -125,12 +125,22 @@ function onSearchSubmit() {
           <!-- 窄屏折叠为图标（ui-guideline §7）：进搜索页，该页输入框自动聚焦 -->
           <button
             type="button"
-            class="-mx-1 -my-1 inline-flex h-7 w-7 cursor-pointer items-center justify-center text-ink-regular hover:text-link xl:hidden"
+            class="-m-1 inline-flex h-8 w-8 md:h-9 md:w-9 cursor-pointer items-center justify-center text-ink-regular hover:text-link xl:hidden"
             aria-label="搜索"
             @click="onSearchSubmit"
           >
             <SvgIcon name="search" :size="20" />
           </button>
+          <!-- 窄屏发帖入口（CR-205 / UI-06）：桌面由右侧「提问」承担；登录后常驻，
+               负边距让 36×36 命中区不改变 28px 的排版宽度，避免挤压 logo 与账号菜单 -->
+          <RouterLink
+            v-if="isLoggedIn"
+            to="/publish"
+            class="-m-1 inline-flex h-8 w-8 md:h-9 md:w-9 items-center justify-center text-ink-regular hover:text-link md:hidden"
+            aria-label="发帖"
+          >
+            <SvgIcon name="pencil" :size="20" />
+          </RouterLink>
           <RouterLink
             v-if="isHome"
             to="/teams"
@@ -142,7 +152,7 @@ function onSearchSubmit() {
           </RouterLink>
           <RouterLink
             to="/notifications"
-            class="-mx-1 -my-1 inline-flex h-7 w-7 items-center justify-center text-ink-regular hover:text-link"
+            class="-m-1 inline-flex h-8 w-8 md:h-9 md:w-9 items-center justify-center text-ink-regular hover:text-link"
             :aria-label="unreadCount ? `通知中心，${unreadLabel} 条未读` : '通知中心'"
           >
             <span class="relative inline-flex">
@@ -152,7 +162,7 @@ function onSearchSubmit() {
           </RouterLink>
           <RouterLink
             to="/messages"
-            class="-mx-1 -my-1 inline-flex h-7 w-7 items-center justify-center text-ink-regular hover:text-link"
+            class="-m-1 inline-flex h-8 w-8 md:h-9 md:w-9 items-center justify-center text-ink-regular hover:text-link"
             :aria-label="unreadMessages ? `私信，${unreadMessageLabel} 条未读` : '私信'"
           >
             <span class="relative inline-flex">

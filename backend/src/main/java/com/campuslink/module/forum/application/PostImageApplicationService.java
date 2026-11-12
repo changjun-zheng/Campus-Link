@@ -42,7 +42,7 @@ public class PostImageApplicationService {
         if (!props.getPostImages().isUploadEnabled()) {
             throw new ApiException(ResultCode.FORBIDDEN);
         }
-        accounts.assertActiveForContent(userId);
+        accounts.assertAllowedToWriteContent(userId);
         if (!rateLimit.allow(userId) || !processing.tryAcquire()) {
             throw new ApiException(ResultCode.POST_IMAGE_RATE_LIMITED);
         }

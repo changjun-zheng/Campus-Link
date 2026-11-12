@@ -93,8 +93,9 @@ public class TeamController {
 
     @Operation(summary = "发布招募（需登录）：方向为固定枚举，人数 2~20（含发起人），联系方式仅成员可见；标题 / 简介 / 目标赛事走机审")
     @SecurityRequirement(name = ApiDocs.BEARER_AUTH)
-    @ErrorCodes({ ResultCode.NOT_LOGGED_IN, ResultCode.USER_BANNED, ResultCode.ACCOUNT_DEACTIVATED,
-            ResultCode.MODERATION_BLOCKED, ResultCode.MODERATION_UNAVAILABLE })
+    @ErrorCodes({ ResultCode.NOT_LOGGED_IN, ResultCode.USER_BANNED, ResultCode.USER_MUTED,
+            ResultCode.ACCOUNT_DEACTIVATED, ResultCode.MODERATION_BLOCKED,
+            ResultCode.MODERATION_UNAVAILABLE })
     @PostMapping
     public ApiResponse<TeamDetailVo> createTeam(@Valid @RequestBody CreateTeamCommand command,
             Authentication authentication) {
@@ -104,9 +105,9 @@ public class TeamController {
 
     @Operation(summary = "申请加入（需登录）：申请后待发起人审批；不能申请自己的组队，已满员 / 已关闭 / 已申请均被拒")
     @SecurityRequirement(name = ApiDocs.BEARER_AUTH)
-    @ErrorCodes({ ResultCode.NOT_LOGGED_IN, ResultCode.USER_BANNED, ResultCode.ACCOUNT_DEACTIVATED,
-            ResultCode.TEAM_NOT_FOUND, ResultCode.TEAM_NOT_RECRUITING, ResultCode.TEAM_FULL,
-            ResultCode.TEAM_APPLICATION_EXISTS, ResultCode.CANNOT_APPLY_OWN_TEAM })
+    @ErrorCodes({ ResultCode.NOT_LOGGED_IN, ResultCode.USER_BANNED, ResultCode.USER_MUTED,
+            ResultCode.ACCOUNT_DEACTIVATED, ResultCode.TEAM_NOT_FOUND, ResultCode.TEAM_NOT_RECRUITING,
+            ResultCode.TEAM_FULL, ResultCode.TEAM_APPLICATION_EXISTS, ResultCode.CANNOT_APPLY_OWN_TEAM })
     @PostMapping("/{id}/applications")
     public ApiResponse<TeamApplyResultVo> applyToTeam(@PathVariable("id") long id,
             Authentication authentication) {

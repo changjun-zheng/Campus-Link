@@ -1,5 +1,6 @@
 package com.campuslink.security;
 
+import com.campuslink.common.security.TokenRevocationGateway;
 import com.campuslink.config.AppProperties;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -11,9 +12,14 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import java.time.Instant;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * JWT 角色映射（CR-196）：SUPERADMIN 叠加 ROLE_OPS，OPS / USER 保持单权限。
@@ -26,7 +32,8 @@ class JwtAuthenticationFilterTest {
     private static final String SECRET = "0123456789abcdef0123456789abcdef";
 
     private final JwtService jwtService = jwtService();
-    private final JwtAuthenticationFilter filter = new JwtAuthenticationFilter(jwtService);
+    private final TokenRevocationGateway revocation = mock(TokenRevocationGateway.class);
+    private final JwtAuthenticationFilter filter = new JwtAuthenticationFilter(jwtService, revocation);
 
     @AfterEach
     void clearContext() {
@@ -57,6 +64,27 @@ class JwtAuthenticationFilterTest {
         Authentication authentication = authenticate("USER");
 
         assertThat(authorities(authentication)).containsExactly("ROLE_USER");
+    }
+
+    @Test
+    @DisplayName("已吊销 token → 不注入登录态（按匿名继续，受保护端点出 401）")
+    void revokedTokenIsAnonymous() throws Exception {
+        when(revocation.isRevoked(eq(7L), any(Instant.class))).thenReturn(true);
+
+        Authentication authentication = authenticate("USER");
+
+        assertThat(authentication).isNull();
+    }
+
+    @Test
+    @DisplayName("吊销查询异常 → fail-open 保持登录态（Redis 故障不把全体用户踢下线）")
+    void revocationFailureFailsOpen() throws Exception {
+        when(revocation.isRevoked(eq(7L), any(Instant.class))).thenThrow(new IllegalStateException("redis down"));
+
+        Authentication authentication = authenticate("USER");
+
+        assertThat(authentication).isNotNull();
+        assertThat(authentication.getPrincipal()).isEqualTo(7L);
     }
 
     private Authentication authenticate(String role) throws Exception {

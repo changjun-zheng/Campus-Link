@@ -38,6 +38,26 @@ public interface TagRepository {
     /** 删除前的存在性校验用；已不存在返回 empty */
     Optional<TagSummary> findTag(long tagId);
 
+    /** 重命名前的重名预检用（CR-217）；{@code tags.name} 唯一键仍是最终防线 */
+    Optional<TagSummary> findTagByName(String name);
+
+    /**
+     * 重命名（F-ADMIN-004 标签侧 / CR-217）：事务内改 {@code tags.name}，并把受影响帖子的
+     * {@code posts.tags} 冗余列中的旧名替换为新名（去重、保序）。调用方须先做重名预检。
+     *
+     * @return 受影响的帖子数（审计 detail 用）
+     */
+    int renameTag(long tagId, String newName);
+
+    /**
+     * 合并（CR-217）：事务内把源的 {@code post_tags} 关联迁到目标（同帖已挂目标则丢弃重复）、
+     * 重写受影响帖子的冗余列（源名 → 目标名并去重）、目标 {@code use_count += 源 use_count}、
+     * 最后删源 {@code tags} 行。{@code use_count} 是累计挂载次数，相加与"软删不回退"口径一致。
+     *
+     * @return 受影响的帖子数（审计 detail 用）
+     */
+    int mergeTag(long sourceId, long targetId);
+
     /**
      * 删除标签（CR-132）：事务内**先删 post_tags 关联**（{@code fk_pt_tag} 外键要求）、
      * 再把该标签从受影响帖子的 {@code posts.tags} 冗余列移除、最后删 {@code tags} 行。

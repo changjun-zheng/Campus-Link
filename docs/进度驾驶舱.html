@@ -1331,10 +1331,10 @@
           <div class="chips">
 
 
-            <span class="chip">数据快照 <b>2026-11-05</b></span>
+            <span class="chip">数据快照 <b>2026-11-12</b></span>
 
 
-            <span class="chip">change-log <b>v1.237</b></span>
+            <span class="chip">change-log <b>v1.259</b></span>
 
 
             <span class="chip">next-steps <b>v1.15</b></span>
@@ -1361,11 +1361,11 @@
           <div class="kpi"><b>2<small> / 4</small></b><span>Sprint 已交付（S1 · S2 MVP）</span></div>
 
 
-          <div class="kpi"><b>914<small> / 914</small></b><span>后端单测全绿（2026-11-05 实跑 <code>mvn verify</code> 914 例 / 0 失败；默认口径有 17 例 SKIPPED＝CR-090 4 + CR-106 契约真身 1 + CR-193 数据库集成 7 + CR-195 图片事务 2 + R-6 名册占用 3；<code>SPRING_IT=true</code> 时全跑，与 AGENTS 声明一致）</span></div>
+          <div class="kpi"><b>1004<small> / 1004</small></b><span>后端单测全绿（2026-11-12 实跑 <code>mvn verify</code> 1004 例 / 0 失败；默认口径有 21 例 SKIPPED＝CR-090 4 + CR-106 契约真身 1 + CR-193 数据库集成 7 + CR-195 图片事务 2 + R-6 名册占用 3 + 标签重命名 / 合并集成 4；<code>SPRING_IT=true</code> 时全跑，与 AGENTS 声明一致）</span></div>
 
 
-          <div class="kpi"><b>79<small> / 131</small></b><span>契约端点 / schema（快照 <b>v1.49</b> · 69 路径 / 61 受保护 / 22
-              tag，2026-11-05 解析归档 openapi.json 实测；CR-200 新增 assistant 3 操作 + 4 schema，diff +358 / −0）</span></div>
+          <div class="kpi"><b>90<small> / 141</small></b><span>契约端点 / schema（快照 <b>v1.57</b> · 77 路径 / 72 受保护 / 23
+              tag，2026-11-11 解析归档 openapi.json 实测；CR-217 标签重命名与合并新增 2 个受保护操作与 2 个 schema，diff +314 / −87）</span></div>
 
 
           <div class="kpi"><b>21<small> + </small>0</b><span>真实页面 + 占位页（/admin 已由 CR-084 转实页 ⇒ 占位清零；src/views/ 21 个 .vue
@@ -1924,7 +1924,7 @@
         </div>
 
 
-        <p>184 次登记，已落地 <b>182</b> 次：完整 <b>173</b> · 部分 <b>9</b> · 未做 <b>2</b> · 在途 <b>0</b>。详见<a href="变更日志/变更台账.md">变更台账</a>。</p>
+        <p>205 次登记，已落地 <b>203</b> 次：完整 <b>194</b> · 部分 <b>9</b> · 未做 <b>2</b> · 在途 <b>0</b>。详见<a href="变更日志/变更台账.md">变更台账</a>。</p>
 
 
         <p class="muted">〔<b>2026-09-27 注（<a href="变更日志/变更台账.md#cr-089">CR-089</a>）</b>：上行统计停在 v1.83 时点；其后 <b>CR-081 ~
@@ -2676,7 +2676,7 @@
 
         <div class="panel-head">
           <h2>🎯 你现在就能动手的三件事（next-steps §4）</h2>
-          <p class="r-desc">〔2026-11-01 · CR-182〕<a href="设计/UI规范/前端界面优化建议.md">前端界面优化建议</a>已归档；推荐从首页与列表开始，待发起人选择批次。仅文档交付，不改变现有任务优先级；搜索容量后续仍保留 CR-181。<b>〔CR-183〕</b>批次 A 已实施并验收，<a href="开发/界面优化批次A验收.md">证据已归档</a>；〔CR-185〕UI-04 详情阅读与 UI-05 发布工作区已实施并验收，证据见<a href="开发/详情与发布体验验收.md">详情与发布体验验收</a>；UI-03 滚动方式与 UI-07 登录文案仍未实施。</p>
+          <p class="r-desc">〔2026-11-01 · CR-182〕<a href="设计/UI规范/前端界面优化建议.md">前端界面优化建议</a>已归档；推荐从首页与列表开始，待发起人选择批次。仅文档交付，不改变现有任务优先级；搜索容量后续仍保留 CR-181。<b>〔CR-183〕</b>批次 A 已实施并验收，<a href="开发/界面优化批次A验收.md">证据已归档</a>；〔CR-185〕UI-04 详情阅读与 UI-05 发布工作区已实施并验收，证据见<a href="开发/详情与发布体验验收.md">详情与发布体验验收</a>；<b>〔2026-11-07〕UI-07 登录文案已修正</b>（删去与实测不符的「仅本校同学可见」，改为「注册需学籍核验，公开内容无需登录即可浏览」，并统一「学籍核验结果」称呼）；<b>〔2026-11-07〕UI-03 已由 CR-204 实施</b>（从帖子详情返回时恢复排序 / 条数 / 滚动位置，其余入口从顶部开始，切换排序回顶）；<b>〔2026-11-07〕UI-06 已由 CR-205 实施</b>（窄屏页头补登录态发帖入口、图标命中区 32/36px、详情操作在触摸设备抬到 28~32px）；<b>〔2026-11-07〕无障碍 AA 已由 CR-206 收口</b>（axe 28 组合清零：占位文本对比度、代码块键盘可达、主色深色微调）。</p>
         </div>
 
 
@@ -2692,8 +2692,8 @@
               <code>backend/scripts/data/D001__seed_dev_roster_45.py</code> 灌入 <b>45 名全合成学生</b>（学号保留段
               <code>888800001~888800045</code>、批次 <code>dev-sim-45</code>、邮箱域 <code>dev.campuslink.local</code>）并经真实链路注册
               <b>45 个开发测试账号</b>（见 <a href="开发/开发测试账号清单.md">开发测试账号清单</a>），<code>bypass=false</code>
-              下的注册链路自此可验证、可复现，<b>本待办由「阻塞项」降为「延后优化项」</b>。三条边界：① <b>B1 / B2 真实名册仍未到位</b>——正式导入路径（真实名册 → admin CSV 导入 →
-              审计留痕）不变，本条不等于名册导入方案的变更；② <b>生产红线一条未放宽</b>——<code>campuslink.roster.bypass</code> 默认值未改（生产仍必须
+              下的注册链路自此可验证、可复现，<b>本待办由「阻塞项」降为「延后优化项」</b>。三条边界：① <b>B1 / B2 真实名册仍未到位</b>——正式导入路径（真实名册 → 管理后台 CSV 导入 →
+              审计留痕；后台导入 UI 已由 <a href="变更日志/变更台账.md#cr-210">CR-210</a> 补齐）不变，本条不等于名册导入方案的变更；② <b>生产红线一条未放宽</b>——<code>campuslink.roster.bypass</code> 默认值未改（生产仍必须
               <code>false</code>）、dev 固定验证码 <code>123456</code> 生产仍必须留空、名册导入照写审计日志、学籍核验三种失败统一提示的防枚举口径未削弱；③ 真实名册到位后这 45
               行按 <code>source_batch='dev-sim-45'</code> 可整体识别并清理（回滚口径见方案 §6）。
             </div>
@@ -3029,7 +3029,7 @@
       <div class="rule"></div>
 
 
-      Campus-Link 进度驾驶舱 · 视图 v2.0（2026-09-13 重构视觉与结构）· 数据快照 2026-11-05<br>
+      Campus-Link 进度驾驶舱 · 视图 v2.0（2026-09-13 重构视觉与结构）· 数据快照 2026-11-12<br>
 
 
       数据由 变更台账 / 下一步行动 / 流程偏离记录 / 设计门纪要 / Sprint2计划 五份事实文档提取生成 · <b>每次工作收尾由 AI 会话按 AGENTS.md「工作收尾约定」更新数据</b>，结构与样式不改
@@ -3051,6 +3051,24 @@
 
 
     const CRS = [
+      { id: "CR-217", date: "2026-11-11", title: "标签重命名与合并（F-ADMIN-004 标签侧补齐）：新增仅 SUPERADMIN 的 <code>PUT /api/v1/admin/tags/{id}</code> 与 <code>POST /api/v1/admin/tags/{id}/merge</code>，事务内同步 <code>tags</code> / <code>post_tags</code> / <code>posts.tags</code> 冗余列，重名 <code>409 / 3008</code>，各记 <code>TAG_RENAME</code> / <code>TAG_MERGE</code> 审计；管理后台标签页补重命名 / 合并入口。零迁移、零配置项；后端新增 13 例（1000 全绿），契约 v1.57（90 操作 / 77 路径 / 141 schema / 72 受保护，+314 / −87）；详见<a href='变更日志/变更台账.md#cr-217'>CR-217</a>。", type: "管理后台（治理）+ 前端 + 契约", status: "full", review: "继续开发（用户授权自主推进）", hash: "592f478" },
+      { id: "CR-216", date: "2026-11-10", title: "操作审计查询增强（目标筛选 + CSV 导出）：审计分页新增 <code>targetType</code> / <code>targetId</code> 筛选；新增仅 SUPERADMIN 的 <code>GET /api/v1/admin/audit-logs/export</code>（同筛选导出 CSV，UTF-8 BOM、RFC 4180 转义、公式注入前缀、上限 5000 行，超出 1001）；管理后台审计页补目标筛选与导出按钮；零迁移、零新错误码、零新审计动作；后端新增 9 例（987 全绿），契约 v1.56（88 操作 / 76 路径 / 139 schema / 70 受保护，+130 / −1）；详见<a href='变更日志/变更台账.md#cr-216'>CR-216</a>。", type: "管理后台（治理）+ 前端 + 契约", status: "full", review: "继续开发（用户授权自主推进）", hash: "043f46a" },
+      { id: "CR-215", date: "2026-11-10", title: "管理后台操作审计（只读查询）：新增仅 SUPERADMIN 的 <code>GET /api/v1/admin/audit-logs</code>（动作 / 操作者 / 近 7·30·90 天筛选 + 分页，出参含操作者昵称与目标对象），V14 为 audit_logs 补两条索引，管理后台新增第七个 Tab「操作审计」；零新增写路径、零新错误码；后端新增 11 例（978 全绿），契约 v1.55（87 操作 / 75 路径 / 139 schema / 69 受保护，+192 / −0）；详见<a href='变更日志/变更台账.md#cr-215'>CR-215</a>。", type: "管理后台（治理）+ 前端 + 契约", status: "full", review: "继续开发（用户授权自主推进）", hash: "afabfd7" },
+      { id: "CR-214", date: "2026-11-10", title: "举报工单「处理中」状态（F-ADMIN-003 补齐）：新增 OPS / SUPERADMIN 的 <code>POST /api/v1/admin/reports/{id}/claim</code>（PENDING → PROCESSING + handler + REPORT_CLAIM 审计，重复认领幂等 200）；闭环允许从待处理或处理中完成；未闭环期间举报人仍看不到被举报内容；看板新增 reportProcessing。零迁移、零新错误码；后端新增 10 例，真机举报→认领→驳回闭环与浏览器筛选 / 认领 / 驳回全通过，契约 v1.54（86 操作 / 74 路径 / 136 schema / 68 受保护，+92 / −1）；详见<a href='变更日志/变更台账.md#cr-214'>CR-214</a>。", type: "功能（管理后台 / 举报）+ 接口契约", status: "full", review: "继续开发（用户授权自主推进）", hash: "fc32c39" },
+      { id: "CR-213", date: "2026-11-10", title: "退出登录服务端失效：新增受保护 <code>POST /api/v1/auth/logout</code>，把当前用户 token 吊销水位推到当前时刻（全端退出，旧 token 即时 401 / 4001）；前端显式退出先尽力调用服务端、失败也照常清本地；零迁移、零新错误码；后端新增 3 例，真机链路 + 浏览器实测通过，契约 v1.53（85 操作 / 73 路径 / 136 schema / 67 受保护，+46 / −0）；详见<a href='变更日志/变更台账.md#cr-213'>CR-213</a>。", type: "功能（账号 / 认证）+ 接口契约", status: "full", review: "继续开发（用户授权自主推进）", hash: "待提交" },
+      { id: "CR-212", date: "2026-11-10", title: "运营角色降级（撤销 OPS）：新增仅 SUPERADMIN 的 <code>DELETE /api/v1/admin/users/{id}/role</code>，只允许 OPS → USER、幂等；撤销即时吊销目标旧 token 并写 <code>USER_ROLE_UPDATE</code> 审计；前端用户检索行仅 OPS 显示「撤销运营」+ 二次确认；零迁移、零新错误码；后端新增 7 例，契约 v1.52（84 操作 / 72 路径 / 136 schema / 66 受保护，+85 / −0）；详见<a href='变更日志/变更台账.md#cr-212'>CR-212</a>。", type: "功能（管理后台）+ 接口契约", status: "full", review: "继续开发（用户授权自主推进）", hash: "待提交" },
+      { id: "CR-211", date: "2026-11-10", title: "管理后台用户检索与处置联动：新增仅 SUPERADMIN 的 <code>GET /api/v1/admin/users?keyword=</code>（纯数字先按 id 精确、昵称 LIKE 去重，最多 50 条 + truncated；只返回 id / 昵称 / 角色 / 状态 / 禁言截止 / 注册时间，不含邮箱 / 手机号 / 学号）；处置台新增用户检索区，行内一键填入封禁 / 警告 / 禁言与运营授予目标，内容搜索作者列带 <code>#id</code> 与「处置作者」；零迁移、零新错误码；后端 8 + 3 例新测，契约 v1.51（83 操作 / 72 路径 / 136 schema / 65 受保护，+134 / −0）；详见<a href='变更日志/变更台账.md#cr-211'>CR-211</a>。", type: "功能（管理后台）+ 接口契约", status: "full", review: "继续开发（用户授权自主推进）", hash: "待提交" },
+      { id: "CR-210", date: "2026-11-10", title: "管理后台名册导入 UI（F-ACC-004 管理员侧收口）：仅 SUPERADMIN 的第六个 Tab，选择 CSV（UTF-8 严格解码，失败回退 GBK；去 BOM；≤5 MB；前 5 行预览）、填写批次号后原样提交既有 /admin/roster/import，结果展示新增 / 跳过 / 失败；入库哈希与 ROSTER_IMPORT 审计仍由后端完成；零后端、零迁移、契约零 diff；详见<a href='变更日志/变更台账.md#cr-210'>CR-210</a>。", type: "前端（管理后台）", status: "full", review: "继续开发（用户授权自主推进）", hash: "待提交" },
+      { id: "CR-209", date: "2026-11-08", title: "用户警告与禁言（F-ADMIN-002 剩余一半）：V13 新增 users.muted_until 与 notifications.message；新增警告 / 禁言 / 解除禁言三个 SUPERADMIN 端点，均写审计并投递站内通知（warning / mute，targetType=USER）；写守卫拆为 assertAllowedToWriteContent（状态 + 禁言），覆盖发帖 / 回帖 / 图片 / 组队写入口并返回 403 / 2019，读取与登录不受影响；管理后台与通知中心同步；契约 v1.50；详见<a href='变更日志/变更台账.md#cr-209'>CR-209</a>。", type: "安全（治理）+ 接口 + 数据结构", status: "full", review: "继续开发（用户授权自主推进）", hash: "待提交" },
+      { id: "CR-208", date: "2026-11-08", title: "JWT 吊销与账号状态即时失效：新增用户级吊销水位（Redis，iat 秒级比较），封禁 / 注销 / 授予 OPS 后旧 token 下一请求即 401，不再等最长 7 天；Redis 故障 fail-open 记 WARN；无新接口、无迁移、契约零 diff；详见<a href='变更日志/变更台账.md#cr-208'>CR-208</a>。", type: "安全（鉴权 / 会话）", status: "full", review: "继续开发（用户授权自主推进）", hash: "待提交" },
+      { id: "CR-207", date: "2026-11-07", title: "发帖相似问题推荐收口（F-AI-001a）：推荐块改用设计令牌并补齐版块 / 回复数 / 相对时间 / 采纳标签与轻量空态，查询补成功空结果 / 失败静默 / 忽略恢复 / 在途作废状态机；同时修复 /posts/similar 恒 500——PostMapper.findSimilar 动态 SQL 漏包 <script>，新增守护用例；接口形状未变；详见<a href='变更日志/变更台账.md#cr-207'>CR-207</a>。", type: "缺陷修复 + 前端（体验）", status: "full", review: "继续开发（用户授权自主推进）", hash: "待提交" },
+      { id: "CR-206", date: "2026-11-07", title: "无障碍审计与 AA 修复（UI-06 收尾）：axe-core 对 375 / 1440 两档 28 个页面组合清零——EP 占位文本映射到 meta、服务端给代码块 <pre> 补 tabindex、主色深色微调 #1a6fc4→#1969b8 消除页面底 4.45:1 边缘失败；后端 915 例全绿，前端 lint / typecheck / build 通过；详见<a href='变更日志/变更台账.md#cr-206'>CR-206</a>。", type: "前端（无障碍）", status: "full", review: "承接 UI-06 / CR-205 后续", hash: "待提交" },
+      { id: "CR-205", date: "2026-11-07", title: "移动端关键操作（UI-06 / 批次 D）：窄屏页头补登录态发帖入口；搜索 / 通知 / 私信 / 发帖图标命中区 32×32（≥768 36×36，负边距保持布局宽度）；详情互动与管理动作在 <768 或触摸设备抬到 28~32px；375 / 360 / 414 / 横屏实测无溢出；纯前端，无接口与数据变更；详见<a href='变更日志/变更台账.md#cr-205'>CR-205</a>。", type: "前端（移动端）", status: "full", review: "承接 UI-06 建议项", hash: "待提交" },
+      { id: "CR-204", date: "2026-11-07", title: "首页滚动与返回体验（UI-03）：从帖子详情返回时恢复排序 / 已加载条数 / 滚动位置（30 分钟内、最多 100 条），其余入口从顶部开始；切换排序回顶；纯前端，无接口与数据变更；详见<a href='变更日志/变更台账.md#cr-204'>CR-204</a>。", type: "前端（体验）", status: "full", review: "承接 UI-03 建议项", hash: "待提交" },
+      { id: "CR-203", date: "2026-11-07", title: "视觉统一批次 C：设置 / 发起组队 / 我的组队 / 管理后台改用 PageHeader（透明页头 + 内容白卡，动作与 Tab 进插槽），组队详情补面包屑，管理后台隐藏 EP Tab 双线；登录 / 个人主页 / 私信会话有意不动；纯前端模板与样式；详见<a href='变更日志/变更台账.md#cr-203'>CR-203</a>。", type: "前端（视觉）", status: "full", review: "承接 CR-202 的页头口径", hash: "待提交" },
+      { id: "CR-202", date: "2026-11-06", title: "视觉统一批次 B：新增 PageHeader.vue，9 个内容页改为「透明页头 + 唯一白卡」，筛选条与 Tab 并入页头；同批修掉 el-select 宽度与页头标题链接色两处 EP 无层样式压过 Tailwind 的缺陷；纯前端模板与样式，无接口与数据变更；详见<a href='变更日志/变更台账.md#cr-202'>CR-202</a>。", type: "前端（视觉）", status: "full", review: "承接 CR-201 的视觉方向", hash: "待提交" },
+      { id: "CR-201", date: "2026-11-06", title: "视觉统一批次 A：首页三栏去侧栏白卡、中栏唯一白卡，列表标题 16/600 并去掉行级版块色条，详情目录改 240px sticky 卡、操作条分组、回复空态加入口，发布页标题 20px + 编辑区 520px；纯样式 / 模板，无接口与数据变更；详见<a href='变更日志/变更台账.md#cr-201'>CR-201</a>。", type: "前端（视觉）", status: "full", review: "用户选择方向 A 并确认开工", hash: "待提交" },
+
       { id: "CR-200", date: "2026-11-05", title: "帖子选中文本问 AI（私密侧栏）：详情页划选正文 →「问 AI」→ 仅提问者可见侧栏调用 DeepSeek 流式回答；Redis 30 分钟多轮、每日 20 次、选区 ≤2000 字；完成帧服务端 Markdown 净化，不写楼层 / 搜索 / 热榜、不落 MySQL；详见<a href='变更日志/变更台账.md#cr-200'>CR-200</a>。", type: "功能 / 接口 / 安全", status: "full", review: "用户批准实施方案", hash: "待提交" },
 
       { id: "CR-195", date: "2026-11-04", title: "帖子图片上传、草稿预览、详情封面与受控读取完成本机验收；生产禁用，详见<a href='变更日志/变更台账.md#cr-195'>CR-195</a>。", type: "论坛 / 图片 / 安全", status: "full", review: "用户批准实施方案", hash: "d238e96" },

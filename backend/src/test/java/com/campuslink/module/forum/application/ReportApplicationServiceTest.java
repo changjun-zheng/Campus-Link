@@ -36,11 +36,13 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
- * 举报工单闭环用例 {@link ReportApplicationService}（F-SAFE-002 / CR-082）。
+ * 举报工单闭环用例 {@link ReportApplicationService}（F-SAFE-002 / CR-082，认领 CR-214）。
  *
  * <p>守的是**闭环的边界**：① 提交侧的三个拒绝（目标类型 / 理由词表 / 24h 去重）各自独立，
  * 词表外的取值不能落库；② 运营分页的 page / size 在应用层归一（1 ~ 100）——
- * 契约里的「归一化后的值」就靠这里；③ 处理侧的四条收场：不存在 → 3001、已闭环 → **零副作用幂等**、
+ * 契约里的「归一化后的值」就靠这里；③ 认领的四条收场：不存在 → 3001、已处理中 / 已闭环 →
+ * **零副作用幂等**、并发被别人先认领 → 不记审计、PENDING → 写库并记审计；
+ * ④ 处理侧的四条收场：不存在 → 3001、已闭环 → **零副作用幂等**、
  * action 非法 → 1001（此时不得动任何目标）、并发被别人先关 → 不再记审计。
  *
  * <p>本类不证明处置真的写进了数据库：{@code PostRepository#updateStatus} / {@code ReplyRepository#updateStatus}
@@ -157,6 +159,69 @@ class ReportApplicationServiceTest {
         service.adminPage("CLOSED", 3, 20);
 
         verify(reportRepository).findPage("CLOSED", 3, 20);
+    }
+
+    @Test
+    @DisplayName("认领：工单不存在 → 3001，不写库、不审计")
+    void claimMissingTicketIsNotFound() {
+        when(reportRepository.findById(REPORT_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.claim(OPERATOR_ID, REPORT_ID))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
+
+        verify(reportRepository, never()).claim(anyLong(), anyLong());
+        verifyNoInteractions(auditService);
+    }
+
+    @Test
+    @DisplayName("认领 PENDING：条件 UPDATE 写 PROCESSING + handler，成功后写 REPORT_CLAIM 审计")
+    void claimPendingMovesToProcessingAndAudits() {
+        when(reportRepository.findById(REPORT_ID)).thenReturn(Optional.of(report("PENDING", Report.TARGET_POST)));
+        when(reportRepository.claim(REPORT_ID, OPERATOR_ID)).thenReturn(true);
+
+        service.claim(OPERATOR_ID, REPORT_ID);
+
+        verify(reportRepository).claim(REPORT_ID, OPERATOR_ID);
+        verify(auditService).record(OPERATOR_ID, "REPORT_CLAIM", Report.TARGET_POST, TARGET_ID,
+                "reportId=" + REPORT_ID);
+    }
+
+    @Test
+    @DisplayName("认领：工单已是 PROCESSING / CLOSED → 幂等返回，不写库不审计")
+    void claimNonPendingIsIdempotent() {
+        when(reportRepository.findById(REPORT_ID)).thenReturn(Optional.of(report("PROCESSING", Report.TARGET_POST)));
+        service.claim(OPERATOR_ID, REPORT_ID);
+
+        when(reportRepository.findById(REPORT_ID)).thenReturn(Optional.of(report("CLOSED", Report.TARGET_POST)));
+        service.claim(OPERATOR_ID, REPORT_ID);
+
+        verify(reportRepository, never()).claim(anyLong(), anyLong());
+        verifyNoInteractions(auditService);
+    }
+
+    @Test
+    @DisplayName("认领并发：条件 UPDATE 返回 false（别人先认领）→ 直接返回，不重复审计")
+    void concurrentClaimSkipsAudit() {
+        when(reportRepository.findById(REPORT_ID)).thenReturn(Optional.of(report("PENDING", Report.TARGET_POST)));
+        when(reportRepository.claim(REPORT_ID, OPERATOR_ID)).thenReturn(false);
+
+        service.claim(OPERATOR_ID, REPORT_ID);
+
+        verifyNoInteractions(auditService);
+    }
+
+    @Test
+    @DisplayName("处理：PROCESSING 工单可直接闭环（认领不是闭环的前置），照常记审计")
+    void closeProcessingTicketDirectly() {
+        when(reportRepository.findById(REPORT_ID)).thenReturn(Optional.of(report("PROCESSING", Report.TARGET_POST)));
+        when(reportRepository.close(REPORT_ID, "DISMISS", OPERATOR_ID)).thenReturn(true);
+
+        service.close(OPERATOR_ID, REPORT_ID, "DISMISS", null);
+
+        verify(reportRepository).close(REPORT_ID, "DISMISS", OPERATOR_ID);
+        verify(auditService).record(OPERATOR_ID, "REPORT_CLOSE", Report.TARGET_POST, TARGET_ID,
+                "reportId=%s action=DISMISS".formatted(REPORT_ID));
     }
 
     @Test

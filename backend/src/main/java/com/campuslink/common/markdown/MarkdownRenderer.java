@@ -60,7 +60,20 @@ public class MarkdownRenderer {
 
     public String render(String markdown) {
         Node document = parser.parse(markdown == null ? "" : markdown);
-        return Jsoup.clean(htmlRenderer.render(document), SAFELIST);
+        return ensureFocusableCodeBlocks(Jsoup.clean(htmlRenderer.render(document), SAFELIST));
+    }
+
+    /**
+     * 代码块的横向滚动需要键盘可达（WCAG 2.1.1；axe 规则 scrollable-region-focusable）。
+     *
+     * <p>白名单输出后再补 {@code tabindex="0"}：不新增标签 / 属性白名单，避免放宽净化面；
+     * 解析后再序列化只为拿到可定位的 DOM，输出仍保持在净化后的同一棵树上。
+     */
+    private static String ensureFocusableCodeBlocks(String html) {
+        Document document = Jsoup.parseBodyFragment(html);
+        document.outputSettings().prettyPrint(false);
+        document.select("pre").attr("tabindex", "0");
+        return document.body().html();
     }
 
     /**

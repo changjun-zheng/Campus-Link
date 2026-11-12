@@ -38,6 +38,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -387,6 +388,67 @@ class NotificationApplicationServiceTest {
             map.put((Long) kv[i], new AuthorBrief((String) kv[i + 1], null));
         }
         return map;
+    }
+
+    @Test
+    @DisplayName("警告（CR-209）：目标是用户本人，正文随行落库")
+    void warningSavesMessageAndUserTarget() {
+        service.userWarned(1L, RECIPIENT, "请勿发布联系方式");
+
+        ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(captor.capture());
+        Notification saved = captor.getValue();
+        assertThat(saved.getType()).isEqualTo(NotificationType.WARNING);
+        assertThat(saved.getTargetType()).isEqualTo(NotificationTargetType.USER);
+        assertThat(saved.getTargetId()).isEqualTo(RECIPIENT);
+        assertThat(saved.getUserId()).isEqualTo(RECIPIENT);
+        assertThat(saved.getMessage()).isEqualTo("请勿发布联系方式");
+    }
+
+    @Test
+    @DisplayName("禁言（CR-209）：正文包含截止时间与原因")
+    void muteSavesDeadlineAndReason() {
+        Instant until = Instant.parse("2026-11-09T04:00:00Z");
+
+        service.userMuted(1L, RECIPIENT, until, "刷屏");
+
+        ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(captor.capture());
+        Notification saved = captor.getValue();
+        assertThat(saved.getType()).isEqualTo(NotificationType.MUTE);
+        assertThat(saved.getTargetType()).isEqualTo(NotificationTargetType.USER);
+        assertThat(saved.getMessage()).contains("2026-11-09 12:00", "刷屏");
+    }
+
+    @Test
+    @DisplayName("平台通知即使开启异步也同步落库（wire 事件不承载正文）")
+    void platformNoticeIgnoresAsyncMode() {
+        lenient().when(deliverySettings.asynchronous()).thenReturn(true);
+
+        service.userWarned(1L, RECIPIENT, "原因");
+
+        verify(notificationRepository).save(any(Notification.class));
+        // 带正文的通知根本不询问异步开关，也不进 Outbox
+        verifyNoInteractions(outbox, deliverySettings);
+    }
+
+    @Test
+    @DisplayName("列表读时组装：USER 目标不带帖子字段，正文来自 message")
+    void listRendersUserTargetMessage() {
+        when(notificationRepository.findPage(RECIPIENT, null, 1, 20)).thenReturn(new PageResult<>(
+                List.of(Notification.rehydrate(5L, RECIPIENT, NotificationType.WARNING, 1L,
+                        NotificationTargetType.USER, RECIPIENT, "原因正文", false, CREATED_AT)), 1, 1, 20));
+        when(accountApplicationService.authorBriefsOf(any())).thenReturn(briefs(1L, "管理员"));
+        when(forumQueryService.replyBriefsOf(any())).thenReturn(Map.of());
+        when(forumQueryService.postBriefsOf(any())).thenReturn(Map.of());
+
+        var item = service.list(RECIPIENT, null, 1, 20).items().get(0);
+
+        assertThat(item.targetType()).isEqualTo("USER");
+        assertThat(item.postId()).isNull();
+        assertThat(item.postTitle()).isNull();
+        assertThat(item.message()).isEqualTo("原因正文");
+        assertThat(item.actorNickname()).isEqualTo("管理员");
     }
 
     @Test

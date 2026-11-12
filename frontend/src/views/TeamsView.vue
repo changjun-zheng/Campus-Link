@@ -16,6 +16,7 @@ import {
 } from '../api/teams'
 import { useAuthStore } from '../stores/auth'
 import { formatRelativeTime } from '../utils/time'
+import PageHeader from '../components/PageHeader.vue'
 import SvgIcon from '../components/SvgIcon.vue'
 import UserAvatar from '../components/UserAvatar.vue'
 
@@ -87,29 +88,23 @@ function statusTagType(s: TeamStatusCode): 'success' | 'warning' | 'info' {
 <template>
   <!-- TRANSITION-SINGLE-ROOT：App.vue 以 <Transition mode="out-in"> 包路由组件，多根会卡死路由切换（CR-091） -->
   <div>
-    <el-card shadow="never" class="mb-5">
-      <div class="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 class="text-title-lg font-medium text-ink">组队广场</h2>
-          <p class="mt-1.5 text-note text-ink-meta">
-            发布招募集结，申请加入后由发起人审批；满员自动停止招募。联系方式仅发起人与已加入成员可见。
-          </p>
-        </div>
-        <div class="flex shrink-0 items-center gap-2">
-          <RouterLink to="/teams/mine">
-            <el-button>我的组队</el-button>
-          </RouterLink>
-          <el-button type="primary" @click="goCreate">
-            <SvgIcon name="pencil" :size="16" class="mr-1" />
-            发起组队
-          </el-button>
-        </div>
-      </div>
-    </el-card>
+    <PageHeader
+      title="组队广场"
+      description="发布招募集结，申请加入后由发起人审批；满员自动停止招募。联系方式仅发起人与已加入成员可见。"
+    >
+      <template #actions>
+        <RouterLink to="/teams/mine">
+          <el-button>我的组队</el-button>
+        </RouterLink>
+        <el-button type="primary" @click="goCreate">
+          <SvgIcon name="pencil" :size="16" class="mr-1" />
+          发起组队
+        </el-button>
+      </template>
 
-    <el-card shadow="never" class="mb-5">
+      <!-- 筛选条（CR-202）：原先单独占一张卡，现在并进页头——它筛的是同一张卡里的列表 -->
       <div class="flex flex-wrap items-center gap-3">
-        <el-select v-model="direction" aria-label="按方向筛选" placeholder="全部方向" clearable class="w-[150px]">
+        <el-select v-model="direction" aria-label="按方向筛选" placeholder="全部方向" clearable class="cl-direction-select">
           <el-option label="全部方向" value="" />
           <el-option v-for="d in TEAM_DIRECTIONS" :key="d.code" :label="d.label" :value="d.code" />
         </el-select>
@@ -133,7 +128,7 @@ function statusTagType(s: TeamStatusCode): 'success' | 'warning' | 'info' {
           </button>
         </nav>
       </div>
-    </el-card>
+    </PageHeader>
 
     <el-card shadow="never" :body-style="{ padding: 0 }">
       <el-skeleton v-if="loading" animated class="px-5 pt-4">
@@ -208,3 +203,12 @@ function statusTagType(s: TeamStatusCode): 'success' | 'warning' | 'info' {
     </el-card>
   </div>
 </template>
+
+<style scoped>
+/* 方向筛选宽度（CR-202）：同 SearchView——EP 无层样式压过 Tailwind 宽度类，改走组件级规则 */
+.cl-direction-select {
+  --el-select-width: 150px;
+  width: 150px;
+  flex: none;
+}
+</style>

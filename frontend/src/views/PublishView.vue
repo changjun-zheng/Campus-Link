@@ -15,6 +15,7 @@ import { uploadPostImage } from '../api/postImages'
 import { usePostImageHtml } from '../composables/usePostImageHtml'
 import { useDraft } from '../composables/useDraft'
 import { vHighlight } from '../utils/highlight'
+import { formatRelativeTime } from '../utils/time'
 import SvgIcon from '../components/SvgIcon.vue'
 
 const route = useRoute()
@@ -158,11 +159,15 @@ function persistDraft(boardCode: string, title: string, contentMd: string) {
   draftStatus.value = saved ? 'saved' : 'failed'
 }
 
-/* ─── 相似帖子推荐（F-FORUM-009）：标题≥6字时防抖查询，最多触发 2 次 ─── */
+/* ─── 相似帖子推荐（F-AI-001a）：标题≥6字时防抖查询，最多触发 2 次 ─── */
 const SIMILAR_MIN_TITLE_LENGTH = 6  // 与后端 campuslink.ai.similar.min-title-length 同源
 const MAX_SIMILAR_QUERIES = 2       // 前端最多触发 2 次（服务端未限流）
 
 const similarPosts = ref<SimilarPostVo[]>([])
+/** 至少有一次查询成功返回（含空结果）；失败 / 开关关闭时不展示空态 */
+const similarChecked = ref(false)
+/** 用户点「忽略」后隐藏，直到下一次查询发起 */
+const similarDismissed = ref(false)
 const queryCount = ref(0)
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
 let reqSeq = 0  // 请求序号，用于乱序保护
@@ -206,24 +211,29 @@ watch(() => form.contentMd, (md) => {
 watch(() => form.title, (newTitle) => {
   if (editing.value) return
   if (debounceTimer) clearTimeout(debounceTimer)
+  const seq = ++reqSeq  // 标题一变即作废在途请求，避免旧结果回填
   const trimmed = newTitle.trim()
   if (trimmed.length < SIMILAR_MIN_TITLE_LENGTH) {
     // 标题不成立时才清空
     similarPosts.value = []
+    similarChecked.value = false
+    similarDismissed.value = false
     return
   }
   if (queryCount.value >= MAX_SIMILAR_QUERIES) return  // 配额耗尽：停止查询，保留上次结果
   debounceTimer = setTimeout(async () => {
-    const seq = ++reqSeq
     queryCount.value++  // 发起即计数
+    similarDismissed.value = false
     try {
       const data = await getSimilarPosts(trimmed)
       if (seq === reqSeq) {  // 只接受最新响应
         similarPosts.value = data
+        similarChecked.value = true
       }
     } catch {
       if (seq === reqSeq) {
         similarPosts.value = []
+        similarChecked.value = false  // 失败 / 开关关闭：静默隐藏
       }
     }
   }, 800)
@@ -477,15 +487,17 @@ async function submit() {
     </div>
 
     <div class="px-6 max-md:px-4">
-      <!-- 标题：超大无边框输入（CSDN / 掘金式） -->
-      <input
-        ref="titleEl"
-        v-model="form.title"
-        aria-label="帖子标题"
-        maxlength="100"
-        :placeholder="form.boardCode === 'interview' ? '如：XX 公司 Java 后端一面面经' : '输入标题（1~100 字）'"
-        class="cl-editor-title block w-full border-0 bg-transparent py-6 text-[26px] leading-snug font-medium text-ink outline-none placeholder:text-ink-meta max-md:text-[22px]"
-      />
+      <!-- 标题（CR-201 批次 A）：20px + 一条细下划线，聚焦时提亮——比 26px 无边界大字更像编辑器 -->
+      <div class="border-b-[0.5px] border-divider transition-colors duration-fast ease-standard focus-within:border-primary-strong">
+        <input
+          ref="titleEl"
+          v-model="form.title"
+          aria-label="帖子标题"
+          maxlength="100"
+          :placeholder="form.boardCode === 'interview' ? '如：XX 公司 Java 后端一面面经' : '输入标题（1~100 字）'"
+          class="cl-editor-title block w-full border-0 bg-transparent py-5 text-[20px] leading-snug font-medium text-ink outline-none placeholder:text-ink-meta"
+        />
+      </div>
 
       <!-- 面经模板入口（CR-143）：仅面经版块 + 正文为空时出现，填入后自动隐藏 -->
       <div v-if="showTemplateHint" class="flex flex-wrap items-center gap-1.5 pb-4 text-note text-ink-meta">
@@ -523,24 +535,41 @@ async function submit() {
       </p>
     </div>
 
-    <!-- 相似帖子推荐（F-FORUM-009；编辑模式不查——改的是已有帖，不是找重复提问） -->
-    <div v-if="!editing && similarPosts.length" class="mx-5 mb-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
-      <div class="mb-2 flex items-center justify-between">
-        <span class="text-sm font-medium text-blue-700">发现相似问题，也许已有答案</span>
-        <button type="button" class="text-xs text-gray-400 hover:text-gray-600" @click="similarPosts = []">忽略</button>
-      </div>
-      <a
-        v-for="post in similarPosts"
-        :key="post.id"
-        :href="'/post/' + post.id"
-        target="_blank"
-        rel="noopener"
-        class="block truncate py-1.5 text-sm text-gray-700 hover:text-blue-600"
-      >
-        <span v-if="post.accepted" class="mr-1 font-medium text-green-600">[已采纳]</span>
-        {{ post.title }}
-        <span class="ml-2 text-xs text-gray-400">{{ post.replyCount }} 回复</span>
-      </a>
+    <!-- 相似帖子推荐（F-AI-001a；编辑模式不查——改的是已有帖，不是找重复提问） -->
+    <div
+      v-if="!editing && !similarDismissed && (similarPosts.length || similarChecked)"
+      data-testid="similar-posts"
+      class="mx-5 mb-3 rounded-sm border-[0.5px] border-line bg-primary-soft px-3 py-2"
+    >
+      <template v-if="similarPosts.length">
+        <div class="mb-1 flex items-center justify-between gap-3">
+          <span class="text-note font-medium text-ink">站内已有相似问题，先看看是否已解答</span>
+          <button
+            type="button"
+            class="shrink-0 text-caption text-ink-meta hover:text-ink"
+            @click="similarDismissed = true"
+          >
+            忽略
+          </button>
+        </div>
+        <ul>
+          <li v-for="post in similarPosts" :key="post.id">
+            <a
+              :href="'/post/' + post.id"
+              target="_blank"
+              rel="noopener"
+              class="flex min-h-7 flex-wrap items-baseline gap-x-2 gap-y-0.5 py-1 text-note text-ink-regular hover:text-link"
+            >
+              <el-tag v-if="post.accepted" type="success" effect="light" size="small" class="flex-none">已采纳</el-tag>
+              <span class="min-w-0 flex-1 truncate">{{ post.title }}</span>
+              <span class="flex-none text-caption text-ink-meta">
+                {{ post.boardName }} · {{ post.replyCount }} 回复 · {{ formatRelativeTime(post.createdAt) }}
+              </span>
+            </a>
+          </li>
+        </ul>
+      </template>
+      <p v-else class="text-caption text-ink-meta">暂未找到相似问题，可直接发布</p>
     </div>
 
     <input ref="fileEl" type="file" accept="image/jpeg,image/png" aria-label="图片文件" hidden @change="uploadSelectedImage" />
@@ -603,13 +632,13 @@ async function submit() {
             maxlength="20000"
             aria-label="正文（Markdown）"
             placeholder="正文支持 Markdown：标题 / 列表 / 代码块（```语言）/ 链接 / 引用。开始输入…"
-            class="cl-editor-body min-h-[50vh] w-full resize-y border-0 bg-transparent py-4 text-body leading-body text-ink outline-none placeholder:text-ink-meta max-md:min-h-[36vh]"
+            class="cl-editor-body min-h-[520px] w-full resize-y border-0 bg-transparent py-4 text-body leading-body text-ink outline-none placeholder:text-ink-meta max-md:min-h-[360px]"
           />
         </section>
         <!-- 预览面板：服务端渲染并净化的 HTML，直接 v-html（XSS 防线在 MarkdownRenderer） -->
         <div
           v-show="previewMode || splitPreview"
-          class="cl-editor-pane cl-editor-preview min-h-[50vh] py-4 max-md:min-h-[36vh]"
+          class="cl-editor-pane cl-editor-preview min-h-[520px] py-4 max-md:min-h-[360px]"
           aria-label="正文预览"
           :aria-busy="previewLoading"
         >

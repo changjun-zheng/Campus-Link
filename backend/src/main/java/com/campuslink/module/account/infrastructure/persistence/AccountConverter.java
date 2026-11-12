@@ -37,6 +37,7 @@ public final class AccountConverter {
         d.setBio(account.getBio());
         d.setRole(account.getRole().name());
         d.setStatus(account.getStatus().name());
+        d.setMutedUntil(account.getMutedUntil());
         d.setVerified(account.isVerified());
         // 管理员等非学生账号无学号（users.student_id_* 可空，唯一索引允许多 NULL）
         if (account.getStudentId() != null) {
@@ -73,6 +74,7 @@ public final class AccountConverter {
                 d.getBio(),
                 AccountRole.valueOf(d.getRole()),
                 AccountStatus.valueOf(d.getStatus()),
+                d.getMutedUntil(),
                 Boolean.TRUE.equals(d.getVerified()),
                 Boolean.TRUE.equals(d.getAnonymized()),
                 d.getDeleteAt(),

@@ -1,8 +1,11 @@
 package com.campuslink.module.account.application;
 
 import com.campuslink.common.audit.AuditService;
+import com.campuslink.common.event.UserMutedEvent;
+import com.campuslink.common.event.UserWarnedEvent;
 import com.campuslink.common.exception.ApiException;
 import com.campuslink.common.result.ResultCode;
+import com.campuslink.common.security.TokenRevocationGateway;
 import com.campuslink.config.AppProperties;
 import com.campuslink.module.account.application.cmd.AccountCommands.LoginCommand;
 import com.campuslink.module.account.application.cmd.AccountCommands.LoginResult;
@@ -43,10 +46,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -93,6 +98,8 @@ class AccountApplicationServiceTest {
     private AuditService auditService;
     @Mock
     private ApplicationEventPublisher eventPublisher;
+    @Mock
+    private TokenRevocationGateway tokenRevocationGateway;
 
     private AppProperties props;
     private AccountApplicationService service;
@@ -102,7 +109,7 @@ class AccountApplicationServiceTest {
         props = new AppProperties();
         service = new AccountApplicationService(verificationService, accountRepository, rosterGateway, ticketStore,
                 captchaService, codec, tokenIssuer, rateLimitGateway, auditService, props, eventPublisher,
-                mock(ModerationApplicationService.class));
+                mock(ModerationApplicationService.class), tokenRevocationGateway);
     }
 
     // ── 学籍核验（F-ACC-004）────────────────────────────────────────────
@@ -340,6 +347,7 @@ class AccountApplicationServiceTest {
         verify(accountRepository).updateStatus(eq(USER_ID), eq(AccountStatus.DEACTIVATED), deleteAt.capture());
         assertThat(deleteAt.getValue()).isBetween(expected.minusSeconds(60), expected.plusSeconds(60));
         verify(auditService).record(USER_ID, "ACCOUNT_DEACTIVATE", "users", USER_ID, "coolingDays=7");
+        verify(tokenRevocationGateway).revokeAllBefore(eq(USER_ID), any(Instant.class));
     }
 
     @Test
@@ -352,7 +360,7 @@ class AccountApplicationServiceTest {
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.USER_NOT_FOUND));
 
         verify(accountRepository, never()).updateStatus(anyLong(), any(), any());
-        verifyNoInteractions(auditService);
+        verifyNoInteractions(auditService, tokenRevocationGateway);
     }
 
     @Test
@@ -389,6 +397,20 @@ class AccountApplicationServiceTest {
     }
 
     @Test
+    @DisplayName("退出登录：只把吊销水位推到当前时刻，不写审计、不触达仓储")
+    void logoutRevokesTokensWithoutAudit() {
+        Instant before = Instant.now();
+
+        service.logout(USER_ID);
+
+        Instant after = Instant.now();
+        ArgumentCaptor<Instant> cutoff = ArgumentCaptor.forClass(Instant.class);
+        verify(tokenRevocationGateway).revokeAllBefore(eq(USER_ID), cutoff.capture());
+        assertThat(cutoff.getValue()).isBetween(before, after);
+        verifyNoInteractions(auditService, accountRepository);
+    }
+
+    @Test
     @DisplayName("管理员封禁：updateStatus(BANNED, null) 清掉残留 delete_at，审计动作名为 USER_BAN")
     void adminBanWritesStatusAndAuditsBan() {
         when(accountRepository.findById(USER_ID)).thenReturn(Optional.of(account(AccountStatus.ACTIVE, null)));
@@ -397,6 +419,7 @@ class AccountApplicationServiceTest {
 
         verify(accountRepository).updateStatus(USER_ID, AccountStatus.BANNED, null);
         verify(auditService).record(1L, "USER_BAN", "users", USER_ID, null);
+        verify(tokenRevocationGateway).revokeAllBefore(eq(USER_ID), any(Instant.class));
     }
 
     @Test
@@ -408,6 +431,7 @@ class AccountApplicationServiceTest {
 
         verify(accountRepository).updateStatus(eq(USER_ID), eq(AccountStatus.ACTIVE), isNull());
         verify(auditService).record(1L, "USER_UNBAN", "users", USER_ID, null);
+        verify(tokenRevocationGateway, never()).revokeAllBefore(anyLong(), any());
     }
 
     @Test
@@ -420,6 +444,7 @@ class AccountApplicationServiceTest {
 
         verify(accountRepository).updateRole(USER_ID, AccountRole.USER, AccountRole.OPS);
         verify(auditService).record(1L, "USER_ROLE_UPDATE", "users", USER_ID, "role=OPS");
+        verify(tokenRevocationGateway).revokeAllBefore(eq(USER_ID), any(Instant.class));
     }
 
     @Test
@@ -430,7 +455,7 @@ class AccountApplicationServiceTest {
         service.adminPromoteToOps(1L, USER_ID);
 
         verify(accountRepository, never()).updateRole(anyLong(), any(), any());
-        verifyNoInteractions(auditService);
+        verifyNoInteractions(auditService, tokenRevocationGateway);
     }
 
     @Test
@@ -468,7 +493,148 @@ class AccountApplicationServiceTest {
         service.adminPromoteToOps(1L, USER_ID);
 
         verify(accountRepository).updateRole(USER_ID, AccountRole.USER, AccountRole.OPS);
+        verifyNoInteractions(auditService, tokenRevocationGateway);
+    }
+
+    // ── 运营角色降级（CR-212）──────────────────────────────────────────
+
+    @Test
+    @DisplayName("撤销 OPS：OPS → USER 定向更新，吊销 token 并记 USER_ROLE_UPDATE")
+    void adminDemoteToUserWritesRoleRevokesAndAudits() {
+        when(accountRepository.findById(USER_ID)).thenReturn(Optional.of(accountWithRole(AccountRole.OPS)));
+        when(accountRepository.updateRole(USER_ID, AccountRole.OPS, AccountRole.USER)).thenReturn(true);
+
+        service.adminDemoteToUser(1L, USER_ID);
+
+        verify(accountRepository).updateRole(USER_ID, AccountRole.OPS, AccountRole.USER);
+        verify(tokenRevocationGateway).revokeAllBefore(eq(USER_ID), any(Instant.class));
+        verify(auditService).record(1L, "USER_ROLE_UPDATE", "users", USER_ID, "role=USER");
+    }
+
+    @Test
+    @DisplayName("本来就是 USER：撤销幂等成功，不发 UPDATE、不记审计、不吊销 token")
+    void adminDemoteToUserIsIdempotentForUser() {
+        when(accountRepository.findById(USER_ID)).thenReturn(Optional.of(account(AccountStatus.ACTIVE, null)));
+
+        service.adminDemoteToUser(1L, USER_ID);
+
+        verify(accountRepository, never()).updateRole(anyLong(), any(), any());
+        verifyNoInteractions(auditService, tokenRevocationGateway);
+    }
+
+    @Test
+    @DisplayName("超管不可经撤销入口降级 → 4002，且不发 UPDATE")
+    void adminDemoteToUserRefusesSuperadmin() {
+        when(accountRepository.findById(USER_ID)).thenReturn(Optional.of(accountWithRole(AccountRole.SUPERADMIN)));
+
+        assertThatThrownBy(() -> service.adminDemoteToUser(1L, USER_ID))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.FORBIDDEN));
+
+        verify(accountRepository, never()).updateRole(anyLong(), any(), any());
+        verifyNoInteractions(auditService, tokenRevocationGateway);
+    }
+
+    @Test
+    @DisplayName("并发窗口内已被降级、条件更新落空：静默返回，不吊销、不记审计")
+    void adminDemoteToUserSkipsSideEffectsWhenUpdateLosesRace() {
+        when(accountRepository.findById(USER_ID)).thenReturn(Optional.of(accountWithRole(AccountRole.OPS)));
+        when(accountRepository.updateRole(USER_ID, AccountRole.OPS, AccountRole.USER)).thenReturn(false);
+
+        service.adminDemoteToUser(1L, USER_ID);
+
+        verify(accountRepository).updateRole(USER_ID, AccountRole.OPS, AccountRole.USER);
+        verifyNoInteractions(auditService, tokenRevocationGateway);
+    }
+
+    // ── 警告 / 禁言（F-ADMIN-002 / CR-209）──────────────────────────────
+
+    @Test
+    @DisplayName("警告：只记 USER_WARN 审计并发布通知事件，不改账号状态")
+    void adminWarnAuditsAndPublishesEvent() {
+        when(accountRepository.findById(USER_ID)).thenReturn(Optional.of(account(AccountStatus.ACTIVE, null)));
+
+        service.adminWarn(1L, USER_ID, "请勿发布联系方式");
+
+        verify(auditService).record(1L, "USER_WARN", "users", USER_ID, "reason=请勿发布联系方式");
+        verify(eventPublisher).publishEvent(new UserWarnedEvent(1L, USER_ID, "请勿发布联系方式"));
+        verify(accountRepository, never()).updateMutedUntil(anyLong(), any());
+        verifyNoInteractions(tokenRevocationGateway);
+    }
+
+    @Test
+    @DisplayName("警告：目标为超管 → 403，不记审计、不发事件")
+    void adminWarnRefusesSuperadmin() {
+        when(accountRepository.findById(USER_ID)).thenReturn(Optional.of(accountWithRole(AccountRole.SUPERADMIN)));
+
+        assertThatThrownBy(() -> service.adminWarn(1L, USER_ID, "测试"))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.FORBIDDEN));
+
         verifyNoInteractions(auditService);
+        verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    @DisplayName("禁言：写 muted_until、记 USER_MUTE 并发布事件；不吊销 token")
+    void adminMuteWritesUntilAuditsAndPublishesEvent() {
+        when(accountRepository.findById(USER_ID)).thenReturn(Optional.of(account(AccountStatus.ACTIVE, null)));
+        Instant before = Instant.now();
+
+        Instant until = service.adminMute(1L, USER_ID, 2, "刷屏");
+
+        assertThat(until).isAfter(before.plus(Duration.ofMinutes(119)));
+        verify(accountRepository).updateMutedUntil(USER_ID, until);
+        verify(auditService).record(eq(1L), eq("USER_MUTE"), eq("users"), eq(USER_ID), contains("hours=2"));
+        verify(eventPublisher).publishEvent(new UserMutedEvent(1L, USER_ID, until, "刷屏"));
+        verifyNoInteractions(tokenRevocationGateway);
+    }
+
+    @Test
+    @DisplayName("禁言：时长越界（0 / 721）→ 1001，不写库不记审计")
+    void adminMuteRejectsInvalidHours() {
+        assertThatThrownBy(() -> service.adminMute(1L, USER_ID, 0, "刷屏"))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.INVALID_PARAM));
+        assertThatThrownBy(() -> service.adminMute(1L, USER_ID, 721, "刷屏"))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.INVALID_PARAM));
+
+        verifyNoInteractions(accountRepository, auditService);
+        verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    @DisplayName("解除禁言：清空 muted_until 并记 USER_UNMUTE；本来未禁言时幂等且零审计")
+    void adminUnmuteClearsOrIsIdempotent() {
+        when(accountRepository.findById(USER_ID)).thenReturn(Optional.of(accountMuted(Instant.now().plusSeconds(600))));
+
+        service.adminUnmute(1L, USER_ID);
+
+        verify(accountRepository).updateMutedUntil(USER_ID, null);
+        verify(auditService).record(1L, "USER_UNMUTE", "users", USER_ID, null);
+
+        reset(accountRepository, auditService);
+        when(accountRepository.findById(USER_ID)).thenReturn(Optional.of(account(AccountStatus.ACTIVE, null)));
+
+        service.adminUnmute(1L, USER_ID);
+
+        verify(accountRepository, never()).updateMutedUntil(anyLong(), any());
+        verifyNoInteractions(auditService);
+    }
+
+    @Test
+    @DisplayName("禁言判定：未到期返回 2019，已到期放行；读路径 assertActiveForContent 不拦禁言")
+    void mutedAccountCanReadButCannotWrite() {
+        when(accountRepository.findById(USER_ID)).thenReturn(Optional.of(accountMuted(Instant.now().plusSeconds(600))));
+
+        assertThatThrownBy(() -> service.assertAllowedToWriteContent(USER_ID))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.USER_MUTED));
+        service.assertActiveForContent(USER_ID);
+
+        when(accountRepository.findById(USER_ID)).thenReturn(Optional.of(accountMuted(Instant.now().minusSeconds(1))));
+        service.assertAllowedToWriteContent(USER_ID);
     }
 
     // ---------- helpers ----------
@@ -498,5 +664,11 @@ class AccountApplicationServiceTest {
         return Account.rehydrate(USER_ID, EmailAddress.of(EMAIL), null, StudentId.of(STUDENT_ID),
                 "张三同学", null, null, null, null, null, AccountRole.USER, status,
                 true, false, deleteAt, Instant.parse("2026-09-01T08:00:00Z"), null);
+    }
+
+    private static Account accountMuted(Instant mutedUntil) {
+        return Account.rehydrate(USER_ID, EmailAddress.of(EMAIL), null, StudentId.of(STUDENT_ID),
+                "张三同学", null, null, null, null, null, AccountRole.USER, AccountStatus.ACTIVE,
+                mutedUntil, true, false, null, Instant.parse("2026-09-01T08:00:00Z"), null);
     }
 }

@@ -53,7 +53,14 @@ class MarkdownRendererTest {
     void codeLanguageClassPreserved() {
         String out = renderer.render("```java\nSystem.out.println(1);\n```");
         assertThat(out).contains("language-java");
-        assertThat(out).contains("<pre><code");
+        assertThat(out).contains("<pre tabindex=\"0\"><code");
+    }
+
+    @Test
+    @DisplayName("代码块可通过键盘聚焦以便横向滚动（WCAG 2.1.1 / axe scrollable-region-focusable）")
+    void codeBlockIsKeyboardFocusable() {
+        String out = renderer.render("```java\nSystem.out.println(1);\n```");
+        assertThat(out).contains("<pre tabindex=\"0\">");
     }
 
     @Test

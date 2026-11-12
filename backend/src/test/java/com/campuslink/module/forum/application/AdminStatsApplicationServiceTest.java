@@ -44,7 +44,7 @@ class AdminStatsApplicationServiceTest {
                 .thenReturn(new AccountApplicationService.AccountStats(45, 43, 1, 1));
         when(adminStatsGateway.postStats(any())).thenReturn(new AdminStatsGateway.ContentStats(26, 25, 1, 0));
         when(adminStatsGateway.replyStats(any())).thenReturn(new AdminStatsGateway.ContentStats(40, 39, 1, 2));
-        when(adminStatsGateway.reportStats()).thenReturn(new AdminStatsGateway.ReportStats(3, 1, 2));
+        when(adminStatsGateway.reportStats()).thenReturn(new AdminStatsGateway.ReportStats(4, 1, 1, 2));
 
         AdminStatsApplicationService.Dashboard d = service.dashboard();
 
@@ -56,6 +56,7 @@ class AdminStatsApplicationServiceTest {
         assertThat(d.posts().todayCreated()).isZero();
         assertThat(d.replies().todayCreated()).isEqualTo(2);
         assertThat(d.reports().pending()).isEqualTo(1);
+        assertThat(d.reports().processing()).isEqualTo(1);
         assertThat(d.reports().closed()).isEqualTo(2);
     }
 
@@ -64,7 +65,7 @@ class AdminStatsApplicationServiceTest {
     void todayStartIsUtcMidnightAndShared() {
         when(adminStatsGateway.postStats(any())).thenReturn(new AdminStatsGateway.ContentStats(0, 0, 0, 0));
         when(adminStatsGateway.replyStats(any())).thenReturn(new AdminStatsGateway.ContentStats(0, 0, 0, 0));
-        when(adminStatsGateway.reportStats()).thenReturn(new AdminStatsGateway.ReportStats(0, 0, 0));
+        when(adminStatsGateway.reportStats()).thenReturn(new AdminStatsGateway.ReportStats(0, 0, 0, 0));
 
         service.dashboard();
 

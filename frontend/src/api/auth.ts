@@ -30,6 +30,12 @@ export const refreshSession = () => post<AuthResponse>('/auth/refresh')
 export const fetchMe = () => get<UserInfo>('/users/me')
 
 /**
+ * 退出登录（CR-213）：服务端吊销当前用户全部旧 token（全端退出）。
+ * 调用方失败也照常清本地，不把网络异常暴露给退出动作。
+ */
+export const logout = () => post<void>('/auth/logout')
+
+/**
  * 资料编辑（F-ACC-007a）：PUT 全量语义——传 `null` 的字段后端保持原值，传空串即清空（昵称除外）。
  * 身份只从令牌取，请求体里没有 id；限流 10 次/小时，超限 `429 / 2008`（消息由后端给出，直接透出）。
  */

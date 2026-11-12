@@ -9,6 +9,7 @@ import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { createTeam, TEAM_DIRECTIONS, type TeamDirectionCode } from '../api/teams'
 import { previewMarkdown } from '../api/markdown'
+import PageHeader from '../components/PageHeader.vue'
 import SvgIcon from '../components/SvgIcon.vue'
 
 const router = useRouter()
@@ -87,12 +88,16 @@ async function onSubmit() {
 <template>
   <!-- TRANSITION-SINGLE-ROOT -->
   <div>
-    <el-card shadow="never" class="mb-5">
-      <h2 class="text-title-lg font-medium text-ink">发起组队</h2>
-      <p class="mt-1.5 text-note text-ink-meta">
-        发布后其他同学可申请加入，由你审批；满员自动停止招募，也可随时关闭（关闭后不可重开）。
-      </p>
-    </el-card>
+    <PageHeader
+      title="发起组队"
+      description="发布后其他同学可申请加入，由你审批；满员自动停止招募，也可随时关闭（关闭后不可重开）。"
+    >
+      <template #actions>
+        <RouterLink to="/teams">
+          <el-button>返回组队广场</el-button>
+        </RouterLink>
+      </template>
+    </PageHeader>
 
     <el-card shadow="never">
       <el-form label-position="top">

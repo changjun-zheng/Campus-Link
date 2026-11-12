@@ -3,6 +3,7 @@ import { onBeforeUnmount, ref, watch } from 'vue'
 import { listNotifications, markAllRead, markNotificationRead, type NotificationVo } from '../api/notifications'
 import { refreshUnreadCount, unreadNotificationCount } from '../composables/useUnreadNotifications'
 import { formatRelativeTime } from '../utils/time'
+import PageHeader from '../components/PageHeader.vue'
 import UserAvatar from '../components/UserAvatar.vue'
 
 const items = ref<NotificationVo[]>([])
@@ -102,12 +103,19 @@ function actionOf(n: NotificationVo): string {
   if (n.type === 'content_restored') {
     return n.targetType === 'POST' ? '恢复了你的帖子' : '恢复了你的回复'
   }
+  if (n.type === 'warning') return '向你发出警告'
+  if (n.type === 'mute') return '对你的账号执行了禁言'
   return n.targetType === 'POST' ? '点赞了你的帖子' : '点赞了你的回复'
 }
 
-/** 内容处置通知的主体是平台，不展示管理员昵称（其余类型展示触发人） */
+/** 平台类通知（下架 / 恢复 / 警告 / 禁言）主体是平台，不展示管理员昵称 */
 function actorOf(n: NotificationVo): string {
-  return n.type === 'content_removed' || n.type === 'content_restored' ? '平台' : n.actorNickname
+  return n.type === 'content_removed' ||
+    n.type === 'content_restored' ||
+    n.type === 'warning' ||
+    n.type === 'mute'
+    ? '平台'
+    : n.actorNickname
 }
 
 /** 楼层类通知带 floor=<replyId> 让详情页定位楼层；原帖已删（服务端不下发 postId）时不给跳转 */
@@ -124,21 +132,18 @@ loadNotifications()
 <template>
   <!-- TRANSITION-SINGLE-ROOT：App.vue 以 <Transition mode="out-in"> 包路由组件，多根组件（fragment）在该模式下会随机卡死路由切换（CR-091 修复详情页同类问题） -->
   <div>
-  <el-card shadow="never" class="mb-5">
-    <div class="flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <h2 class="text-title-lg font-medium text-ink">通知中心</h2>
-        <p class="mt-1.5 text-note text-ink-meta">回复、引用、采纳、点赞、收藏与内容处置的站内提醒，仅本人可见</p>
-      </div>
-      <div class="flex items-center gap-3">
-        <el-radio-group v-model="onlyUnread" @change="onFilterChange">
-          <el-radio-button :value="false">全部</el-radio-button>
-          <el-radio-button :value="true">未读</el-radio-button>
-        </el-radio-group>
-        <el-button text type="primary" :loading="marking" @click="readAll">全部已读</el-button>
-      </div>
-    </div>
-  </el-card>
+  <PageHeader
+    title="通知中心"
+    description="回复、引用、采纳、点赞、收藏与内容处置的站内提醒，仅本人可见"
+  >
+    <template #actions>
+      <el-radio-group v-model="onlyUnread" @change="onFilterChange">
+        <el-radio-button :value="false">全部</el-radio-button>
+        <el-radio-button :value="true">未读</el-radio-button>
+      </el-radio-group>
+      <el-button text type="primary" :loading="marking" @click="readAll">全部已读</el-button>
+    </template>
+  </PageHeader>
 
   <el-card shadow="never" :body-style="{ padding: 0 }">
     <el-skeleton v-if="loading" animated class="px-5 pt-4">
@@ -200,9 +205,13 @@ loadNotifications()
               {{ actionOf(n) }}
               <template v-if="n.floorNo">#{{ n.floorNo }} 楼</template>
             </p>
+            <!-- 平台直发通知（警告 / 禁言）没有帖子目标，正文来自 message（CR-209） -->
+            <p v-if="n.message" class="mt-1 whitespace-pre-wrap text-title-sm text-ink-regular">
+              {{ n.message }}
+            </p>
             <!-- after:inset-0 把点击区拉到整行（定位祖先是 relative 的 li）；hover 因此也覆盖整行 -->
             <RouterLink
-              v-if="targetOf(n)"
+              v-else-if="targetOf(n)"
               :to="targetOf(n)!"
               class="mt-1 block truncate text-title-sm text-link hover:underline after:absolute after:inset-0 after:content-['']"
             >

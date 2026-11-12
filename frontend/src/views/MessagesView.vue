@@ -8,6 +8,7 @@
 import { ref } from 'vue'
 import { listConversations, type ConversationVo } from '../api/messages'
 import SvgIcon from '../components/SvgIcon.vue'
+import PageHeader from '../components/PageHeader.vue'
 import UserAvatar from '../components/UserAvatar.vue'
 import { formatRelativeTime } from '../utils/time'
 
@@ -45,10 +46,7 @@ load(1)
 <template>
   <!-- TRANSITION-SINGLE-ROOT：App.vue 以 <Transition mode="out-in"> 包路由组件，多根会卡死路由切换（CR-091） -->
   <div>
-    <el-card shadow="never" class="mb-5">
-      <h2 class="text-title-lg font-medium text-ink">私信</h2>
-      <p class="mt-1.5 text-note text-ink-meta">与同学一对一交流，仅本人可见；按最后一条消息时间倒序</p>
-    </el-card>
+    <PageHeader title="私信" description="与同学一对一交流，仅本人可见；按最后一条消息时间倒序" />
 
     <el-card shadow="never" :body-style="{ padding: 0 }">
       <el-skeleton v-if="loading" animated class="px-5 pt-4">

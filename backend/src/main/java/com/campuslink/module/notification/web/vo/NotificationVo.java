@@ -9,11 +9,12 @@ public record NotificationVo(Long id, String type, Long actorId, String actorNic
                              String actorAvatarUrl,
                              String targetType, Long targetId,
                              Long postId, String postTitle, Integer floorNo,
+                             String message,
                              boolean read, Instant createdAt) {
 
     public static NotificationVo from(NotificationItem item) {
         return new NotificationVo(item.id(), item.type(), item.actorId(), item.actorNickname(),
                 item.actorAvatarUrl(), item.targetType(), item.targetId(), item.postId(), item.postTitle(),
-                item.floorNo(), item.read(), item.createdAt());
+                item.floorNo(), item.message(), item.read(), item.createdAt());
     }
 }

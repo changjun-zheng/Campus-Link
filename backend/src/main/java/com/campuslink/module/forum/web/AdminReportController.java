@@ -19,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -55,7 +56,7 @@ public class AdminReportController {
             @Size(max = 512, message = "处理结论最长 512 字") String note) {
     }
 
-    @Operation(summary = "工单分页（OPS / SUPERADMIN）：status 可选 PENDING / CLOSED，缺省全部")
+    @Operation(summary = "工单分页（OPS / SUPERADMIN）：status 可选 PENDING / PROCESSING / CLOSED，缺省全部")
     @SecurityRequirement(name = ApiDocs.BEARER_AUTH)
     @ErrorCodes({ResultCode.NOT_LOGGED_IN, ResultCode.FORBIDDEN})
     @GetMapping
@@ -67,6 +68,16 @@ public class AdminReportController {
         PageResult<Report> result = reportApplicationService.adminPage(status, page, size);
         return ApiResponse.ok(new PageVo<>(result.items().stream().map(AdminReportVo::from).toList(),
                 result.total(), result.page(), result.size()));
+    }
+
+    @Operation(summary = "认领工单（OPS / SUPERADMIN，CR-214）：PENDING → PROCESSING 并记录处理人；"
+            + "已处理中 / 已闭环时幂等 200")
+    @SecurityRequirement(name = ApiDocs.BEARER_AUTH)
+    @ErrorCodes({ResultCode.NOT_LOGGED_IN, ResultCode.FORBIDDEN, ResultCode.NOT_FOUND})
+    @PostMapping("/{id}/claim")
+    public ApiResponse<Void> claim(@PathVariable("id") long id, Authentication authentication) {
+        reportApplicationService.claim(CurrentUser.requireRole(authentication, "ROLE_OPS"), id);
+        return ApiResponse.ok();
     }
 
     @Operation(summary = "工单处理（OPS / SUPERADMIN）：action=REMOVE 联动目标处置（下架 / 封禁），DISMISS 驳回；闭环 + 审计")

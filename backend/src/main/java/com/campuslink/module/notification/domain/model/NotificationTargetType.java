@@ -7,7 +7,9 @@ package com.campuslink.module.notification.domain.model;
 public enum NotificationTargetType {
 
     POST,
-    REPLY;
+    REPLY,
+    /** 平台直接面向用户的通知（警告 / 禁言，CR-209）：targetId 是接收人 userId，无帖子跳转 */
+    USER;
 
     public static NotificationTargetType fromName(String name) {
         for (NotificationTargetType type : values()) {

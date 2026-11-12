@@ -40,7 +40,7 @@ public class ReplyApplicationService {
      */
     @Transactional
     public PublishedReply reply(Long postId, Long authorId, PublishReplyCommand command) {
-        accountApplicationService.assertActiveForContent(authorId);
+        accountApplicationService.assertAllowedToWriteContent(authorId);
         Post post = postRepository.findById(postId)
                 .filter(Post::isVisible)
                 .orElseThrow(PostNotFoundException::new);

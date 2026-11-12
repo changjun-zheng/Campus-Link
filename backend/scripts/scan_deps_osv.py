@@ -30,6 +30,7 @@ import collections
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -80,10 +81,19 @@ def backend_dependencies(deps_file: Path) -> list[dict]:
     return out
 
 
+def maven_executable() -> str:
+    """定位 mvn。Windows 下它是 `mvn.cmd`，直接写 "mvn" 会抛 FileNotFoundError。"""
+    exe = shutil.which("mvn")
+    if not exe:
+        raise SystemExit("找不到 mvn：请确认 Maven 的 bin 目录在 PATH 中；"
+                         "或先自行生成依赖清单再用 --skip-maven")
+    return exe
+
+
 def resolve_maven_deps(deps_file: Path) -> None:
     """在仓库内跑一次 dependency:list（CI 里由前置步骤完成，可用 --skip-maven 跳过）。"""
     deps_file.parent.mkdir(parents=True, exist_ok=True)
-    cmd = ["mvn", "-q", "dependency:list", "-DincludeScope=runtime",
+    cmd = [maven_executable(), "-q", "dependency:list", "-DincludeScope=runtime",
            f"-DoutputFile={deps_file}", "-f", str(POM)]
     print(f"[信息] 解析后端依赖：{' '.join(cmd[:4])} …")
     subprocess.run(cmd, check=True, cwd=ROOT)

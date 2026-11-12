@@ -36,8 +36,9 @@ public class PostImageController {
     @Operation(summary = "上传帖子图片；仅登录且可发帖账号，JPEG/PNG ≤2MiB")
     @SecurityRequirement(name = ApiDocs.BEARER_AUTH)
     @ErrorCodes({ResultCode.NOT_LOGGED_IN, ResultCode.FORBIDDEN, ResultCode.USER_BANNED,
-            ResultCode.ACCOUNT_DEACTIVATED, ResultCode.FILE_TOO_LARGE, ResultCode.POST_IMAGE_INVALID,
-            ResultCode.POST_IMAGE_RATE_LIMITED, ResultCode.POST_IMAGE_STORAGE_UNAVAILABLE})
+            ResultCode.USER_MUTED, ResultCode.ACCOUNT_DEACTIVATED, ResultCode.FILE_TOO_LARGE,
+            ResultCode.POST_IMAGE_INVALID, ResultCode.POST_IMAGE_RATE_LIMITED,
+            ResultCode.POST_IMAGE_STORAGE_UNAVAILABLE})
     public ApiResponse<PostImageApplicationService.UploadedImage> upload(
             @RequestParam("file") MultipartFile file, Authentication authentication) {
         long userId = CurrentUser.requireId(authentication);

@@ -48,4 +48,8 @@ public interface TagMapper extends BaseMapper<TagDO> {
 
     @Select("SELECT id, name, use_count, created_at FROM tags WHERE id = #{tagId}")
     AdminTagRow findTag(@Param("tagId") long tagId);
+
+    /** 重命名前的重名预检（CR-217）；唯一键 uk_tags_name 仍是最终防线 */
+    @Select("SELECT id, name, use_count, created_at FROM tags WHERE name = #{name}")
+    AdminTagRow findTagByName(@Param("name") String name);
 }

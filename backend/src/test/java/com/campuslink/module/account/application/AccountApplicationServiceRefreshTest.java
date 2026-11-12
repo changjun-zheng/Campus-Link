@@ -3,6 +3,7 @@ package com.campuslink.module.account.application;
 import com.campuslink.common.audit.AuditService;
 import com.campuslink.common.exception.ApiException;
 import com.campuslink.common.result.ResultCode;
+import com.campuslink.common.security.TokenRevocationGateway;
 import com.campuslink.config.AppProperties;
 import com.campuslink.module.account.application.cmd.AccountCommands.LoginResult;
 import com.campuslink.module.account.domain.gateway.AccountRepository;
@@ -62,7 +63,8 @@ class AccountApplicationServiceRefreshTest {
                 mock(StudentVerificationService.class), accountRepository, mock(RosterGateway.class),
                 mock(VerificationTicketStore.class), mock(CaptchaService.class), mock(SensitiveCodec.class),
                 tokenIssuer, mock(RateLimitGateway.class), mock(AuditService.class), new AppProperties(),
-                mock(ApplicationEventPublisher.class), mock(ModerationApplicationService.class));
+                mock(ApplicationEventPublisher.class), mock(ModerationApplicationService.class),
+                mock(TokenRevocationGateway.class));
     }
 
     private Account account(AccountStatus status) {

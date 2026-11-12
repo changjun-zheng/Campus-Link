@@ -41,6 +41,8 @@ public enum ResultCode {
     AVATAR_UPDATE_TOO_FREQUENT(2017, 429, "头像修改过于频繁，请稍后再试"),
 
     CAPTCHA_SEND_FAILED(2018, 503, "验证码发送失败，请稍后重试"),
+    /** 禁言（F-ADMIN-002 / CR-209）：与封禁分开，前端据此提示"暂时无法发布内容"而不是"账号已封禁" */
+    USER_MUTED(2019, 403, "账号已被禁言，暂时无法发布内容"),
 
     STUDENT_VERIFY_FAILED(2101, 400, "学籍信息校验未通过"),
     VERIFY_TICKET_INVALID(2102, 400, "核验票据无效或已过期，请重新核验"),
@@ -53,6 +55,8 @@ public enum ResultCode {
     POST_IMAGE_RATE_LIMITED(3005, 429, "图片上传过于频繁，请稍后重试"),
     POST_IMAGE_REFERENCE_INVALID(3006, 422, "图片引用无效或超过数量限制"),
     POST_IMAGE_STORAGE_UNAVAILABLE(3007, 503, "图片存储暂不可用，请稍后重试"),
+    /** 标签重命名（F-ADMIN-004 / CR-217）：目标名被其它标签占用；唯一键是最终防线，此码只在预检与并发兜底时抛 */
+    TAG_NAME_TAKEN(3008, 409, "标签名已存在"),
     NOT_LOGGED_IN(4001, 401, "未登录"),
     FORBIDDEN(4002, 403, "无权限"),
 

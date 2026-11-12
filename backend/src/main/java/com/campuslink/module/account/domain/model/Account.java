@@ -32,6 +32,8 @@ public class Account {
     private String bio;
     private AccountRole role;
     private AccountStatus status;
+    /** 禁言截止时间（CR-209）：NULL = 未禁言；读取时按当前时间判定，过期自然失效，无定时任务 */
+    private Instant mutedUntil;
     private final boolean verified;
     private boolean anonymized;
     private Instant deleteAt;
@@ -40,7 +42,8 @@ public class Account {
 
     private Account(Long id, EmailAddress email, PhoneNumber phone, StudentId studentId, String nickname, String avatarUrl,
                     String school, String major, String grade, String bio, AccountRole role, AccountStatus status,
-                    boolean verified, boolean anonymized, Instant deleteAt, Instant createdAt, Instant updatedAt) {
+                    Instant mutedUntil, boolean verified, boolean anonymized, Instant deleteAt, Instant createdAt,
+                    Instant updatedAt) {
         if (email == null && phone == null) {
             throw new IllegalArgumentException("email 与 phone 至少其一存在");
         }
@@ -56,6 +59,7 @@ public class Account {
         this.bio = bio;
         this.role = role;
         this.status = status;
+        this.mutedUntil = mutedUntil;
         this.verified = verified;
         this.anonymized = anonymized;
         this.deleteAt = deleteAt;
@@ -81,16 +85,25 @@ public class Account {
     public static Account registered(EmailAddress email, PhoneNumber phone, StudentId studentId, String nickname,
             String grade) {
         return new Account(null, email, phone, studentId, nickname.trim(), null, null, null, grade, null,
-                AccountRole.USER, AccountStatus.ACTIVE, true, false, null, null, null);
+                AccountRole.USER, AccountStatus.ACTIVE, null, true, false, null, null, null);
     }
 
-    /** 仓储重建入口（infrastructure 适配器调用） */
+    /** 仓储重建入口（infrastructure 适配器调用）；保留旧签名供既有测试使用，禁言状态默认为空 */
     public static Account rehydrate(Long id, EmailAddress email, PhoneNumber phone, StudentId studentId, String nickname,
                                     String avatarUrl, String school, String major, String grade, String bio,
                                     AccountRole role, AccountStatus status, boolean verified, boolean anonymized,
                                     Instant deleteAt, Instant createdAt, Instant updatedAt) {
+        return rehydrate(id, email, phone, studentId, nickname, avatarUrl, school, major, grade, bio, role, status,
+                null, verified, anonymized, deleteAt, createdAt, updatedAt);
+    }
+
+    /** 仓储重建入口（CR-209 起带禁言截止时间） */
+    public static Account rehydrate(Long id, EmailAddress email, PhoneNumber phone, StudentId studentId, String nickname,
+                                    String avatarUrl, String school, String major, String grade, String bio,
+                                    AccountRole role, AccountStatus status, Instant mutedUntil, boolean verified,
+                                    boolean anonymized, Instant deleteAt, Instant createdAt, Instant updatedAt) {
         return new Account(id, email, phone, studentId, nickname, avatarUrl, school, major, grade, bio,
-                role, status, verified, anonymized, deleteAt, createdAt, updatedAt);
+                role, status, mutedUntil, verified, anonymized, deleteAt, createdAt, updatedAt);
     }
 
     /**
@@ -100,11 +113,16 @@ public class Account {
      */
     public static Account provisioned(EmailAddress email, String nickname, AccountRole role) {
         return new Account(null, email, null, null, nickname.trim(), null, null, null, null, null,
-                role, AccountStatus.ACTIVE, true, false, null, null, null);
+                role, AccountStatus.ACTIVE, null, true, false, null, null, null);
     }
 
     public boolean isActive() {
         return status == AccountStatus.ACTIVE;
+    }
+
+    /** 当前是否处于禁言期（CR-209）：到期即自然失效，无需清理任务 */
+    public boolean isMutedAt(Instant now) {
+        return mutedUntil != null && mutedUntil.isAfter(now);
     }
 
     /**

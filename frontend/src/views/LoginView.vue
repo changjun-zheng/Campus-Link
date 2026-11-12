@@ -16,7 +16,7 @@ const tab = ref<'login' | 'register'>('login')
 
 /** 左侧品牌区事实（CR-161：原为与标题重复的三个卖点，改为可核验事实）；icon 显式标注类型，否则推成 string 传不进 SvgIcon */
 const values: { icon: IconName; title: string }[] = [
-  { icon: 'school', title: '仅限本校学生' },
+  { icon: 'school', title: '面向本校学生' },
   { icon: 'circle-check', title: '学籍核验注册' },
   { icon: 'list', title: '6 个固定版块' },
 ]
@@ -163,7 +163,7 @@ async function doRegister() {
         问有所答<br />学有同伴 · 求职有路
       </h2>
       <p class="mt-3 text-note leading-body text-ink-regular">
-        重庆工程学院计算机专业学生的垂直交流论坛，学籍核验注册，仅本校同学可见。
+        重庆工程学院计算机专业学生的垂直交流论坛；注册需学籍核验，公开内容无需登录即可浏览。
       </p>
       <ul class="mt-6 flex flex-col gap-3.5">
         <li v-for="v in values" :key="v.title" class="flex items-start gap-2.5 text-note text-ink-regular">
@@ -248,7 +248,7 @@ async function doRegister() {
                 <el-input v-model="reg.nickname" placeholder="社区展示昵称（2~32 字符）" maxlength="32" />
               </el-form-item>
               <el-button type="primary" class="w-full" @click="doRegister">完成注册</el-button>
-              <p class="mt-2 w-full text-caption text-ink-meta">核验票据 5 分钟内有效，过期请返回上一步重新核验。</p>
+              <p class="mt-2 w-full text-caption text-ink-meta">学籍核验结果 5 分钟内有效，过期请返回上一步重新核验。</p>
             </el-form>
 
             <p class="mt-4 text-center text-body text-ink-regular">

@@ -10,11 +10,18 @@ import com.campuslink.module.forum.web.vo.AdminTagsVo;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -54,6 +61,39 @@ public class AdminTagController {
     public ApiResponse<Void> deleteTag(@PathVariable("id") long id, Authentication authentication) {
         long operatorId = CurrentUser.requireRole(authentication, "ROLE_SUPERADMIN");
         adminTagApplicationService.delete(operatorId, id);
+        return ApiResponse.ok();
+    }
+
+    /** 重命名（CR-217）：名称 1~32 字，重名 409 / 3008 */
+    public record RenameCommand(@NotBlank(message = "标签名不能为空")
+                                @Size(max = 32, message = "标签名最长 32 字") String name) {
+    }
+
+    /** 合并（CR-217）：把路径上的源标签并入 body 指定的目标标签 */
+    public record MergeCommand(@NotNull(message = "targetId 不能为空") Long targetId) {
+    }
+
+    @Operation(summary = "重命名标签（仅 SUPERADMIN）：同步 tags.name 与受影响帖子的 posts.tags 冗余列，记 TAG_RENAME 审计")
+    @SecurityRequirement(name = ApiDocs.BEARER_AUTH)
+    @ErrorCodes({ResultCode.NOT_LOGGED_IN, ResultCode.FORBIDDEN, ResultCode.NOT_FOUND, ResultCode.TAG_NAME_TAKEN})
+    @PutMapping("/tags/{id}")
+    public ApiResponse<Void> renameTag(@PathVariable("id") long id,
+                                       @Valid @RequestBody RenameCommand command,
+                                       Authentication authentication) {
+        long operatorId = CurrentUser.requireRole(authentication, "ROLE_SUPERADMIN");
+        adminTagApplicationService.rename(operatorId, id, command.name());
+        return ApiResponse.ok();
+    }
+
+    @Operation(summary = "合并标签（仅 SUPERADMIN）：源标签的关联 / 冗余列 / 使用次数并入目标并删除源，记 TAG_MERGE 审计")
+    @SecurityRequirement(name = ApiDocs.BEARER_AUTH)
+    @ErrorCodes({ResultCode.NOT_LOGGED_IN, ResultCode.FORBIDDEN, ResultCode.NOT_FOUND})
+    @PostMapping("/tags/{id}/merge")
+    public ApiResponse<Void> mergeTag(@PathVariable("id") long id,
+                                      @Valid @RequestBody MergeCommand command,
+                                      Authentication authentication) {
+        long operatorId = CurrentUser.requireRole(authentication, "ROLE_SUPERADMIN");
+        adminTagApplicationService.merge(operatorId, id, command.targetId());
         return ApiResponse.ok();
     }
 }

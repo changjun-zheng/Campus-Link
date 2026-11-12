@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { onBeforeRouteLeave } from 'vue-router'
 import { listFollowingPosts, listPosts, type PostSort, type PostSummaryVo } from '../api/forum'
 import { BOARDS } from '../constants/boards'
 import { useAuthStore } from '../stores/auth'
@@ -25,8 +26,83 @@ const sortOptions = computed<{ value: PostSort | 'following'; label: string }[]>
 const posts = ref<PostSummaryVo[]>([])
 const total = ref(0)
 const page = ref(1)
-/** 每批条数（CR-091 触底加载）：首屏 6 条，触底自动续载 6 条 */
-const size = 6
+/** 每批条数（CR-091 触底加载）：首屏 6 条，触底自动续载 6 条；
+ *  CR-204 恢复列表时临时放大为已加载条数（≤100），后续批次沿用同一页大小保证不重不漏 */
+const size = ref(6)
+/** 列表状态记忆（CR-204）：只写给「离开首页去帖子详情」的那一次，回到首页消费一次即清 */
+const LIST_STATE_KEY = 'campuslink:home:list'
+const LIST_STATE_TTL_MS = 30 * 60 * 1000
+const LIST_RESTORE_MAX = 100
+interface HomeListState {
+  sort: PostSort | 'following'
+  loaded: number
+  scrollTop: number
+  windowY: number
+  ts: number
+}
+
+function readListState(): HomeListState | null {
+  try {
+    const raw = sessionStorage.getItem(LIST_STATE_KEY)
+    if (!raw) return null
+    const s = JSON.parse(raw) as Partial<HomeListState>
+    if (!s || typeof s.ts !== 'number' || Date.now() - s.ts > LIST_STATE_TTL_MS) return null
+    if (s.sort !== 'latest' && s.sort !== 'hot' && s.sort !== 'following') return null
+    if (s.sort === 'following' && !auth.isLoggedIn) return null
+    if (typeof s.loaded !== 'number' || s.loaded < 1) return null
+    return {
+      sort: s.sort,
+      loaded: Math.min(Math.floor(s.loaded), LIST_RESTORE_MAX),
+      scrollTop: typeof s.scrollTop === 'number' ? Math.max(0, s.scrollTop) : 0,
+      windowY: typeof s.windowY === 'number' ? Math.max(0, s.windowY) : 0,
+      ts: s.ts,
+    }
+  } catch {
+    return null
+  }
+}
+
+/** 在 setup 期同步读取：排序与页大小必须先于首次加载确定，避免 watch(sort) 触发二次请求 */
+const pendingRestore = readListState()
+if (pendingRestore) {
+  sort.value = pendingRestore.sort
+  size.value = pendingRestore.loaded
+  try {
+    sessionStorage.removeItem(LIST_STATE_KEY)
+  } catch {
+    /* 存储不可用：忽略 */
+  }
+}
+
+function saveListState() {
+  try {
+    sessionStorage.setItem(
+      LIST_STATE_KEY,
+      JSON.stringify({
+        sort: sort.value,
+        loaded: posts.value.length,
+        scrollTop: listWrapRef.value?.scrollTop ?? 0,
+        windowY: window.scrollY,
+        ts: Date.now(),
+      } satisfies HomeListState),
+    )
+  } catch {
+    /* 隐私模式 / 配额不足：状态记忆失败不影响浏览 */
+  }
+}
+
+/** 只记「去帖子详情」的离开；去其它页面一律丢弃快照，避免下次进首页误恢复 */
+onBeforeRouteLeave((to) => {
+  try {
+    if (String(to.path).startsWith('/post/')) {
+      saveListState()
+    } else {
+      sessionStorage.removeItem(LIST_STATE_KEY)
+    }
+  } catch {
+    /* 存储不可用：忽略 */
+  }
+})
 const loading = ref(false)
 const loadError = ref('')
 /** 触底加载（CR-091）：每批 6 条，距列表容器底部 320px 内自动续载 */
@@ -57,8 +133,8 @@ async function loadFirst() {
   try {
     const res =
       sort.value === 'following'
-        ? await listFollowingPosts(1, size)
-        : await listPosts(1, size, undefined, sort.value)
+        ? await listFollowingPosts(1, size.value)
+        : await listPosts(1, size.value, undefined, sort.value)
     posts.value = res.list
     total.value = res.total
     page.value = 1
@@ -85,8 +161,8 @@ async function loadMore() {
     const next = page.value + 1
     const res =
       sort.value === 'following'
-        ? await listFollowingPosts(next, size)
-        : await listPosts(next, size, undefined, sort.value)
+        ? await listFollowingPosts(next, size.value)
+        : await listPosts(next, size.value, undefined, sort.value)
     posts.value.push(...res.list)
     page.value = next
     // 防御：total 虚高而后续页为空时收敛计数，避免无限触发
@@ -160,6 +236,9 @@ watch(sort, () => {
   total.value = 0
   page.value = 1
   moreError.value = false
+  // 切换排序回到列表起点（CR-204）：中栏独立滚动与窄屏整页滚动两处都归零
+  listWrapRef.value?.scrollTo({ top: 0 })
+  window.scrollTo({ top: 0 })
   void loadFirst()
 })
 
@@ -175,8 +254,24 @@ async function loadUnanswered() {
   }
 }
 
-onMounted(() => {
-  void loadFirst()
+/** 恢复滚动位置（CR-204）：有独立滚动容器的档位还原容器，窄屏整页滚动还原窗口 */
+function applyRestoredScroll(state: HomeListState) {
+  const el = listWrapRef.value
+  if (el && el.scrollHeight > el.clientHeight + 1) {
+    el.scrollTop = state.scrollTop
+  } else {
+    window.scrollTo({ top: state.windowY })
+  }
+}
+
+onMounted(async () => {
+  if (pendingRestore) {
+    await loadFirst()
+    await nextTick()
+    applyRestoredScroll(pendingRestore)
+  } else {
+    void loadFirst()
+  }
   loadHotTop()
   loadUnanswered()
   window.addEventListener('scroll', onWindowScroll, { passive: true })
@@ -197,38 +292,37 @@ const myEntries: { label: string; to: string; icon: IconName }[] = [
   <div class="flex gap-5 lg:sticky lg:top-[60px] lg:h-[calc(100vh-60px)]">
     <!-- ─── 左栏：版块导航（lg 以上显示，栏内自滚） ─── -->
     <aside class="hidden w-[184px] flex-none lg:block lg:overflow-y-auto">
-      <el-card shadow="never" :body-style="{ padding: '8px' }">
-        <nav aria-label="版块导航">
-          <p class="px-3 pb-1 pt-1 text-caption text-ink-meta">版块</p>
-          <RouterLink
-            v-for="b in BOARDS"
-            :key="b.code"
-            :to="`/board/${b.code}`"
-            class="group flex items-center gap-2.5 rounded-md px-3 py-2.5 text-body text-ink-regular transition-colors duration-fast ease-standard hover:bg-bg-hover"
-            active-class="bg-primary-soft font-medium text-primary-strong"
-          >
-            <SvgIcon :name="b.icon" :size="20" :class="['flex-none', `cl-board-ink--${b.code}`]" />
-            {{ b.name }}
-          </RouterLink>
-        </nav>
-        <nav aria-label="我的入口" class="mt-2 border-t-[0.5px] border-divider pt-2">
-          <p class="px-3 pb-1 text-caption text-ink-meta">我的</p>
-          <RouterLink
-            v-for="m in myEntries"
-            :key="m.to"
-            :to="m.to"
-            class="group flex items-center gap-2.5 rounded-md px-3 py-2.5 text-body text-ink-regular transition-colors duration-fast ease-standard hover:bg-bg-hover"
-            active-class="bg-primary-soft font-medium text-primary-strong"
-          >
-            <SvgIcon
-              :name="m.icon"
-              :size="20"
-              class="flex-none text-ink-meta transition-colors group-hover:text-primary-strong"
-            />
-            {{ m.label }}
-          </RouterLink>
-        </nav>
-      </el-card>
+      <!-- CR-201 批次 A：侧栏不再套白卡，改透明分组导航——白卡只留给中栏，页面才有单一焦点 -->
+      <nav aria-label="版块导航" class="py-1">
+        <p class="px-3 pb-2 text-caption font-medium text-ink-meta">版块</p>
+        <RouterLink
+          v-for="b in BOARDS"
+          :key="b.code"
+          :to="`/board/${b.code}`"
+          class="group flex items-center gap-2.5 rounded-md px-3 py-2 text-body text-ink-regular transition-colors duration-fast ease-standard hover:bg-bg-subtle"
+          active-class="bg-bg-subtle font-medium text-primary-strong"
+        >
+          <SvgIcon :name="b.icon" :size="20" :class="['flex-none', `cl-board-ink--${b.code}`]" />
+          {{ b.name }}
+        </RouterLink>
+      </nav>
+      <nav aria-label="我的入口" class="mt-2 border-t-[0.5px] border-divider pt-3">
+        <p class="px-3 pb-2 text-caption font-medium text-ink-meta">我的</p>
+        <RouterLink
+          v-for="m in myEntries"
+          :key="m.to"
+          :to="m.to"
+          class="group flex items-center gap-2.5 rounded-md px-3 py-2 text-body text-ink-regular transition-colors duration-fast ease-standard hover:bg-bg-subtle"
+          active-class="bg-bg-subtle font-medium text-primary-strong"
+        >
+          <SvgIcon
+            :name="m.icon"
+            :size="20"
+            class="flex-none text-ink-meta transition-colors group-hover:text-primary-strong"
+          />
+          {{ m.label }}
+        </RouterLink>
+      </nav>
     </aside>
 
     <!-- ─── 中栏：信息流（定高列，帖子列表在卡片体内自滚） ─── -->
@@ -326,27 +420,28 @@ const myEntries: { label: string; to: string; icon: IconName }[] = [
 
     <!-- ─── 右栏：等你来答 + 热榜 + 站点卡（xl 以上显示，栏内自滚） ─── -->
     <aside class="hidden w-[264px] flex-none xl:block xl:overflow-y-auto">
-      <!-- 等你来答（CR-142，N1）：问答帖且未采纳，把「提问 → 回答 → 采纳」循环的供给侧亮出来 -->
-      <el-card shadow="never" class="side-card" :body-style="{ padding: '16px' }">
-        <template #header>
-          <div class="flex items-center justify-between">
-            <span class="inline-flex items-center gap-1.5 text-title-sm font-medium">
-              <SvgIcon name="message-circle" :size="16" class="text-primary-strong" />
-              等你来答
-            </span>
-            <RouterLink
-              to="/board/qna?filter=unanswered"
-              class="text-caption text-link hover:underline"
-            >更多</RouterLink>
-          </div>
-        </template>
-        <ol v-if="unansweredTop5.length">
+      <!-- CR-201 批次 A：右栏去卡后统一成「小标签 + 内容」的模块语法——
+           三块共用同一套 12px 分组标签（图标 + 名称 + 右侧动作），模块之间留 24px + 分隔线，
+           让右栏读起来是一列索引，而不是三段互相竞争的标题。
+           等你来答（CR-142，N1）：问答帖且未采纳，把「提问 → 回答 → 采纳」循环的供给侧亮出来 -->
+      <section class="pt-1">
+        <header class="mb-2.5 flex items-center justify-between">
+          <span class="inline-flex items-center gap-1.5 text-note font-semibold text-ink">
+            <SvgIcon name="message-circle" :size="14" class="text-primary-strong" />
+            等你来答
+          </span>
+          <RouterLink
+            to="/board/qna?filter=unanswered"
+            class="text-caption text-link hover:underline"
+          >更多</RouterLink>
+        </header>
+        <ol v-if="unansweredTop5.length" class="min-h-[190px]">
           <li
             v-for="(p, i) in unansweredTop5"
             :key="p.id"
-            class="-mx-2 flex items-start gap-2 rounded-md border-b-[0.5px] border-divider px-2 py-1.5 transition-colors duration-fast ease-standard last:border-b-0 hover:bg-bg-hover"
+            class="flex items-start gap-2 rounded-md py-1.5 transition-colors duration-fast ease-standard hover:bg-bg-subtle"
           >
-            <span class="inline-flex h-5 w-5 flex-none items-center justify-center rounded-sm bg-code text-caption tabular-nums text-ink-meta">
+            <span class="w-3.5 flex-none pt-0.5 text-caption tabular-nums text-ink-meta">
               {{ i + 1 }}
             </span>
             <RouterLink :to="`/post/${p.id}`" class="min-w-0 flex-1 line-clamp-2 break-words text-note leading-tight text-ink-regular hover:text-link">
@@ -359,24 +454,22 @@ const myEntries: { label: string; to: string; icon: IconName }[] = [
             >{{ p.replyCount }} 回答</span>
           </li>
         </ol>
-        <p v-else class="text-note text-ink-meta">暂时没有待解答的问题</p>
-      </el-card>
+        <p v-else class="min-h-[190px] text-note text-ink-meta">暂时没有待解答的问题</p>
+      </section>
 
-      <el-card shadow="never" class="side-card mt-4" :body-style="{ padding: '16px' }">
-        <template #header>
-          <div class="flex items-center justify-between">
-            <span class="inline-flex items-center gap-1.5 text-title-sm font-medium">
-              <SvgIcon name="trophy" :size="16" class="text-rank-gold" />
-              全站热榜
-            </span>
-            <button type="button" class="cursor-pointer text-caption text-link hover:underline" aria-label="更多全站热榜" @click="showHotPosts">更多</button>
-          </div>
-        </template>
-        <ol v-if="hotTop5.length">
+      <section class="mt-6 border-t-[0.5px] border-line pt-5">
+        <header class="mb-2.5 flex items-center justify-between">
+          <span class="inline-flex items-center gap-1.5 text-note font-semibold text-ink">
+            <SvgIcon name="trophy" :size="14" class="text-rank-gold" />
+            全站热榜
+          </span>
+          <button type="button" class="cursor-pointer text-caption text-link hover:underline" aria-label="更多全站热榜" @click="showHotPosts">更多</button>
+        </header>
+        <ol v-if="hotTop5.length" class="min-h-[190px]">
           <li
             v-for="(p, i) in hotTop5"
             :key="p.id"
-            class="-mx-2 flex items-start gap-2 rounded-md border-b-[0.5px] border-divider px-2 py-1.5 transition-colors duration-fast ease-standard last:border-b-0 hover:bg-bg-hover"
+            class="flex items-start gap-2 rounded-md py-1.5 transition-colors duration-fast ease-standard hover:bg-bg-subtle"
           >
             <!-- 前三名奖牌徽章（2026-11-05）：只保留奖杯 / 奖牌自身的轮廓（不铺圆形底色），
                  名次数字按各自图形的空腔落位——皇冠落在冠身、奖牌落在盘面、绶带落在圆章；
@@ -400,7 +493,7 @@ const myEntries: { label: string; to: string; icon: IconName }[] = [
             </span>
             <span
               v-else
-              class="inline-flex h-6 w-6 flex-none items-center justify-center rounded-sm text-caption tabular-nums text-ink-meta"
+              class="inline-flex h-6 w-6 flex-none items-center justify-center text-caption tabular-nums text-ink-meta"
             >
               {{ i + 1 }}
             </span>
@@ -409,21 +502,20 @@ const myEntries: { label: string; to: string; icon: IconName }[] = [
             </RouterLink>
           </li>
         </ol>
-        <p v-else class="text-note text-ink-meta">热榜计算中，稍后再来看</p>
-      </el-card>
+        <p v-else class="min-h-[190px] text-note text-ink-meta">热榜计算中，稍后再来看</p>
+      </section>
 
-      <!-- 关于卡：整栏已 sticky 钉住（CR-098），此处回归普通排布 -->
-      <div class="mt-4">
-        <el-card shadow="never" :body-style="{ padding: '16px' }">
-          <h3 class="text-title-sm font-medium text-ink">关于 Campus-Link</h3>
-          <p class="mt-2 text-note leading-body text-ink-regular">
-            重庆工程学院计算机专业学生的垂直交流论坛——问有所答、学有同伴、求职有路。
-          </p>
-          <RouterLink to="/publish">
-            <el-button type="primary" size="small" class="mt-3">我要提问</el-button>
-          </RouterLink>
-        </el-card>
-      </div>
+      <!-- 关于区（CR-201 批次 A）：从「标题 + 正文 + 实心按钮」降为注脚——
+           它与上方两个模块不是同级内容，实心按钮在侧栏里还会抢走中栏的视觉重量 -->
+      <section class="mt-6 border-t-[0.5px] border-line pt-5">
+        <p class="text-note font-semibold text-ink">关于 Campus-Link</p>
+        <p class="mt-1.5 text-caption leading-body text-ink-meta">
+          重庆工程学院计算机专业学生的垂直交流论坛——问有所答、学有同伴、求职有路。
+        </p>
+        <RouterLink to="/publish" class="mt-2 inline-block text-caption text-primary-strong hover:underline">
+          我要提问 →
+        </RouterLink>
+      </section>
     </aside>
   </div>
 </template>
@@ -436,19 +528,10 @@ const myEntries: { label: string; to: string; icon: IconName }[] = [
   flex-direction: column;
 }
 
-/* 卡片头层（2026-11-05）：排序条与右栏卡头统一用主色淡底压一层，
-   让白卡不再是整块白板、也把品牌色带进信息流；只改底色，不动 EP 的内边距与描边 */
-.sort-card :deep(.el-card__header),
-.side-card :deep(.el-card__header) {
-  background: var(--cl-color-primary-soft);
-}
+/* 卡片头层（CR-201 批次 A）：排序条恢复白底，只靠 EP 自带的 0.5px 下边框分界。
+   之前的主色淡底把整条卡头刷成浅蓝，反而削弱了中栏白卡的独立性 */
 .sort-card :deep(.el-card__body) {
   flex: 1;
   min-height: 0;
-}
-/* 右栏两张异步卡片（CR-183 保留 CR-155 的预留高度）：数据回来前先把卡片体撑到成品高度，
-   否则「热榜计算中」等占位文本换成 5 条列表时会把下面的卡片顶下去（CLS 0.062） */
-.side-card :deep(.el-card__body) {
-  min-height: 230px;
 }
 </style>

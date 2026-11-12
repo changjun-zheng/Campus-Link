@@ -97,7 +97,7 @@ class ForumQueryApplicationServiceTest {
                 likeRepository, favoriteRepository, accountApplicationService, userBlockApplicationService,
                 followApplicationService, reportRepository, new MarkdownRenderer(), appProperties);
         // 默认无待处理举报；具体用例需要非空集合时自行覆盖（lenient：匿名用例根本不查库）
-        lenient().when(reportRepository.findPendingTargetsByReporter(anyLong()))
+        lenient().when(reportRepository.findUnclosedTargetsByReporter(anyLong()))
                 .thenReturn(com.campuslink.module.forum.domain.model.ReportedTargets.EMPTY);
     }
 
@@ -720,7 +720,7 @@ class ForumQueryApplicationServiceTest {
     @DisplayName("举报未闭环的帖子：详情对举报人回 3001，匿名访客与其他人不受影响")
     void postDetailHidesReportedPostFromReporter() {
         when(postRepository.findById(7L)).thenReturn(java.util.Optional.of(post(7L, 100L)));
-        when(reportRepository.findPendingTargetsByReporter(42L))
+        when(reportRepository.findUnclosedTargetsByReporter(42L))
                 .thenReturn(new com.campuslink.module.forum.domain.model.ReportedTargets(
                         java.util.Set.of(7L), java.util.Set.of()));
         when(accountApplicationService.authorBriefsOf(any())).thenReturn(briefs(100L, "作者乙"));
@@ -730,13 +730,13 @@ class ForumQueryApplicationServiceTest {
                 .isInstanceOf(com.campuslink.module.forum.domain.exception.PostNotFoundException.class);
         // 匿名访客没有举报身份，照常可读
         assertThat(service.postDetail(7L, null).id()).isEqualTo(7L);
-        verify(reportRepository, never()).findPendingTargetsByReporter(org.mockito.ArgumentMatchers.isNull());
+        verify(reportRepository, never()).findUnclosedTargetsByReporter(org.mockito.ArgumentMatchers.isNull());
     }
 
     @Test
     @DisplayName("列表：举报目标帖子 id 传给仓储做 SQL 侧剔除（total 同源），匿名不查举报集合")
     void listPostsPassesReportedPostIds() {
-        when(reportRepository.findPendingTargetsByReporter(42L))
+        when(reportRepository.findUnclosedTargetsByReporter(42L))
                 .thenReturn(new com.campuslink.module.forum.domain.model.ReportedTargets(
                         java.util.Set.of(7L), java.util.Set.of()));
         when(postRepository.findPage(null, PostSortOrder.LATEST, PostListFilter.NONE, java.util.Set.of(), java.util.Set.of(7L), 1, 20))
@@ -753,14 +753,14 @@ class ForumQueryApplicationServiceTest {
         when(postRepository.findPage(null, PostSortOrder.LATEST, PostListFilter.NONE, java.util.Set.of(), java.util.Set.of(), 1, 20))
                 .thenReturn(new PageResult<>(List.of(), 0, 1, 20));
         service.listPosts(null, "latest", null, 1, 20, null);
-        verify(reportRepository, never()).findPendingTargetsByReporter(org.mockito.ArgumentMatchers.isNull());
+        verify(reportRepository, never()).findUnclosedTargetsByReporter(org.mockito.ArgumentMatchers.isNull());
     }
 
     @Test
     @DisplayName("楼层：举报目标楼层 id 传给仓储，且被引用时不渲染引用块")
     void listRepliesPassesReportedReplyIdsAndHidesQuoted() {
         when(postRepository.findById(9L)).thenReturn(java.util.Optional.of(post(9L, 100L)));
-        when(reportRepository.findPendingTargetsByReporter(42L))
+        when(reportRepository.findUnclosedTargetsByReporter(42L))
                 .thenReturn(new com.campuslink.module.forum.domain.model.ReportedTargets(
                         java.util.Set.of(), java.util.Set.of(11L)));
         when(replyRepository.findPageByPostId(9L, java.util.Set.of(), java.util.Set.of(11L), 1, 20))

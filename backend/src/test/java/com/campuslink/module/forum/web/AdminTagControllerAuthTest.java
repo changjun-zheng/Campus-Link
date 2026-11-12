@@ -114,6 +114,46 @@ class AdminTagControllerAuthTest {
         verify(service).delete(1L, TAG_ID);
     }
 
+    @Test
+    @DisplayName("重命名 / 合并：匿名 → 4001，OPS → 4002，均不触达用例")
+    void renameAndMergeRejectAnonymousAndOps() {
+        var rename = new AdminTagController.RenameCommand("JVM");
+        var merge = new AdminTagController.MergeCommand(9L);
+
+        assertThatThrownBy(() -> controller.renameTag(TAG_ID, rename, null))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_LOGGED_IN));
+        assertThatThrownBy(() -> controller.mergeTag(TAG_ID, merge, null))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_LOGGED_IN));
+        assertThatThrownBy(() -> controller.renameTag(TAG_ID, rename, auth("ROLE_OPS")))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.FORBIDDEN));
+        assertThatThrownBy(() -> controller.mergeTag(TAG_ID, merge, auth("ROLE_OPS")))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.FORBIDDEN));
+        assertThatThrownBy(() -> controller.renameTag(TAG_ID, rename, auth("ROLE_USER")))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.FORBIDDEN));
+
+        verify(service, never()).rename(anyLong(), anyLong(), anyString());
+        verify(service, never()).merge(anyLong(), anyLong(), anyLong());
+    }
+
+    @Test
+    @DisplayName("SUPERADMIN 重命名 / 合并 → 200，操作人取自令牌且参数直传")
+    void superadminRenameAndMergeUsePrincipal() {
+        ApiResponse<Void> renamed = controller.renameTag(TAG_ID,
+                new AdminTagController.RenameCommand("JVM"), auth("ROLE_SUPERADMIN"));
+        ApiResponse<Void> merged = controller.mergeTag(TAG_ID,
+                new AdminTagController.MergeCommand(9L), auth("ROLE_SUPERADMIN"));
+
+        assertThat(renamed.code()).isZero();
+        assertThat(merged.code()).isZero();
+        verify(service).rename(1L, TAG_ID, "JVM");
+        verify(service).merge(1L, TAG_ID, 9L);
+    }
+
     private static Authentication auth(String authority) {
         return new UsernamePasswordAuthenticationToken(1L, "",
                 List.of(new SimpleGrantedAuthority(authority)));

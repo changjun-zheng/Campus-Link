@@ -9,26 +9,42 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import {
+  claimReport,
   closeReport,
   deleteAdminTag,
+  exportAuditLogs,
   getAdminDashboard,
   getReviewQueue,
   grantOpsRole,
+  importRoster,
   listAdminTags,
+  listAuditLogs,
   listReports,
+  mergeAdminTag,
   moderatePost,
   moderateReply,
+  muteUser,
+  renameAdminTag,
+  revokeOpsRole,
   searchAdminContents,
+  searchAdminUsers,
   setUserStatus,
+  unmuteUser,
+  warnUser,
+  type AdminAuditLogVo,
   type AdminContentItemVo,
   type AdminDashboardVo,
   type AdminReportVo,
   type AdminTagVo,
+  type AdminUserItemVo,
   type ReviewQueueItemVo,
+  type RosterImportResultVo,
 } from '../api/admin'
 import { useAuthStore } from '../stores/auth'
-import { formatRelativeTime } from '../utils/time'
+import { AUDIT_ACTION_LABELS, AUDIT_ACTIONS, AUDIT_TARGET_LABELS, AUDIT_TARGET_TYPES } from '../constants/audit'
+import { formatRelativeTime, formatTime } from '../utils/time'
 import DonutChart from '../components/DonutChart.vue'
+import PageHeader from '../components/PageHeader.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -36,10 +52,12 @@ const auth = useAuthStore()
 const isSuperadmin = computed(() => auth.user?.role === 'SUPERADMIN')
 const canAccessAdmin = computed(() => isSuperadmin.value || auth.user?.role === 'OPS')
 
-const tab = ref<'reports' | 'moderation' | 'dashboard' | 'tags' | 'review'>('reports')
+const tab = ref<
+  'reports' | 'moderation' | 'dashboard' | 'tags' | 'review' | 'roster' | 'audit'
+>('reports')
 
 /* ─── 工单 ─── */
-const reportStatus = ref<'PENDING' | 'CLOSED' | ''>('')
+const reportStatus = ref<'PENDING' | 'PROCESSING' | 'CLOSED' | ''>('')
 const reports = ref<AdminReportVo[]>([])
 const reportTotal = ref(0)
 const reportPage = ref(1)
@@ -60,6 +78,16 @@ const REASON_LABELS: Record<string, string> = {
   OTHER: '其他',
 }
 const TARGET_LABELS: Record<string, string> = { POST: '帖子', REPLY: '回复', USER: '用户' }
+const REPORT_STATUS_LABELS: Record<string, string> = {
+  PENDING: '待处理',
+  PROCESSING: '处理中',
+  CLOSED: '已闭环',
+}
+const REPORT_STATUS_TAG_TYPES: Record<string, 'warning' | 'primary' | 'info'> = {
+  PENDING: 'warning',
+  PROCESSING: 'primary',
+  CLOSED: 'info',
+}
 
 async function loadReports() {
   reportsLoading.value = true
@@ -91,6 +119,19 @@ function openClose(r: AdminReportVo, action: 'REMOVE' | 'DISMISS') {
   closeAction.value = action
   closeNote.value = ''
   closeDialogVisible.value = true
+}
+
+async function claimReportRow(r: AdminReportVo) {
+  processingId.value = r.id
+  try {
+    await claimReport(r.id)
+    ElMessage.success('已认领，工单进入处理中')
+    await loadReports()
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '认领失败')
+  } finally {
+    processingId.value = null
+  }
 }
 
 async function confirmClose() {
@@ -227,10 +268,83 @@ async function doSetUserStatus(status: 'ACTIVE' | 'BANNED') {
   try {
     await setUserStatus(id, status)
     ElMessage.success(status === 'BANNED' ? '已封禁（登录与发帖即时拒绝）' : '已解封')
+    await refreshUserResults()
   } catch (e) {
     ElMessage.error(e instanceof Error ? e.message : '操作失败')
   } finally {
     banning.value = false
+  }
+}
+
+/* ─── 警告 / 禁言（F-ADMIN-002 / CR-209）：均以 banUserId 为目标，仅 SUPERADMIN ─── */
+const warnReason = ref('')
+const warning = ref(false)
+
+async function doWarn() {
+  const id = Number(banUserId.value)
+  if (!id || id < 1) {
+    ElMessage.warning('请先填写有效的用户 id（正整数）')
+    return
+  }
+  if (!warnReason.value.trim()) {
+    ElMessage.warning('请填写警告原因')
+    return
+  }
+  warning.value = true
+  try {
+    await warnUser(id, warnReason.value.trim())
+    ElMessage.success('警告已发送（站内通知）')
+    warnReason.value = ''
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '警告发送失败')
+  } finally {
+    warning.value = false
+  }
+}
+
+const muteHours = ref(24)
+const muteReason = ref('')
+const muting = ref(false)
+const unmuting = ref(false)
+
+async function doMute() {
+  const id = Number(banUserId.value)
+  if (!id || id < 1) {
+    ElMessage.warning('请先填写有效的用户 id（正整数）')
+    return
+  }
+  if (!muteReason.value.trim()) {
+    ElMessage.warning('请填写禁言原因')
+    return
+  }
+  muting.value = true
+  try {
+    await muteUser(id, muteHours.value, muteReason.value.trim())
+    ElMessage.success(`已禁言 ${muteHours.value} 小时，期间发帖 / 回帖 / 组队写入被拒绝`)
+    muteReason.value = ''
+    await refreshUserResults()
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '禁言失败')
+  } finally {
+    muting.value = false
+  }
+}
+
+async function doUnmute() {
+  const id = Number(banUserId.value)
+  if (!id || id < 1) {
+    ElMessage.warning('请先填写有效的用户 id（正整数）')
+    return
+  }
+  unmuting.value = true
+  try {
+    await unmuteUser(id)
+    ElMessage.success('已解除禁言')
+    await refreshUserResults()
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '解除禁言失败')
+  } finally {
+    unmuting.value = false
   }
 }
 
@@ -248,11 +362,132 @@ async function doGrantOps() {
   try {
     await grantOpsRole(id)
     ElMessage.success('已授予运营角色；目标用户需重新登录后生效')
+    await refreshUserResults()
   } catch (e) {
     ElMessage.error(e instanceof Error ? e.message : '授予失败')
   } finally {
     grantingOps.value = false
   }
+}
+
+/* ─── 撤销运营角色（CR-212）：仅 SUPERADMIN；仅 OPS → USER，撤销后旧 token 即时失效 ─── */
+const revokingOps = ref(false)
+
+async function doRevokeOps(user: AdminUserItemVo) {
+  try {
+    await ElMessageBox.confirm(
+      `确定撤销「${user.nickname}」的运营角色？撤销后其旧登录立即失效，重新登录为普通用户。`,
+      '撤销运营',
+      { type: 'warning', confirmButtonText: '撤销', cancelButtonText: '取消' },
+    )
+  } catch {
+    // 用户取消 / 关闭弹窗：不撤销、不提示
+    return
+  }
+  revokingOps.value = true
+  try {
+    await revokeOpsRole(user.id)
+    ElMessage.success('已撤销运营角色；目标旧登录已失效，重新登录后为普通用户')
+    await refreshUserResults()
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '撤销失败')
+  } finally {
+    revokingOps.value = false
+  }
+}
+
+/* ─── 用户检索（CR-211，仅 SUPERADMIN）：按 id 或昵称找账号，一键填入下方处置目标 ─── */
+const userKeyword = ref('')
+const lastUserKeyword = ref('')
+const userResults = ref<AdminUserItemVo[]>([])
+const userTruncated = ref(false)
+const userSearched = ref(false)
+const usersLoading = ref(false)
+const usersError = ref('')
+
+async function loadUsers() {
+  const keyword = userKeyword.value.trim()
+  if (!keyword) {
+    ElMessage.warning('请输入用户 id 或昵称关键字')
+    return
+  }
+  lastUserKeyword.value = keyword
+  usersLoading.value = true
+  usersError.value = ''
+  try {
+    const res = await searchAdminUsers(keyword)
+    userResults.value = res.items
+    userTruncated.value = res.truncated
+    userSearched.value = true
+  } catch (e) {
+    userResults.value = []
+    userTruncated.value = false
+    userSearched.value = true
+    usersError.value = e instanceof Error ? e.message : '用户检索失败'
+  } finally {
+    usersLoading.value = false
+  }
+}
+
+function resetUserSearch() {
+  userKeyword.value = ''
+  lastUserKeyword.value = ''
+  userResults.value = []
+  userTruncated.value = false
+  userSearched.value = false
+  usersError.value = ''
+}
+
+/** 处置成功后静默刷新当前检索结果：角色 / 状态 / 禁言截止要立刻反映在表里 */
+async function refreshUserResults() {
+  if (!userSearched.value || !lastUserKeyword.value) return
+  try {
+    const res = await searchAdminUsers(lastUserKeyword.value)
+    userResults.value = res.items
+    userTruncated.value = res.truncated
+  } catch {
+    // 处置已成功，刷新失败不二次报错；下次检索会重新拉取
+  }
+}
+
+/** 把内容搜索收窄到该用户并滚到结果区，便于继续查看其近期帖子 */
+function openUserContent(user: AdminUserItemVo) {
+  contentType.value = 'post'
+  contentKeyword.value = ''
+  contentUserId.value = String(user.id)
+  contentAuthorKeyword.value = ''
+  contentDays.value = ''
+  contentPage.value = 1
+  void loadContents()
+  document.getElementById('admin-content-search')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+function fillUserTarget(id: number, nickname: string) {
+  banUserId.value = String(id)
+  ElMessage.success(`已填入用户 #${id}（${nickname}），可在下方执行封禁 / 警告 / 禁言`)
+  document.getElementById('admin-user-actions')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+function selectUserTarget(user: AdminUserItemVo) {
+  fillUserTarget(user.id, user.nickname)
+}
+
+function selectOpsTarget(user: AdminUserItemVo) {
+  opsUserId.value = String(user.id)
+  ElMessage.success(`已填入运营授予目标 #${user.id}（${user.nickname}）`)
+  document.getElementById('admin-user-actions')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+function selectAuthorTarget(item: AdminContentItemVo) {
+  fillUserTarget(item.authorId, item.authorNickname)
+}
+
+function isMuted(user: AdminUserItemVo): boolean {
+  return !!user.mutedUntil && new Date(user.mutedUntil).getTime() > Date.now()
+}
+
+function mutedLabel(user: AdminUserItemVo): string {
+  return user.mutedUntil ? formatTime(user.mutedUntil) : '—'
 }
 
 /* ─── 数据看板（F-ADMIN-005 / CR-131）：进入 Tab 才加载，不在首屏多打一次聚合 ─── */
@@ -319,6 +554,7 @@ const dashboardKpis = computed(() => {
       total: d.reportTotal,
       items: [
         { label: '待处理', value: d.reportPending, color: warning },
+        { label: '处理中', value: d.reportProcessing, color: primary },
         { label: '已闭环', value: d.reportClosed, color: success },
       ],
       extra: null,
@@ -422,6 +658,107 @@ async function onDeleteTag(tag: AdminTagVo) {
   }
 }
 
+/* ─── 标签重命名 / 合并（CR-217）：仅 SUPERADMIN；两个动作都不可撤销 ─── */
+const renameVisible = ref(false)
+const renameTarget = ref<AdminTagVo | null>(null)
+const renameName = ref('')
+const renameSubmitting = ref(false)
+
+function openRenameTag(tag: AdminTagVo) {
+  renameTarget.value = tag
+  renameName.value = tag.name
+  renameVisible.value = true
+}
+
+async function submitRenameTag() {
+  const target = renameTarget.value
+  if (!target) return
+  const name = renameName.value.trim()
+  if (!name) {
+    ElMessage.warning('标签名不能为空')
+    return
+  }
+  if (name.length > 32) {
+    ElMessage.warning('标签名最长 32 字')
+    return
+  }
+  // 新旧同名：后端视为幂等成功，这里直接关窗、不打多余请求
+  if (name === target.name) {
+    renameVisible.value = false
+    return
+  }
+  renameSubmitting.value = true
+  try {
+    await renameAdminTag(target.id, name)
+    ElMessage.success(`已将「${target.name}」重命名为「${name}」`)
+    renameVisible.value = false
+    await loadTags()
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '重命名失败')
+  } finally {
+    renameSubmitting.value = false
+  }
+}
+
+const mergeVisible = ref(false)
+const mergeSource = ref<AdminTagVo | null>(null)
+const mergeTargetId = ref<number | null>(null)
+const mergeOptions = ref<AdminTagVo[]>([])
+const mergeSearching = ref(false)
+const mergeSubmitting = ref(false)
+
+function openMergeTag(tag: AdminTagVo) {
+  mergeSource.value = tag
+  mergeTargetId.value = null
+  mergeOptions.value = []
+  mergeVisible.value = true
+  void searchMergeTargets('')
+}
+
+/** 目标标签远程搜索：只取前 20 条按名称排序（排除源标签自身） */
+async function searchMergeTargets(keyword: string) {
+  mergeSearching.value = true
+  try {
+    const res = await listAdminTags({ keyword: keyword.trim() || undefined, sort: 'name', page: 1, size: 20 })
+    mergeOptions.value = res.items.filter((t) => t.id !== mergeSource.value?.id)
+  } catch {
+    mergeOptions.value = []
+  } finally {
+    mergeSearching.value = false
+  }
+}
+
+async function submitMergeTag() {
+  const source = mergeSource.value
+  const targetId = mergeTargetId.value
+  if (!source || targetId == null) {
+    ElMessage.warning('请选择要并入的目标标签')
+    return
+  }
+  const targetName = mergeOptions.value.find((t) => t.id === targetId)?.name ?? `#${targetId}`
+  try {
+    await ElMessageBox.confirm(
+      `确定把「${source.name}」并入「${targetName}」？源标签会被删除，其帖子将改挂目标标签，且该操作不可撤销。`,
+      '合并标签',
+      { type: 'warning', confirmButtonText: '合并', cancelButtonText: '取消' },
+    )
+  } catch {
+    return
+  }
+  mergeSubmitting.value = true
+  try {
+    await mergeAdminTag(source.id, targetId)
+    ElMessage.success(`已将「${source.name}」并入「${targetName}」`)
+    mergeVisible.value = false
+    const nextPage = tagPage.value > 1 && tags.value.length === 1 ? tagPage.value - 1 : tagPage.value
+    await loadTags(nextPage)
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '合并失败')
+  } finally {
+    mergeSubmitting.value = false
+  }
+}
+
 /* ─── 内容巡查（F-SAFE-004 / CR-133）：进入 Tab 才加载；处置复用既有端点 ─── */
 const reviewKind = ref<'post' | 'reply'>('post')
 const reviewItems = ref<ReviewQueueItemVo[]>([])
@@ -478,6 +815,251 @@ async function onReviewModerate(item: ReviewQueueItemVo) {
   }
 }
 
+/* ─── 操作审计（CR-215 / CR-216）：仅 SUPERADMIN；进入 Tab 才加载，只读 + CSV 导出 ─── */
+const auditAction = ref('')
+const auditActorId = ref('')
+const auditTargetType = ref('')
+const auditTargetId = ref('')
+const auditDays = ref<7 | 30 | 90 | '' | undefined>('')
+const auditItems = ref<AdminAuditLogVo[]>([])
+const auditTotal = ref(0)
+const auditPage = ref(1)
+const auditSize = 20
+const auditLoading = ref(false)
+const auditExporting = ref(false)
+const auditError = ref('')
+
+/** 空串 → 不筛选；非正整数 → null（由调用方提示，不把 NaN 发给后端） */
+function parseAuditId(raw: string): number | undefined | null {
+  const keyword = raw.trim()
+  if (keyword === '') return undefined
+  const value = Number(keyword)
+  return Number.isInteger(value) && value >= 1 ? value : null
+}
+
+function auditFilters() {
+  return {
+    action: auditAction.value.trim() || undefined,
+    actorId: parseAuditId(auditActorId.value),
+    targetType: auditTargetType.value.trim() || undefined,
+    targetId: parseAuditId(auditTargetId.value),
+  }
+}
+
+async function loadAuditLogs(next = auditPage.value) {
+  auditLoading.value = true
+  auditError.value = ''
+  try {
+    const filters = auditFilters()
+    if (filters.actorId === null) {
+      auditItems.value = []
+      auditTotal.value = 0
+      auditError.value = '操作者 id 需为正整数'
+      return
+    }
+    if (filters.targetId === null) {
+      auditItems.value = []
+      auditTotal.value = 0
+      auditError.value = '目标 id 需为正整数'
+      return
+    }
+    const res = await listAuditLogs({
+      action: filters.action,
+      actorId: filters.actorId,
+      targetType: filters.targetType,
+      targetId: filters.targetId,
+      days: auditDays.value === '' ? undefined : auditDays.value,
+      page: next,
+      size: auditSize,
+    })
+    auditItems.value = res.list
+    auditTotal.value = res.total
+    auditPage.value = res.page
+  } catch (e) {
+    auditItems.value = []
+    auditTotal.value = 0
+    auditError.value = e instanceof Error ? e.message : '审计记录加载失败'
+  } finally {
+    auditLoading.value = false
+  }
+}
+
+function onAuditSearch() {
+  void loadAuditLogs(1)
+}
+
+function resetAuditFilters() {
+  auditAction.value = ''
+  auditActorId.value = ''
+  auditTargetType.value = ''
+  auditTargetId.value = ''
+  auditDays.value = ''
+  void loadAuditLogs(1)
+}
+
+function auditExportFilename(): string {
+  const now = new Date()
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return `audit-logs-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`
+    + `-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.csv`
+}
+
+/** 导出遵循当前筛选（不分页）；后端上限 5000 行，超出返回 1001 并透出提示 */
+async function onAuditExport() {
+  const filters = auditFilters()
+  if (filters.actorId === null) {
+    ElMessage.warning('操作者 id 需为正整数')
+    return
+  }
+  if (filters.targetId === null) {
+    ElMessage.warning('目标 id 需为正整数')
+    return
+  }
+  auditExporting.value = true
+  try {
+    const blob = await exportAuditLogs({
+      action: filters.action,
+      actorId: filters.actorId,
+      targetType: filters.targetType,
+      targetId: filters.targetId,
+      days: auditDays.value === '' ? undefined : auditDays.value,
+    })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = auditExportFilename()
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+    ElMessage.success('审计记录已导出')
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '导出失败')
+  } finally {
+    auditExporting.value = false
+  }
+}
+
+/* ─── 名册导入（F-ACC-004 / CR-210）：仅 SUPERADMIN；CSV 原文提交，后端哈希入库并写审计 ─── */
+const rosterFileEl = ref<HTMLInputElement | null>(null)
+const rosterFileName = ref('')
+const rosterFileSize = ref(0)
+const rosterEncoding = ref<'UTF-8' | 'GBK'>('UTF-8')
+const rosterText = ref('')
+const rosterLineCount = ref(0)
+const rosterPreview = ref<string[]>([])
+const rosterBatch = ref(defaultRosterBatch())
+const rosterImporting = ref(false)
+const rosterResult = ref<RosterImportResultVo | null>(null)
+const rosterResultBatch = ref('')
+const rosterError = ref('')
+const rosterReady = computed(() => rosterText.value.trim().length > 0)
+
+function defaultRosterBatch(): string {
+  const now = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `manual-${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+}
+
+function pickRosterFile() {
+  rosterFileEl.value?.click()
+}
+
+function clearRosterFile() {
+  rosterFileName.value = ''
+  rosterFileSize.value = 0
+  rosterEncoding.value = 'UTF-8'
+  rosterText.value = ''
+  rosterLineCount.value = 0
+  rosterPreview.value = []
+  rosterResult.value = null
+  rosterResultBatch.value = ''
+  rosterError.value = ''
+  if (rosterFileEl.value) rosterFileEl.value.value = ''
+}
+
+async function onRosterFileChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  if (file.size > 5 * 1024 * 1024) {
+    clearRosterFile()
+    ElMessage.warning('CSV 文件不能超过 5 MB')
+    return
+  }
+  rosterResult.value = null
+  rosterResultBatch.value = ''
+  rosterError.value = ''
+  try {
+    const buffer = await file.arrayBuffer()
+    let text: string
+    let encoding: 'UTF-8' | 'GBK' = 'UTF-8'
+    try {
+      text = new TextDecoder('utf-8', { fatal: true }).decode(buffer)
+    } catch {
+      // Excel 在中文 Windows 上常把 CSV 存成 GBK；按 GBK 读取后再以 UTF-8 提交，避免姓名入库为乱码
+      text = new TextDecoder('gbk').decode(buffer)
+      encoding = 'GBK'
+    }
+    // UTF-8 BOM 不是表头内容；留着会让「学号」表头识别失败
+    if (text.charCodeAt(0) === 0xfeff) text = text.slice(1)
+    const lines = text.split(/\r\n?|\n/).filter((line) => line.trim())
+    rosterFileName.value = file.name
+    rosterFileSize.value = file.size
+    rosterEncoding.value = encoding
+    rosterText.value = text
+    rosterLineCount.value = lines.length
+    rosterPreview.value = lines.slice(0, 5)
+    if (!lines.length) ElMessage.warning('文件为空或只有空行')
+  } catch {
+    clearRosterFile()
+    ElMessage.error('文件读取失败，请重试')
+  } finally {
+    // 允许重新选择同一个文件（change 事件只在文件变化时触发）
+    input.value = ''
+  }
+}
+
+async function doImportRoster() {
+  if (!rosterReady.value) {
+    ElMessage.warning('请先选择 CSV 文件')
+    return
+  }
+  const batch = rosterBatch.value.trim()
+  if (!batch) {
+    ElMessage.warning('请填写批次号')
+    return
+  }
+  if (batch.length > 64) {
+    ElMessage.warning('批次号最长 64 个字符')
+    return
+  }
+  rosterImporting.value = true
+  rosterError.value = ''
+  rosterResult.value = null
+  rosterResultBatch.value = ''
+  try {
+    const res = await importRoster(rosterText.value, batch)
+    rosterResult.value = res
+    rosterResultBatch.value = batch
+    if (res.failed > 0) {
+      ElMessage.warning(`导入完成：新增 ${res.inserted}，跳过 ${res.skipped}，失败 ${res.failed}`)
+    } else {
+      ElMessage.success(`导入完成：新增 ${res.inserted}，跳过 ${res.skipped}`)
+    }
+  } catch (e) {
+    rosterError.value = e instanceof Error ? e.message : '导入失败'
+  } finally {
+    rosterImporting.value = false
+  }
+}
+
 watch([reportStatus, reportPage], () => loadReports())
 watch(tab, () => {
   if (tab.value === 'reports' && !reports.value.length) loadReports()
@@ -485,6 +1067,7 @@ watch(tab, () => {
   if (tab.value === 'moderation' && !contents.value.length) loadContents()
   if (tab.value === 'tags' && isSuperadmin.value && !tags.value.length) loadTags()
   if (tab.value === 'review' && !reviewItems.value.length) loadReviewQueue()
+  if (tab.value === 'audit' && isSuperadmin.value && !auditItems.value.length) loadAuditLogs()
 })
 onMounted(() => {
   if (canAccessAdmin.value) loadReports()
@@ -514,13 +1097,21 @@ function goLogin() {
   </el-result>
 
   <template v-else>
-    <el-tabs v-model="tab" class="mb-5">
-      <el-tab-pane label="举报工单" name="reports" />
-      <el-tab-pane :label="isSuperadmin ? '内容处置台' : '内容检索'" name="moderation" />
-      <el-tab-pane v-if="isSuperadmin" label="数据看板" name="dashboard" />
-      <el-tab-pane v-if="isSuperadmin" label="标签管理" name="tags" />
-      <el-tab-pane label="内容巡查" name="review" />
-    </el-tabs>
+    <!-- 页头（CR-203）：本页原先没有标题，直接以 Tab 起头；补上与其余页面一致的页头 -->
+    <PageHeader
+      title="管理后台"
+      :description="isSuperadmin ? '举报工单、内容处置、运营数据、标签、名册与操作审计；仅运营 / 超级管理员可见' : '举报工单、内容处置与内容巡查；仅运营 / 超级管理员可见'"
+    >
+      <el-tabs v-model="tab">
+        <el-tab-pane label="举报工单" name="reports" />
+        <el-tab-pane :label="isSuperadmin ? '内容处置台' : '内容检索'" name="moderation" />
+        <el-tab-pane v-if="isSuperadmin" label="数据看板" name="dashboard" />
+        <el-tab-pane v-if="isSuperadmin" label="标签管理" name="tags" />
+        <el-tab-pane label="内容巡查" name="review" />
+        <el-tab-pane v-if="isSuperadmin" label="名册导入" name="roster" />
+        <el-tab-pane v-if="isSuperadmin" label="操作审计" name="audit" />
+      </el-tabs>
+    </PageHeader>
 
     <!-- ─── 数据看板（F-ADMIN-005 / CR-131）：仅 SUPERADMIN；进入 Tab 才加载 ─── -->
     <el-card v-if="isSuperadmin" v-show="tab === 'dashboard'" shadow="never" class="mb-5">
@@ -661,6 +1252,8 @@ function goLogin() {
             </div>
             <div class="flex flex-none items-center gap-3">
               <span class="text-caption text-ink-meta">{{ formatRelativeTime(tag.createdAt) }}</span>
+              <el-button size="small" plain @click="openRenameTag(tag)">重命名</el-button>
+              <el-button size="small" plain @click="openMergeTag(tag)">合并</el-button>
               <el-button size="small" type="danger" plain @click="onDeleteTag(tag)">删除</el-button>
             </div>
           </li>
@@ -675,6 +1268,53 @@ function goLogin() {
           />
         </div>
       </template>
+
+      <!-- 重命名（CR-217）：同步 tags.name 与受影响帖子的 posts.tags 冗余列 -->
+      <el-dialog v-model="renameVisible" title="重命名标签" width="420px">
+        <p class="mb-3 text-body text-ink-meta">
+          会把所有帖子上的「{{ renameTarget?.name }}」同步改成新名称；名称 1~32 字，不能与其它标签重名。
+        </p>
+        <el-input
+          v-model="renameName"
+          maxlength="32"
+          show-word-limit
+          placeholder="新标签名"
+          @keyup.enter="submitRenameTag"
+        />
+        <template #footer>
+          <el-button @click="renameVisible = false">取消</el-button>
+          <el-button type="primary" :loading="renameSubmitting" @click="submitRenameTag">保存</el-button>
+        </template>
+      </el-dialog>
+
+      <!-- 合并（CR-217）：帖子关联 / 冗余列 / 使用次数并入目标后删除源标签 -->
+      <el-dialog v-model="mergeVisible" title="合并标签" width="460px">
+        <p class="mb-3 text-body text-ink-meta">
+          将「{{ mergeSource?.name }}」的帖子与使用次数并入目标标签，随后删除源标签。该操作不可撤销。
+        </p>
+        <el-select
+          v-model="mergeTargetId"
+          filterable
+          remote
+          clearable
+          :remote-method="searchMergeTargets"
+          :loading="mergeSearching"
+          placeholder="搜索目标标签（按名称）"
+          aria-label="目标标签"
+          style="width: 100%"
+        >
+          <el-option
+            v-for="opt in mergeOptions"
+            :key="opt.id"
+            :label="`${opt.name}（使用 ${opt.useCount} 次）`"
+            :value="opt.id"
+          />
+        </el-select>
+        <template #footer>
+          <el-button @click="mergeVisible = false">取消</el-button>
+          <el-button type="primary" :loading="mergeSubmitting" @click="submitMergeTag">合并</el-button>
+        </template>
+      </el-dialog>
     </el-card>
 
     <!-- ─── 内容巡查（F-SAFE-004 / CR-133）：仅 SUPERADMIN；进入 Tab 才加载 ─── -->
@@ -745,6 +1385,125 @@ function goLogin() {
       </template>
     </el-card>
 
+    <!-- ─── 名册导入（F-ACC-004 / CR-210）：仅 SUPERADMIN；CSV 原文提交，后端哈希入库并写审计 ─── -->
+    <el-card v-if="isSuperadmin" v-show="tab === 'roster'" shadow="never">
+      <template #header>
+        <div class="flex flex-wrap items-baseline justify-between gap-2">
+          <span class="font-medium">学籍名册导入</span>
+          <span class="text-caption text-ink-meta">
+            学号哈希入库；导入操作写 ROSTER_IMPORT 审计
+          </span>
+        </div>
+      </template>
+
+      <div class="max-w-[760px]">
+        <el-form label-width="90px">
+          <el-form-item label="CSV 文件">
+            <div class="flex flex-wrap items-center gap-2">
+              <el-button @click="pickRosterFile">选择文件</el-button>
+              <span v-if="rosterFileName" class="text-note text-ink-regular">
+                {{ rosterFileName }} · {{ formatFileSize(rosterFileSize) }} · {{ rosterLineCount }} 行 · {{ rosterEncoding }}
+              </span>
+              <span v-else class="text-note text-ink-meta">UTF-8 / GBK，≤ 5 MB</span>
+              <el-button v-if="rosterFileName" link @click="clearRosterFile">清除</el-button>
+            </div>
+            <input
+              ref="rosterFileEl"
+              type="file"
+              accept=".csv,text/csv"
+              hidden
+              aria-label="名册 CSV 文件"
+              @change="onRosterFileChange"
+            />
+          </el-form-item>
+
+          <el-form-item label="批次号">
+            <div class="flex flex-wrap items-center gap-2">
+              <el-input
+                v-model="rosterBatch"
+                maxlength="64"
+                show-word-limit
+                class="w-[320px]"
+                placeholder="例如 2026级-秋季-20261110"
+              />
+              <span class="text-caption text-ink-meta">写入 source_batch，便于追溯</span>
+            </div>
+          </el-form-item>
+
+          <el-form-item v-if="rosterPreview.length" label="前 5 行">
+            <ul class="w-full rounded-sm border-[0.5px] border-divider bg-code px-3 py-2">
+              <li
+                v-for="(line, index) in rosterPreview"
+                :key="index"
+                class="truncate font-mono text-caption leading-relaxed text-ink-regular"
+              >
+                {{ line }}
+              </li>
+            </ul>
+          </el-form-item>
+
+          <el-form-item>
+            <el-button
+              type="primary"
+              :loading="rosterImporting"
+              :disabled="!rosterReady"
+              @click="doImportRoster"
+            >
+              开始导入
+            </el-button>
+          </el-form-item>
+        </el-form>
+
+        <el-alert
+          v-if="rosterEncoding === 'GBK'"
+          type="warning"
+          :closable="false"
+          show-icon
+          class="mb-3"
+          title="检测到非 UTF-8 编码，已按 GBK 读取；提交时会统一转为 UTF-8。建议后续另存为 UTF-8 CSV。"
+        />
+
+        <el-alert v-if="rosterError" type="error" :closable="false" show-icon class="mb-3" :title="rosterError" />
+
+        <div v-if="rosterResult" role="status" aria-live="polite" class="mb-4 rounded-md border-[0.5px] border-divider p-4">
+          <div class="flex flex-wrap items-baseline justify-between gap-2">
+            <span class="text-body font-medium text-ink">导入完成</span>
+            <span class="text-caption text-ink-meta">批次 {{ rosterResultBatch }}</span>
+          </div>
+          <dl class="mt-3 grid grid-cols-3 gap-3 text-center">
+            <div class="rounded-sm bg-code px-3 py-2">
+              <dt class="text-caption text-ink-meta">新增</dt>
+              <dd class="mt-1 text-hero font-medium tabular-nums text-ink">{{ rosterResult.inserted }}</dd>
+            </div>
+            <div class="rounded-sm bg-code px-3 py-2">
+              <dt class="text-caption text-ink-meta">跳过（学号已存在）</dt>
+              <dd class="mt-1 text-hero font-medium tabular-nums text-ink">{{ rosterResult.skipped }}</dd>
+            </div>
+            <div class="rounded-sm bg-code px-3 py-2">
+              <dt class="text-caption text-ink-meta">失败（格式不合规）</dt>
+              <dd class="mt-1 text-hero font-medium tabular-nums text-ink">{{ rosterResult.failed }}</dd>
+            </div>
+          </dl>
+          <p class="mt-3 text-caption leading-body text-ink-meta">
+            失败行未入库，可修正后重新导入；重复学号按跳过处理，不会覆盖已有记录。本次操作已写入 ROSTER_IMPORT 审计。
+          </p>
+        </div>
+
+        <div class="rounded-md border-[0.5px] border-divider p-4 text-caption leading-body text-ink-meta">
+          <p class="font-medium text-ink-regular">CSV 格式</p>
+          <p class="mt-1">
+            每行 <code class="font-mono">学号,姓名[,年级[,专业]]</code>；学号必须 9 位数字，姓名必填，年级 / 专业可空。
+          </p>
+          <p class="mt-1">
+            首行表头可写「学号,姓名」或 Student ID，后端自动跳过；UTF-8 / GBK 均可，逗号分隔，不支持引号包裹的字段。
+          </p>
+          <p class="mt-1">
+            导入始终写名册，不受 <code class="font-mono">campuslink.roster.bypass</code> 开关影响；注册核验是否走名册由后端配置决定。
+          </p>
+        </div>
+      </div>
+    </el-card>
+
     <!-- ─── 举报工单 ─── -->
     <el-card v-show="tab === 'reports'" shadow="never" :body-style="{ padding: 0 }">
       <template #header>
@@ -753,6 +1512,7 @@ function goLogin() {
           <el-radio-group v-model="reportStatus" size="small">
             <el-radio-button value="">全部</el-radio-button>
             <el-radio-button value="PENDING">待处理</el-radio-button>
+            <el-radio-button value="PROCESSING">处理中</el-radio-button>
             <el-radio-button value="CLOSED">已闭环</el-radio-button>
           </el-radio-group>
         </div>
@@ -774,7 +1534,7 @@ function goLogin() {
       </div>
 
       <p v-else-if="!reports.length" class="py-10 text-center text-body text-ink-regular">
-        暂无{{ reportStatus === 'PENDING' ? '待处理' : '' }}工单
+        暂无{{ reportStatus ? REPORT_STATUS_LABELS[reportStatus] : '' }}工单
       </p>
 
       <template v-else>
@@ -785,8 +1545,8 @@ function goLogin() {
             class="border-b-[0.5px] border-divider px-5 py-3 transition-colors duration-fast ease-standard last:border-b-0"
           >
             <div class="flex flex-wrap items-center gap-2 text-caption text-ink-meta">
-              <el-tag size="small" :type="r.status === 'PENDING' ? 'warning' : 'info'" effect="light">
-                {{ r.status === 'PENDING' ? '待处理' : '已闭环' }}
+              <el-tag size="small" :type="REPORT_STATUS_TAG_TYPES[r.status]" effect="light">
+                {{ REPORT_STATUS_LABELS[r.status] || r.status }}
               </el-tag>
               <span class="text-ink-regular">{{ TARGET_LABELS[r.targetType] || r.targetType }}</span>
               <span>#{{ r.targetId }}</span>
@@ -807,7 +1567,18 @@ function goLogin() {
             <p v-if="r.status === 'CLOSED'" class="mt-1 text-note text-ink-meta">
               处理结论：{{ r.resolution || '—' }}
             </p>
-            <div v-if="r.status === 'PENDING'" class="mt-2 flex gap-2">
+            <p v-else-if="r.handlerId" class="mt-1 text-note text-ink-meta">
+              处理人 #{{ r.handlerId }}
+            </p>
+            <div v-if="r.status !== 'CLOSED'" class="mt-2 flex gap-2">
+              <el-button
+                v-if="r.status === 'PENDING'"
+                size="small"
+                :loading="processingId === r.id"
+                @click="claimReportRow(r)"
+              >
+                认领
+              </el-button>
               <el-button
                 type="danger"
                 size="small"
@@ -836,7 +1607,7 @@ function goLogin() {
     </el-card>
 
     <!-- ─── 内容处置台：搜索（F-ADMIN-002 / CR-141）+ 按 id 直达 ─── -->
-    <el-card v-show="tab === 'moderation'" shadow="never">
+    <el-card id="admin-content-search" v-show="tab === 'moderation'" shadow="never">
       <template #header>
         <div class="flex flex-wrap items-baseline justify-between gap-2">
           <span class="font-medium">{{ isSuperadmin ? '内容处置台' : '内容检索' }}</span>
@@ -893,8 +1664,11 @@ function goLogin() {
           <el-table-column prop="title" label="标题" min-width="160" show-overflow-tooltip />
           <el-table-column prop="summary" label="摘要" min-width="240" show-overflow-tooltip />
           <el-table-column prop="boardName" label="版块" width="110" />
-          <el-table-column label="作者" width="120">
-            <template #default="{ row }">{{ row.authorNickname }}</template>
+          <el-table-column label="作者" width="150">
+            <template #default="{ row }">
+              {{ row.authorNickname }}
+              <span class="text-caption text-ink-meta">#{{ row.authorId }}</span>
+            </template>
           </el-table-column>
           <el-table-column label="状态" width="90">
             <template #default="{ row }">
@@ -906,8 +1680,14 @@ function goLogin() {
           <el-table-column label="时间" width="110">
             <template #default="{ row }">{{ formatRelativeTime(row.createdAt) }}</template>
           </el-table-column>
-          <el-table-column v-if="isSuperadmin" label="操作" width="100" fixed="right">
+          <el-table-column v-if="isSuperadmin" label="操作" width="190" fixed="right">
             <template #default="{ row }">
+              <el-button
+                v-if="row.authorId"
+                type="primary"
+                link
+                @click="selectAuthorTarget(row as AdminContentItemVo)"
+              >处置作者</el-button>
               <el-button
                 v-if="row.status === 'PUBLISHED'"
                 type="danger"
@@ -936,8 +1716,116 @@ function goLogin() {
         </div>
       </div>
 
+      <!-- ─── 用户检索（F-ADMIN-002 / CR-211）：按 id 或昵称找账号，点击填入下方处置目标 ─── -->
+      <template v-if="isSuperadmin">
+        <el-divider>用户检索</el-divider>
+        <div class="px-5">
+          <p class="mb-3 text-caption text-ink-meta">
+            纯数字按用户 id 精确查，其余按昵称关键字模糊查；最多 50 条，只显示账号基础状态（不含邮箱 / 学号）。
+          </p>
+          <el-form inline class="gap-y-2">
+            <el-form-item label="用户 id / 昵称">
+              <el-input
+                v-model="userKeyword"
+                placeholder="如 123 或 张三"
+                clearable
+                class="w-[200px]"
+                @keyup.enter="loadUsers"
+              />
+            </el-form-item>
+            <el-form-item>
+              <el-button type="primary" :loading="usersLoading" @click="loadUsers">检索</el-button>
+              <el-button @click="resetUserSearch">重置</el-button>
+            </el-form-item>
+          </el-form>
+          <el-alert v-if="usersError" type="error" :closable="false" :title="usersError" class="mb-3" />
+          <el-alert
+            v-else-if="userTruncated"
+            type="warning"
+            :closable="false"
+            title="匹配超过 50 条，仅显示前 50 条；请输入更精确的关键字"
+            class="mb-3"
+          />
+          <el-table
+            v-if="userSearched && userResults.length"
+            v-loading="usersLoading"
+            :data="userResults"
+            size="small"
+            class="mb-3"
+          >
+            <el-table-column prop="id" label="用户 id" width="90" />
+            <el-table-column label="昵称" min-width="120" show-overflow-tooltip>
+              <template #default="{ row }">
+                <RouterLink
+                  :to="`/u/${row.id}`"
+                  target="_blank"
+                  rel="noopener"
+                  class="text-link hover:underline"
+                >{{ row.nickname }}</RouterLink>
+              </template>
+            </el-table-column>
+            <el-table-column label="角色" width="100">
+              <template #default="{ row }">
+                <el-tag
+                  :type="row.role === 'SUPERADMIN' ? 'danger' : row.role === 'OPS' ? 'warning' : 'info'"
+                  size="small"
+                >
+                  {{ row.role === 'SUPERADMIN' ? '超级管理员' : row.role === 'OPS' ? '运营' : '用户' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="状态" width="100">
+              <template #default="{ row }">
+                <el-tag
+                  :type="row.status === 'ACTIVE' ? 'success' : row.status === 'BANNED' ? 'danger' : 'info'"
+                  size="small"
+                >
+                  {{ row.status === 'ACTIVE' ? '正常' : row.status === 'BANNED' ? '已封禁' : '已注销' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="禁言" width="150">
+              <template #default="{ row }">
+                <span v-if="isMuted(row as AdminUserItemVo)" class="text-[var(--cl-color-danger-strong)]">
+                  至 {{ mutedLabel(row as AdminUserItemVo) }}
+                </span>
+                <span v-else class="text-ink-meta">—</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="注册时间" width="120">
+              <template #default="{ row }">{{ formatRelativeTime(row.createdAt) }}</template>
+            </el-table-column>
+            <el-table-column label="操作" width="270" fixed="right">
+              <template #default="{ row }">
+                <el-button type="primary" link @click="selectUserTarget(row as AdminUserItemVo)">
+                  设为处置目标
+                </el-button>
+                <el-button link @click="openUserContent(row as AdminUserItemVo)">查看帖子</el-button>
+                <el-button
+                  v-if="row.role === 'USER' && row.status === 'ACTIVE'"
+                  link
+                  @click="selectOpsTarget(row as AdminUserItemVo)"
+                >填入运营授予</el-button>
+                <el-button
+                  v-if="row.role === 'OPS'"
+                  link
+                  type="danger"
+                  :loading="revokingOps"
+                  @click="doRevokeOps(row as AdminUserItemVo)"
+                >撤销运营</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <el-empty
+            v-else-if="userSearched && !usersLoading"
+            description="未找到匹配用户"
+            :image-size="56"
+          />
+        </div>
+      </template>
+
       <el-divider v-if="isSuperadmin">按 id 直达</el-divider>
-      <el-form v-if="isSuperadmin" label-width="90px" class="max-w-[560px]">
+      <el-form v-if="isSuperadmin" id="admin-user-actions" label-width="90px" class="max-w-[560px]">
         <el-form-item label="目标类型">
           <el-radio-group v-model="targetType">
             <el-radio-button value="POST">帖子</el-radio-button>
@@ -960,6 +1848,40 @@ function goLogin() {
           <el-button :loading="banning" @click="doSetUserStatus('ACTIVE')">解封</el-button>
         </el-form-item>
         <el-divider />
+        <el-form-item label="警告原因">
+          <el-input
+            v-model="warnReason"
+            maxlength="200"
+            show-word-limit
+            placeholder="将作为站内通知正文发送给用户（最长 200 字）"
+          />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="warning" :loading="warning" @click="doWarn">发送警告</el-button>
+        </el-form-item>
+        <el-divider />
+        <el-form-item label="禁言时长">
+          <el-select v-model="muteHours" aria-label="禁言时长" class="w-[140px]">
+            <el-option :value="1" label="1 小时" />
+            <el-option :value="6" label="6 小时" />
+            <el-option :value="24" label="24 小时" />
+            <el-option :value="72" label="3 天" />
+            <el-option :value="168" label="7 天" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="禁言原因">
+          <el-input
+            v-model="muteReason"
+            maxlength="200"
+            show-word-limit
+            placeholder="会写入审计与禁言通知（最长 200 字）"
+          />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="danger" :loading="muting" @click="doMute">禁言</el-button>
+          <el-button :loading="unmuting" @click="doUnmute">解除禁言</el-button>
+        </el-form-item>
+        <el-divider />
         <el-form-item label="运营用户 id">
           <el-input v-model="opsUserId" placeholder="用户 id（正整数）" />
         </el-form-item>
@@ -970,10 +1892,134 @@ function goLogin() {
       <p class="px-5 pb-5 text-caption leading-body text-ink-meta">
         <template v-if="isSuperadmin">
           下架即从全站列表 / 搜索 / 热榜 / 详情消失（不碰作者删除墓碑，可恢复）；封禁即时拒绝登录与发帖；
+          警告与禁言使用上方同一个用户 id——警告只发站内通知，禁言期间仅内容写入被拒（浏览与登录不受影响）；
           授予运营角色需目标用户重新登录后生效。全部操作写审计日志。
         </template>
         <template v-else>运营可处理举报工单、查看内容巡查与检索结果；处置与封禁由超级管理员执行。</template>
       </p>
+    </el-card>
+
+    <!-- ─── 操作审计（CR-215）：仅 SUPERADMIN；只读，进入 Tab 才加载 ─── -->
+    <el-card v-if="isSuperadmin" v-show="tab === 'audit'" shadow="never">
+      <template #header>
+        <div class="flex flex-wrap items-baseline justify-between gap-2">
+          <span class="font-medium">操作审计</span>
+          <span class="text-caption text-ink-meta">
+            只读；动作与目标类型可按候选搜索，也可直接输入未收录值；导出遵循当前筛选（上限 5000 行）
+          </span>
+        </div>
+      </template>
+
+      <div class="mb-4 flex flex-wrap items-center gap-2">
+        <el-select
+          v-model="auditAction"
+          filterable
+          allow-create
+          clearable
+          default-first-option
+          placeholder="动作（如 USER_BAN）"
+          aria-label="审计动作"
+          style="width: 220px"
+        >
+          <el-option
+            v-for="action in AUDIT_ACTIONS"
+            :key="action"
+            :label="AUDIT_ACTION_LABELS[action]"
+            :value="action"
+          />
+        </el-select>
+        <el-input
+          v-model="auditActorId"
+          placeholder="操作者 id（正整数）"
+          clearable
+          style="width: 180px"
+          @keyup.enter="onAuditSearch"
+        />
+        <el-select
+          v-model="auditTargetType"
+          filterable
+          allow-create
+          clearable
+          default-first-option
+          placeholder="目标类型（如 users）"
+          aria-label="审计目标类型"
+          style="width: 200px"
+        >
+          <el-option
+            v-for="targetType in AUDIT_TARGET_TYPES"
+            :key="targetType"
+            :label="AUDIT_TARGET_LABELS[targetType]"
+            :value="targetType"
+          />
+        </el-select>
+        <el-input
+          v-model="auditTargetId"
+          placeholder="目标 id（正整数）"
+          clearable
+          style="width: 170px"
+          @keyup.enter="onAuditSearch"
+        />
+        <el-select
+          v-model="auditDays"
+          aria-label="时间范围"
+          placeholder="全部时间"
+          clearable
+          style="width: 140px"
+        >
+          <el-option label="近 7 天" :value="7" />
+          <el-option label="近 30 天" :value="30" />
+          <el-option label="近 90 天" :value="90" />
+        </el-select>
+        <el-button type="primary" :loading="auditLoading" @click="onAuditSearch">查询</el-button>
+        <el-button @click="resetAuditFilters">重置</el-button>
+        <el-button :loading="auditExporting" @click="onAuditExport">导出 CSV</el-button>
+      </div>
+
+      <el-skeleton v-if="auditLoading" :rows="4" animated />
+      <div v-else-if="auditError" class="py-2">
+        <el-alert type="error" :closable="false" show-icon :title="auditError">
+          <el-button size="small" @click="loadAuditLogs()">重新加载</el-button>
+        </el-alert>
+      </div>
+      <template v-else>
+        <el-table :data="auditItems" empty-text="没有匹配的审计记录">
+          <el-table-column label="时间" width="160">
+            <template #default="{ row }">{{ formatTime(row.createdAt) }}</template>
+          </el-table-column>
+          <el-table-column label="操作者" width="150" show-overflow-tooltip>
+            <template #default="{ row }">
+              <span v-if="row.actorId == null">{{ row.actorNickname }}</span>
+              <span v-else>#{{ row.actorId }} {{ row.actorNickname }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="动作" width="150">
+            <template #default="{ row }">
+              <el-tag size="small" effect="plain">
+                {{ AUDIT_ACTION_LABELS[row.action] ?? row.action }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="对象" width="160" show-overflow-tooltip>
+            <template #default="{ row }">
+              <span v-if="row.targetType">
+                {{ AUDIT_TARGET_LABELS[row.targetType] ?? row.targetType
+                }}<template v-if="row.targetId != null"> #{{ row.targetId }}</template>
+              </span>
+              <span v-else>—</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="detail" label="详情" min-width="240" show-overflow-tooltip />
+        </el-table>
+        <div v-if="auditTotal > auditSize" class="flex justify-center pt-3">
+          <el-pagination
+            layout="prev, pager, next, total"
+            :total="auditTotal"
+            :page-size="auditSize"
+            :current-page="auditPage"
+            @current-change="(next: number) => loadAuditLogs(next)"
+          />
+        </div>
+      </template>
     </el-card>
 
     <!-- 工单处置确认弹窗：CR-103 接入 ESLint 时检出「按钮点了没反应」——
@@ -1019,5 +2065,10 @@ export default {}
 <style scoped>
 :deep(.el-dialog) {
   max-width: 480px;
+}
+
+/* Tab 移入页头后（CR-203）：EP 的 nav 下划线是 2px 灰线，会与 PageHeader 的 0.5px 收底叠成双线 */
+:deep(.el-tabs__nav-wrap::after) {
+  display: none;
 }
 </style>

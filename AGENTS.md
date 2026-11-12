@@ -62,7 +62,7 @@ description: 重庆工程学院计算机专业学生交流论坛（Spring Boot 4
 mysql -h127.0.0.1 -uroot -p -e "CREATE DATABASE IF NOT EXISTS campuslink DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;"
 
 mvn verify            # 编译 + 单测 + 架构守护 + jacoco 行覆盖 80% check + module 覆盖率门禁（CR-197，需 PATH 有 python：Windows `python` / unix `python3`）+ SpotBugs 静态扫描 + Checkstyle 风格门禁；合码前必须全绿
-                      # 当前基线 914（默认 mvn verify 有 17 例 SKIPPED：CR-090 的 4 例 + CR-106 的契约快照真身比对 1 例 + CR-193 的数据库集成 7 例 + CR-195 的图片事务集成 2 例 + R-6 名册占用集成 3 例；CI 与本机 SPRING_IT=true 时 0 SKIPPED 全跑）——改基线数只改本注释这一处
+                      # 当前基线 1004（默认 mvn verify 有 21 例 SKIPPED：CR-090 的 4 例 + CR-106 的契约快照真身比对 1 例 + CR-193 的数据库集成 7 例 + CR-195 的图片事务集成 2 例 + R-6 名册占用集成 3 例 + 标签重命名 / 合并集成 4 例；CI 与本机 SPRING_IT=true 时 0 SKIPPED 全跑）——改基线数只改本注释这一处
 mvn spring-boot:run   # 启动：8088（SERVER_PORT 可覆盖）；健康检查 /actuator/health，OpenAPI /api/docs
                       # 搜索升级（CR-181，可选）：默认 engine=mysql；启用 Meili 时先起本机 MeiliSearch（127.0.0.1:7700，
                       # 二进制不入仓），再以 SEARCH_ENGINE=meilisearch 启动；生产须注入 MEILI_URL / MEILI_API_KEY。
@@ -97,6 +97,7 @@ python backend/scripts/scan_deps_osv.py             # --fail-on high / none、--
 - **测试名册**（仅 `campuslink.roster.bypass=true` 生效，学号 9 位数字）：`249971346/张三` ~ `249971349/赵六`；
 - **45 个开发账号**（全合成身份、仅限本机开发库；清单见[开发测试账号清单](docs/开发/开发测试账号清单.md)）：学号 `888800001`~`888800045`、邮箱 `dev-stu-01@dev.campuslink.local`~、登录 = **邮箱 + 验证码 `123456`**（**本系统没有密码字段**；接口自 CR-093 起"邮箱或手机号"二合一，开发账号只有邮箱）；批量核验用 `VERIFY_IP_HOURLY_LIMIT=<n>` 临时抬高 IP 限流（默认 10 次/小时/IP，对外行为不变）；
 - **管理员**（dev-only 种子）：`admin@campuslink.local` + 验证码 `123456`，角色 `SUPERADMIN`，无学号、不走学籍核验；
+- **合成样例帖**（2026-11-07，UI-08）：`backend/scripts/data/D006__seed_dev_synthetic_posts.py`（默认 dry-run；需后端已启动，走真实发帖 / 回帖 / 采纳 / 点赞接口；`--cleanup` 按标题定向清理 12 条样例及关联数据）；
 - **入参格式**：学号 `^\d{9}$`；姓名限中文名（2~16 汉字可含 `·`）或外文名（字母起头可含空格 / `-` / `'` / `.`）；`nickname` 2~32 自由文本。
 
 **机审**（F-SAFE-001）：`campuslink.moderation.mode` 缺省 `log`（只记录放行，开发用）；`local`＝本地词表，命中即拦 `5001 / 422`，**词表为空则启动失败**（`MODERATION_WORDS` 逗号分隔），**不允许"配了 local 却没有词"变成静默放行**；真实服务商适配待 A3-8。
@@ -136,7 +137,7 @@ python backend/scripts/scan_deps_osv.py             # --fail-on high / none、--
 ### 前端
 
 - 页面按 PRD 5.1 清单实现；**Element Plus 按需自动引入**（unplugin-auto-import / unplugin-vue-components，勿回退全量引入）；
-- **`src/styles/tokens.css` 是设计令牌唯一来源**：主色 `#409eff`、**正文链接色 `#1a6fc4` 独立于主色**（不派生、不随动）、**白字实心按钮与白底主色文字用 `--cl-color-primary-strong`（#1a6fc4，AA 5.10:1）、未读徽章 / 危险按钮用 `--cl-color-danger-strong`（#cf1322，5.80:1）**、字号阶梯、间距为 4 的倍数、圆角三档、0.5px 细边框、去默认阴影 / 渐变；以 `:root:root` 覆写 EP 的 `--el-*`；**改主色只改 `--cl-color-primary`，但 `--el-color-primary-rgb` 须手工同步**；`src/styles/tailwind.css` 提供工具类（`@theme inline` 映射令牌），两者在 `main.ts` 一次性引入；
+- **`src/styles/tokens.css` 是设计令牌唯一来源**：主色 `#409eff`、**正文链接色 `#1a6fc4` 独立于主色**（不派生、不随动）、**白字实心按钮与白底主色文字用 `--cl-color-primary-strong`（#1969b8，白字 5.59:1 / 页面底 4.94:1）、未读徽章 / 危险按钮用 `--cl-color-danger-strong`（#cf1322，5.80:1）**、字号阶梯、间距为 4 的倍数、圆角三档、0.5px 细边框、去默认阴影 / 渐变；以 `:root:root` 覆写 EP 的 `--el-*`；**改主色只改 `--cl-color-primary`，但 `--el-color-primary-rgb` 须手工同步**；`src/styles/tailwind.css` 提供工具类（`@theme inline` 映射令牌），两者在 `main.ts` 一次性引入；
 - **层叠边界（强制约定，无 lint 强制）**：Tailwind v4 输出在 `@layer` 内、EP 样式不带 layer，**无层恒胜有层——EP 组件一律通过 CSS 变量调样式，自有元素才用工具类**；改页面前先查[界面规范](docs/设计/UI规范/界面规范.md)；
 - **图标统一走 `components/SvgIcon.vue`**（Tabler 线性图标，构建期内联静态 SVG；自带 `.cl-icon` 容器防 EP `fill: currentColor` 覆写描边）；**不复用 `el-icon`**；
 - **代码高亮**：`src/utils/highlight.ts`（highlight.js/lib/core 按需注册语言）**只对服务端已渲染的 `pre code` 的 `textContent` 着色**，不二次渲染 Markdown、不拼接 HTML、不做前端净化兜底；`src/styles/hljs.css` 只提供 `--cl-code-*` 色板（**不整份引入主题 CSS**——那含字面 hex，会破"颜色只来自令牌"）；

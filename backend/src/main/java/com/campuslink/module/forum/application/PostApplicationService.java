@@ -69,7 +69,7 @@ public class PostApplicationService {
      */
     @Transactional
     public PublishedPost publish(Long authorId, PublishPostCommand command) {
-        accountApplicationService.assertActiveForContent(authorId);
+        accountApplicationService.assertAllowedToWriteContent(authorId);
         Board board = boardRepository.findByCode(command.boardCode())
                 .orElseThrow(BoardNotFoundException::new);
         // 机审放在版块校验之后：无效请求（版块不存在）先给出准确错误，而不是被 5002 抢占语义。
@@ -172,7 +172,7 @@ public class PostApplicationService {
      */
     @Transactional
     public void revisePost(Long authorId, long postId, UpdatePostCommand command) {
-        accountApplicationService.assertActiveForContent(authorId);
+        accountApplicationService.assertAllowedToWriteContent(authorId);
         Post post = postRepository.findById(postId)
                 .filter(Post::isVisible)
                 .orElseThrow(PostNotFoundException::new);
