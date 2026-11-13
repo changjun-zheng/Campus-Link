@@ -29,6 +29,7 @@ import { formatTime } from '../utils/time'
 import { vHighlight } from '../utils/highlight'
 import { ensureHeadingIds, parseHeadingsFromHtml } from '../utils/heading'
 import { injectCopyButtons } from '../utils/copyCode'
+import { copyText } from '../utils/clipboard'
 import UserAvatar from '../components/UserAvatar.vue'
 
 const route = useRoute()
@@ -386,6 +387,29 @@ function cancelQuote() {
   quoting.value = null
 }
 
+/**
+ * 引用块跳转（CR-221）：被引楼层在当页就直接滚过去；不在当页则把 id 交给服务端按 focus
+ * 算出所在页（排序 / 过滤口径同楼层列表，不按 floorNo 猜页），加载后再定位。
+ * 目标已不可见（已删 / 下架 / 被过滤）时服务端回落请求页，这里只提示一句、不改当前页。
+ */
+async function jumpToQuotedReply(r: ReplyVo) {
+  const replyId = r.quoted?.replyId
+  if (!replyId) return
+  if (!replies.value.some((item) => item.id === replyId)) {
+    await loadReplies(replyId)
+  }
+  if (await focusFloor(replyId)) return
+  if (!repliesError.value) ElMessage.info('被引用楼层已不可见')
+}
+
+/** 复制楼层深链（CR-221）：?floor= 走 CR-220 的服务端跨页定位，打开即落在该层并高亮 */
+async function copyFloorLink(r: ReplyVo) {
+  const href = router.resolve({ name: 'post', params: { id: postId.value }, query: { floor: r.id } }).href
+  const ok = await copyText(`${window.location.origin}${href}`)
+  if (ok) ElMessage.success('楼层链接已复制')
+  else ElMessage.error('复制失败，请检查浏览器剪贴板权限')
+}
+
 /** 空态主操作（CR-201 批次 A）：未登录先跳登录，登录后滚到回复框并聚焦 */
 function focusComposer() {
   if (!requireLoginOrRedirect()) return
@@ -400,6 +424,16 @@ function focusReplyIdFromQuery(): number | undefined {
   return Number.isInteger(id) && id > 0 ? id : undefined
 }
 
+/** 滚动到指定楼层并高亮；楼层不在当前 DOM（跨页 / 不可见）时返回 false */
+async function focusFloor(replyId: number | string): Promise<boolean> {
+  await nextTick()
+  const el = document.getElementById(`floor-${replyId}`)
+  if (!el) return false
+  focusedFloorId.value = String(replyId)
+  el.scrollIntoView({ block: 'center' })
+  return true
+}
+
 /**
  * 通知跳转定位（F-SOC-001 / CR-220）：`?floor=<replyId>` 由服务端算出所在页后滚动并高亮。
  * 页码不在这里猜——最佳答案置顶与软删楼层的 floor_no 空洞都会让"按楼层号算页"落错页；
@@ -410,13 +444,7 @@ async function focusFloorFromQuery() {
   if (!raw) {
     return
   }
-  await nextTick()
-  const el = document.getElementById(`floor-${raw}`)
-  if (!el) {
-    return
-  }
-  focusedFloorId.value = raw
-  el.scrollIntoView({ block: 'center' })
+  await focusFloor(raw)
 }
 
 /* ─── 举报（F-SAFE-002 / CR-084）：帖子与楼层入口；弹窗组件按需加载（CR-174） ─── */
@@ -703,6 +731,9 @@ watch(
                   >
                     引用
                   </el-button>
+                  <el-button link size="small" class="ml-1" @click="copyFloorLink(r)">
+                    复制链接
+                  </el-button>
                   <el-button
                     v-if="auth.user?.id !== r.authorId"
                     link
@@ -713,14 +744,18 @@ watch(
                     举报
                   </el-button>
                 </div>
-                <!-- 引用块（F-009 / CR-085）：服务端摘要，被引楼层不可见时 quoted 为 null 不渲染 -->
-                <div
+                <!-- 引用块（F-009 / CR-085）：服务端摘要，被引楼层不可见时 quoted 为 null 不渲染；
+                     可点击跳到被引楼层（CR-221），跨页复用 CR-220 的 focus 定位 -->
+                <button
                   v-if="r.quoted"
-                  class="mb-1.5 rounded-sm border-[0.5px] border-divider bg-code px-2.5 py-1.5 text-caption text-ink-meta"
+                  type="button"
+                  class="mb-1.5 block w-full cursor-pointer rounded-sm border-[0.5px] border-divider bg-code px-2.5 py-1.5 text-left text-caption text-ink-meta transition-colors duration-fast ease-standard hover:border-link hover:text-link"
+                  aria-label="跳到被引用楼层"
+                  @click="jumpToQuotedReply(r)"
                 >
                   <span class="text-ink-regular">引用 @{{ r.quoted.authorNickname }}</span>
                   <span class="ml-1.5">{{ r.quoted.excerpt }}</span>
-                </div>
+                </button>
                 <div class="markdown-body" v-highlight v-html="r.contentHtml" />
               </div>
             </li>

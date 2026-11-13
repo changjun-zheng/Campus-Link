@@ -9,6 +9,7 @@ import {
   type AssistantStreamHandlers,
 } from '../api/assistant'
 import { useAuthStore } from '../stores/auth'
+import { copyText } from '../utils/clipboard'
 
 /** 后端 7xxx：只对需要改变面板形态的几类做前端处理，其余按普通错误展示 */
 const CODE_QUOTA_EXCEEDED = 7002
@@ -267,29 +268,7 @@ export function useAssistant(postId: () => number | null) {
   async function copyMessage(message: AssistantMessage): Promise<boolean> {
     const text = message.content
     if (!text) return false
-    if (navigator.clipboard && window.isSecureContext) {
-      try {
-        await navigator.clipboard.writeText(text)
-        return true
-      } catch {
-        // 落到 execCommand 兜底
-      }
-    }
-    try {
-      const area = document.createElement('textarea')
-      area.value = text
-      area.setAttribute('readonly', '')
-      area.style.position = 'fixed'
-      area.style.top = '-1000px'
-      area.style.opacity = '0'
-      document.body.appendChild(area)
-      area.select()
-      const ok = document.execCommand('copy')
-      document.body.removeChild(area)
-      return ok
-    } catch {
-      return false
-    }
+    return copyText(text)
   }
 
   onBeforeUnmount(abort)

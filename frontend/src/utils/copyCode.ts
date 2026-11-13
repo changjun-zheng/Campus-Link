@@ -12,6 +12,8 @@
  * 不动 `<pre>` 本身，因此按钮注入放在 nextTick 之后即可，先后顺序都不影响快照到的代码文本。
  */
 
+import { copyText } from './clipboard'
+
 const BUTTON_MARK = 'data-copy-btn'
 
 function setSuccessStyle(btn: HTMLButtonElement) {
@@ -22,33 +24,6 @@ function setSuccessStyle(btn: HTMLButtonElement) {
 function clearSuccessStyle(btn: HTMLButtonElement) {
   btn.classList.remove('is-success')
   btn.setAttribute('aria-label', '复制代码')
-}
-
-async function copyText(text: string): Promise<boolean> {
-  // 优先走异步 Clipboard API（HTTPS / localhost 下可用）
-  if (navigator.clipboard && window.isSecureContext) {
-    try {
-      await navigator.clipboard.writeText(text)
-      return true
-    } catch {
-      // 落到 execCommand 兜底
-    }
-  }
-  try {
-    const ta = document.createElement('textarea')
-    ta.value = text
-    ta.setAttribute('readonly', '')
-    ta.style.position = 'fixed'
-    ta.style.top = '-1000px'
-    ta.style.opacity = '0'
-    document.body.appendChild(ta)
-    ta.select()
-    const ok = document.execCommand('copy')
-    document.body.removeChild(ta)
-    return ok
-  } catch {
-    return false
-  }
 }
 
 function createButton(codeText: string): HTMLButtonElement {
