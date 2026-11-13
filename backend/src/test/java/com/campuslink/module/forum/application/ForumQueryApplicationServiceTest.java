@@ -353,7 +353,7 @@ class ForumQueryApplicationServiceTest {
         assertThatThrownBy(() -> service.postDetail(9L, null))
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
-        assertThatThrownBy(() -> service.listReplies(9L, 1, 20, null))
+        assertThatThrownBy(() -> service.listReplies(9L, 1, 20, null, null))
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
 
@@ -381,11 +381,62 @@ class ForumQueryApplicationServiceTest {
         when(accountApplicationService.authorBriefsOf(List.of(100L, 200L)))
                 .thenReturn(briefs(100L, "张三", 200L, "李四"));
 
-        PageResult<ReplyItem> page = service.listReplies(9L, 1, 20, null);
+        PageResult<ReplyItem> page = service.listReplies(9L, 1, 20, null, null);
 
         assertThat(page.items()).extracting(ReplyItem::floorNo).containsExactly(1, 2);
         assertThat(page.items()).extracting(ReplyItem::authorNickname).containsExactly("张三", "李四");
         assertThat(page.total()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("通知跳转定位（CR-220）：focus 命中时按目标楼层所在页取数，page 以定位结果为准")
+    void focusReplyJumpsToItsPage() {
+        when(postRepository.findById(9L)).thenReturn(Optional.of(post(9L, 100L)));
+        Reply target = reply(45L, 200L, 45);
+        when(replyRepository.findVisibleById(45L)).thenReturn(Optional.of(target));
+        when(replyRepository.countVisibleUpTo(9L, java.util.Set.of(), java.util.Set.of(), false, 45)).thenReturn(45L);
+        when(replyRepository.findPageByPostId(9L, java.util.Set.of(), java.util.Set.of(), 3, 20))
+                .thenReturn(new PageResult<>(List.of(target), 45, 3, 20));
+        when(accountApplicationService.authorBriefsOf(List.of(200L))).thenReturn(briefs(200L, "李四"));
+
+        PageResult<ReplyItem> page = service.listReplies(9L, 1, 20, null, 45L);
+
+        assertThat(page.page()).isEqualTo(3);
+        assertThat(page.items()).extracting(ReplyItem::floorNo).containsExactly(45);
+    }
+
+    @Test
+    @DisplayName("通知跳转定位（CR-220）：focus 属于他帖时忽略，按请求页正常返回")
+    void focusReplyOfAnotherPostFallsBack() {
+        when(postRepository.findById(9L)).thenReturn(Optional.of(post(9L, 100L)));
+        when(replyRepository.findVisibleById(45L)).thenReturn(Optional.of(
+                Reply.rehydrate(45L, 8L, 200L, 45, "内容", "<p>内容</p>", null, false, 0, CREATED_AT)));
+        when(replyRepository.findPageByPostId(9L, java.util.Set.of(), java.util.Set.of(), 1, 20))
+                .thenReturn(new PageResult<>(List.of(reply(11L, 100L, 1)), 1, 1, 20));
+        when(accountApplicationService.authorBriefsOf(List.of(100L))).thenReturn(briefs(100L, "张三"));
+
+        PageResult<ReplyItem> page = service.listReplies(9L, 1, 20, null, 45L);
+
+        assertThat(page.page()).isEqualTo(1);
+        verify(replyRepository, never()).countVisibleUpTo(any(), any(), any(), org.mockito.ArgumentMatchers.anyBoolean(),
+                anyInt());
+    }
+
+    @Test
+    @DisplayName("通知跳转定位（CR-220）：focus 被访问者拉黑时按不存在处理，退回请求页")
+    void focusReplyBlockedFallsBack() {
+        when(postRepository.findById(9L)).thenReturn(Optional.of(post(9L, 100L)));
+        when(userBlockApplicationService.blockedIdsOf(42L)).thenReturn(java.util.Set.of(200L));
+        when(replyRepository.findVisibleById(45L)).thenReturn(Optional.of(reply(45L, 200L, 45)));
+        when(replyRepository.findPageByPostId(9L, java.util.Set.of(200L), java.util.Set.of(), 2, 20))
+                .thenReturn(new PageResult<>(List.of(reply(21L, 100L, 21)), 21, 2, 20));
+        when(accountApplicationService.authorBriefsOf(List.of(100L))).thenReturn(briefs(100L, "张三"));
+
+        PageResult<ReplyItem> page = service.listReplies(9L, 2, 20, 42L, 45L);
+
+        assertThat(page.page()).isEqualTo(2);
+        verify(replyRepository, never()).countVisibleUpTo(any(), any(), any(), org.mockito.ArgumentMatchers.anyBoolean(),
+                anyInt());
     }
 
     /**
@@ -403,7 +454,7 @@ class ForumQueryApplicationServiceTest {
                         null, false, 0, CREATED_AT)));
         when(accountApplicationService.authorBriefsOf(any())).thenReturn(briefs(100L, "张三", 200L, "李四"));
 
-        List<ReplyItem> items = service.listReplies(9L, 1, 20, null).items();
+        List<ReplyItem> items = service.listReplies(9L, 1, 20, null, null).items();
 
         assertThat(items.get(0).quoted()).isNull();
         assertThat(items.get(1).quoted()).isNotNull();
@@ -422,7 +473,7 @@ class ForumQueryApplicationServiceTest {
         when(replyRepository.findVisibleByIds(java.util.Set.of(99L))).thenReturn(List.of());
         when(accountApplicationService.authorBriefsOf(List.of(200L))).thenReturn(briefs(200L, "李四"));
 
-        ReplyItem item = service.listReplies(9L, 1, 20, null).items().getFirst();
+        ReplyItem item = service.listReplies(9L, 1, 20, null, null).items().getFirst();
 
         assertThat(item.quoted()).isNull();
         // 只查了楼层作者：被引楼层的内容已不可见，其作者昵称无从渲染、也不该被批量查询带出
@@ -770,7 +821,7 @@ class ForumQueryApplicationServiceTest {
         when(likeRepository.findLikedTargetIds(anyLong(), any(), any()))
                 .thenReturn(java.util.Set.of());
 
-        List<ReplyItem> items = service.listReplies(9L, 1, 20, 42L).items();
+        List<ReplyItem> items = service.listReplies(9L, 1, 20, 42L, null).items();
 
         assertThat(items).hasSize(1);
         assertThat(items.get(0).quoted()).isNull();

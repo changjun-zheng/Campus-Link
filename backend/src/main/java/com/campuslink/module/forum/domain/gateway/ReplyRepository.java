@@ -17,6 +17,17 @@ public interface ReplyRepository {
                                        Collection<Long> excludedReplyIds, int page, int size);
 
     /**
+     * 楼层列表里**排到目标楼层为止**的可见条数（含目标本身），用于把回复 id 换算成分页页码
+     * （CR-220：通知跳转跨页定位）。
+     *
+     * <p>过滤条件必须与 {@link #findPageByPostId} 同源（{@code status='PUBLISHED' AND is_deleted=0} +
+     * 拉黑 / 本人未闭环举报），排序也必须同源（{@code is_accepted DESC, floor_no ASC}）——
+     * 否则算出的页码与真正的列表组成不一致，跳转会落到错误的页。
+     */
+    long countVisibleUpTo(Long postId, Collection<Long> excludedAuthorIds,
+                          Collection<Long> excludedReplyIds, boolean accepted, int floorNo);
+
+    /**
      * "我的回帖"分页（F-ACC-007c）：本人楼层时间倒序，**父帖不可见即整条不出现**
      * （父帖 {@code is_deleted=1} 或 {@code status<>'PUBLISHED'} 都算不可见），
      * 楼层自身的 {@code status} 不过滤、随载体返回（作者要能看到"我哪一层被下架"）。

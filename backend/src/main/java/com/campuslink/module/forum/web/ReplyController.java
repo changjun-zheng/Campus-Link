@@ -46,16 +46,17 @@ public class ReplyController {
     private final ReplyApplicationService replyApplicationService;
     private final InteractionApplicationService interactionApplicationService;
 
-    @Operation(summary = "楼层列表（公开）：按 floor_no 升序；楼层 = 回复序号，帖子本体不占楼层号；登录请求附带各楼层 likedByMe，匿名时恒 false")
+    @Operation(summary = "楼层列表（公开）：最佳答案置顶、其余按 floor_no 升序；可选 focus=<回复 id> 定位到该楼层所在页（通知跳转用，page 以响应为准）；登录请求附带各楼层 likedByMe，匿名时恒 false")
     @ErrorCodes({ResultCode.NOT_FOUND})
     @PublicEndpoint
     @GetMapping
     public ApiResponse<PageVo<ReplyVo>> list(@PathVariable("postId") Long postId,
                                              @RequestParam(defaultValue = "1") int page,
                                              @RequestParam(defaultValue = "20") int size,
+                                             @RequestParam(required = false) Long focus,
                                              Authentication authentication) {
         PageResult<ReplyItem> result = forumQueryService.listReplies(postId, page, size,
-                CurrentUser.optionalId(authentication));
+                CurrentUser.optionalId(authentication), focus);
         return ApiResponse.ok(new PageVo<>(result.items().stream().map(ReplyVo::from).toList(),
                 result.total(), result.page(), result.size()));
     }

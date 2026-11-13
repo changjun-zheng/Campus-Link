@@ -98,13 +98,24 @@ class ForumPublicReadTest {
     @Test
     @DisplayName("楼层列表：匿名可读")
     void repliesAreReadableAnonymously() {
-        when(forumQueryService.listReplies(1L, 1, 20, null)).thenReturn(new PageResult<>(
+        when(forumQueryService.listReplies(1L, 1, 20, null, null)).thenReturn(new PageResult<>(
                 List.of(new ReplyItem(11L, 1, "<p>一</p>", 42L, "张三", null, false, 0, false, null, CREATED_AT)), 1, 1, 20));
 
-        var response = replyController.list(1L, 1, 20, null);
+        var response = replyController.list(1L, 1, 20, null, null);
 
         assertThat(response.data().list()).extracting("floorNo").containsExactly(1);
         assertThat(response.data().list()).extracting("likedByMe").containsExactly(false);
+    }
+
+    @Test
+    @DisplayName("楼层列表：focus 原样透传，页码以服务端定位结果为准（CR-220）")
+    void replyFocusIsPassedThrough() {
+        when(forumQueryService.listReplies(1L, 1, 20, null, 22L)).thenReturn(new PageResult<>(
+                List.of(), 21, 2, 20));
+
+        var response = replyController.list(1L, 1, 20, 22L, null);
+
+        assertThat(response.data().page()).isEqualTo(2);
     }
 }
 

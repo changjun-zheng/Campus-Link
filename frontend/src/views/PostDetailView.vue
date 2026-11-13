@@ -318,11 +318,13 @@ async function loadPost() {
   }
 }
 
-async function loadReplies() {
+async function loadReplies(focusReplyId?: number) {
   repliesLoading.value = true
   repliesError.value = ''
   try {
-    const res = await listReplies(postId.value, page.value, size)
+    const res = await listReplies(postId.value, page.value, size, focusReplyId)
+    // 通知定位（CR-220）：服务端可能直接给回目标楼层所在页，分页器与数据必须跟响应走
+    page.value = res.page
     replies.value = res.list
     total.value = res.total
   } catch (e) {
@@ -391,9 +393,17 @@ function focusComposer() {
   replyInputRef.value?.focus()
 }
 
+/** `?floor=<replyId>` 解析为合法的正整数值；缺省 / 非法一律 undefined（不触发跨页定位） */
+function focusReplyIdFromQuery(): number | undefined {
+  const raw = String(route.query.floor ?? '')
+  const id = Number(raw)
+  return Number.isInteger(id) && id > 0 ? id : undefined
+}
+
 /**
- * 通知跳转定位（F-SOC-001）：`?floor=<replyId>` 命中当前页楼层时滚动并高亮。
- * 楼层不在本页时不猜页码——最佳答案置顶会改变分页组成，猜错反而跳错楼层，落到帖子即可。
+ * 通知跳转定位（F-SOC-001 / CR-220）：`?floor=<replyId>` 由服务端算出所在页后滚动并高亮。
+ * 页码不在这里猜——最佳答案置顶与软删楼层的 floor_no 空洞都会让"按楼层号算页"落错页；
+ * 目标不可见 / 不存在时服务端回落请求页，这里找不到元素就安静停在该页。
  */
 async function focusFloorFromQuery() {
   const raw = String(route.query.floor ?? '')
@@ -435,7 +445,8 @@ watch(
     quoting.value = null
     focusedFloorId.value = ''
     loadPost()
-    loadReplies().then(focusFloorFromQuery)
+    // 带 ?floor= 时把目标 id 交给服务端定位页码（CR-220）；否则按第 1 页正常加载
+    loadReplies(focusReplyIdFromQuery()).then(focusFloorFromQuery)
   },
   { immediate: true },
 )
@@ -611,7 +622,7 @@ watch(
             show-icon
             :title="repliesError"
           >
-            <el-button size="small" @click="loadReplies">重新加载</el-button>
+            <el-button size="small" @click="loadReplies()">重新加载</el-button>
           </el-alert>
         </div>
 

@@ -31,6 +31,29 @@ public class ReplyRepositoryImpl implements ReplyRepository {
     @Override
     public PageResult<Reply> findPageByPostId(Long postId, Collection<Long> excludedAuthorIds,
                                               Collection<Long> excludedReplyIds, int page, int size) {
+        LambdaQueryWrapper<ReplyDO> query = visibleQuery(postId, excludedAuthorIds, excludedReplyIds)
+                .orderByDesc(ReplyDO::getIsAccepted)
+                .orderByAsc(ReplyDO::getFloorNo);
+        IPage<ReplyDO> result = replyMapper.selectPage(new Page<>(page, size), query);
+        return new PageResult<>(result.getRecords().stream().map(ReplyConverter::toDomain).toList(),
+                result.getTotal(), page, size);
+    }
+
+    @Override
+    public long countVisibleUpTo(Long postId, Collection<Long> excludedAuthorIds,
+                                 Collection<Long> excludedReplyIds, boolean accepted, int floorNo) {
+        LambdaQueryWrapper<ReplyDO> query = visibleQuery(postId, excludedAuthorIds, excludedReplyIds);
+        // 排序口径 is_accepted DESC, floor_no ASC ⇒ "排到目标为止" = 更靠前的已采纳行 + 同采纳状态且 floor_no <= 目标。
+        // 条件与 findPageByPostId 同源，算出的页码才和真实列表组成一致（CR-220）。
+        query.and(w -> w.gt(ReplyDO::getIsAccepted, accepted)
+                .or(same -> same.eq(ReplyDO::getIsAccepted, accepted)
+                        .le(ReplyDO::getFloorNo, floorNo)));
+        return replyMapper.selectCount(query);
+    }
+
+    /** 楼层列表的公共过滤：列表分页与"目标楼层排第几"共用，避免两处可见性口径漂移（CR-220） */
+    private static LambdaQueryWrapper<ReplyDO> visibleQuery(Long postId, Collection<Long> excludedAuthorIds,
+                                                            Collection<Long> excludedReplyIds) {
         LambdaQueryWrapper<ReplyDO> query = new LambdaQueryWrapper<ReplyDO>()
                 .eq(ReplyDO::getPostId, postId)
                 .eq(ReplyDO::getStatus, STATUS_PUBLISHED)
@@ -43,11 +66,7 @@ public class ReplyRepositoryImpl implements ReplyRepository {
         if (excludedReplyIds != null && !excludedReplyIds.isEmpty()) {
             query.notIn(ReplyDO::getId, excludedReplyIds);
         }
-        query.orderByDesc(ReplyDO::getIsAccepted)
-                .orderByAsc(ReplyDO::getFloorNo);
-        IPage<ReplyDO> result = replyMapper.selectPage(new Page<>(page, size), query);
-        return new PageResult<>(result.getRecords().stream().map(ReplyConverter::toDomain).toList(),
-                result.getTotal(), page, size);
+        return query;
     }
 
     @Override

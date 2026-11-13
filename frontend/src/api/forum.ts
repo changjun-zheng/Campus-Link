@@ -135,8 +135,15 @@ export const listPosts = (
 
 export const getPost = (id: number | string) => get<PostDetailVo>(`/posts/${id}`)
 
-export const listReplies = (postId: number | string, page = 1, size = 20) =>
-  get<PageVo<ReplyVo>>(`/posts/${postId}/replies?page=${page}&size=${size}`)
+/**
+ * 楼层列表。`focus`（CR-220）= 要定位的回复 id：服务端按同一排序与过滤算出它所在页并返回，
+ * 响应 `page` 以定位结果为准（目标不可见时回落请求页）。通知跳转跨页定位用，普通翻页不传。
+ */
+export const listReplies = (postId: number | string, page = 1, size = 20, focus?: number) => {
+  const query = new URLSearchParams({ page: String(page), size: String(size) })
+  if (focus !== undefined) query.set('focus', String(focus))
+  return get<PageVo<ReplyVo>>(`/posts/${postId}/replies?${query.toString()}`)
+}
 
 export const publishPost = (payload: {
   boardCode: string

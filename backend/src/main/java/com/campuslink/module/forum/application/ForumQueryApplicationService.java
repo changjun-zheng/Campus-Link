@@ -49,6 +49,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -241,12 +242,13 @@ public class ForumQueryApplicationService {
      * 单条版同源），excerpt 走 {@code toPlainSummary} 120 字；被引楼层不可见（下架 / 已删除）即不渲染。
      * 引用作者的昵称**并入同一批** {@code nicknamesOf}（楼层作者 + 被引楼层作者一次取齐），不做 N+1。
      */
-    public PageResult<ReplyItem> listReplies(Long postId, int page, int size, Long viewerId) {
+    public PageResult<ReplyItem> listReplies(Long postId, int page, int size, Long viewerId, Long focusReplyId) {
         requireVisiblePost(postId);
-        int currentPage = normalizePage(page);
         int pageSize = normalizeSize(size);
         ReportedTargets reported = reportedTargetsOf(viewerId);
-        PageResult<Reply> found = replyRepository.findPageByPostId(postId, blockedAuthorIds(viewerId),
+        Set<Long> blocked = blockedAuthorIds(viewerId);
+        int currentPage = focusPage(postId, focusReplyId, normalizePage(page), pageSize, blocked, reported.replyIds());
+        PageResult<Reply> found = replyRepository.findPageByPostId(postId, blocked,
                 reported.replyIds(), currentPage, pageSize);
         Map<Long, Reply> quotedVisible = replyRepository.findVisibleByIds(
                 found.items().stream().map(Reply::getQuotedReplyId)
@@ -274,6 +276,32 @@ public class ForumQueryApplicationService {
                 })
                 .toList();
         return new PageResult<>(items, found.total(), currentPage, pageSize);
+    }
+
+    /**
+     * 通知跳转的跨页定位（CR-220 / F-SOC-001）：把「回复 id」换算成它在楼层列表里的页码。
+     *
+     * <p>目标不存在、属于他帖、已下架 / 已删，或被当前访问者过滤（拉黑 / 本人未闭环举报）时，
+     * **不报错也不跳到空页**——退回请求页（通常是第 1 页），与"内容不可见不外泄"同口径。
+     * 页码由仓储按列表同一过滤与排序数出，不按 {@code floorNo} 猜：软删楼层会留下 floor_no 空洞，
+     * 最佳答案又会置顶，两种情况下 floor_no 都不能直接映射页码。
+     */
+    private int focusPage(Long postId, Long focusReplyId, int fallbackPage, int pageSize,
+                          Set<Long> blocked, Set<Long> reportedReplyIds) {
+        if (focusReplyId == null) {
+            return fallbackPage;
+        }
+        Optional<Reply> focus = replyRepository.findVisibleById(focusReplyId)
+                .filter(reply -> postId.equals(reply.getPostId()))
+                .filter(reply -> !blocked.contains(reply.getAuthorId()))
+                .filter(reply -> !reportedReplyIds.contains(reply.getId()));
+        if (focus.isEmpty()) {
+            return fallbackPage;
+        }
+        Reply target = focus.get();
+        long upTo = replyRepository.countVisibleUpTo(postId, blocked, reportedReplyIds,
+                target.isAccepted(), target.getFloorNo());
+        return (int) Math.max(1, (upTo + pageSize - 1) / pageSize);
     }
 
     /**
