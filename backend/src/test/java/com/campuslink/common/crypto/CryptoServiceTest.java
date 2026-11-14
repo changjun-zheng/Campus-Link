@@ -49,7 +49,7 @@ class CryptoServiceTest {
     @Test
     @DisplayName("姓名归一化：去空格、全角转半角、小写")
     void nameNormalizer() {
-        assertThat(NameNormalizer.normalize(" 张三 ")).isEqualTo("张三");
+        assertThat(NameNormalizer.normalize(" 张三 ")).isEqualTo("张三-CI实验");
         assertThat(NameNormalizer.normalize("ＯＬＬＥｈ")).isEqualTo("olleh");
         assertThat(NameNormalizer.normalize(null)).isEmpty();
     }
