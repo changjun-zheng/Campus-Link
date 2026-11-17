@@ -6,6 +6,7 @@ import { BOARDS } from '../constants/boards'
 import PageHeader from '../components/PageHeader.vue'
 import PostListItem from '../components/PostListItem.vue'
 import SvgIcon from '../components/SvgIcon.vue'
+import { isImeConfirm } from '../utils/keyboard'
 
 const route = useRoute()
 const router = useRouter()
@@ -117,7 +118,9 @@ function syncQuery(kw: string) {
   router.replace({ path: '/search', query })
 }
 
-function onSubmit() {
+/** 回车搜索：跳过输入法确认候选词的那次 Enter（MWG ime-safe-enter-submit） */
+function onSubmit(event?: Event) {
+  if (isImeConfirm(event)) return
   runSearch(1)
 }
 
@@ -156,7 +159,7 @@ onMounted(async () => {
         placeholder="搜索帖子标题 / 正文 / 标签（至少 2 个字）"
         maxlength="50"
         clearable
-        @keyup.enter="onSubmit"
+        @keydown.enter="onSubmit"
       >
         <template #prefix>
           <SvgIcon name="search" :size="16" />

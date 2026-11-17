@@ -11,6 +11,7 @@ import SvgIcon from './SvgIcon.vue'
 import type { AssistantMessage } from '../composables/useAssistant'
 import { vHighlight } from '../utils/highlight'
 import { injectCopyButtons } from '../utils/copyCode'
+import { isImeConfirm } from '../utils/keyboard'
 
 const props = defineProps<{
   selectedText: string
@@ -58,7 +59,7 @@ const retryId = computed(() => {
 
 function onKeydown(event: Event | KeyboardEvent) {
   if (!(event instanceof KeyboardEvent)) return
-  if (event.key !== 'Enter' || event.shiftKey || event.isComposing) return
+  if (event.key !== 'Enter' || event.shiftKey || isImeConfirm(event)) return
   event.preventDefault()
   if (canSend.value) emit('send')
 }

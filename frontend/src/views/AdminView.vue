@@ -43,6 +43,7 @@ import {
 import { useAuthStore } from '../stores/auth'
 import { AUDIT_ACTION_LABELS, AUDIT_ACTIONS, AUDIT_TARGET_LABELS, AUDIT_TARGET_TYPES } from '../constants/audit'
 import { formatRelativeTime, formatTime } from '../utils/time'
+import { isImeConfirm } from '../utils/keyboard'
 import DonutChart from '../components/DonutChart.vue'
 import PageHeader from '../components/PageHeader.vue'
 
@@ -186,6 +187,13 @@ async function loadContents() {
   } finally {
     contentsLoading.value = false
   }
+}
+
+/** 关键词回车检索：输入法确认候选词的 Enter 不触发（MWG ime-safe-enter-submit） */
+function onContentSearch(event?: Event) {
+  if (isImeConfirm(event)) return
+  contentPage.value = 1
+  void loadContents()
 }
 
 function resetContentSearch() {
@@ -405,7 +413,8 @@ const userSearched = ref(false)
 const usersLoading = ref(false)
 const usersError = ref('')
 
-async function loadUsers() {
+async function loadUsers(event?: Event) {
+  if (isImeConfirm(event)) return
   const keyword = userKeyword.value.trim()
   if (!keyword) {
     ElMessage.warning('请输入用户 id 或昵称关键字')
@@ -632,7 +641,8 @@ async function loadTags(next = tagPage.value) {
   }
 }
 
-function onTagSearch() {
+function onTagSearch(event?: Event) {
+  if (isImeConfirm(event)) return
   void loadTags(1)
 }
 
@@ -670,7 +680,8 @@ function openRenameTag(tag: AdminTagVo) {
   renameVisible.value = true
 }
 
-async function submitRenameTag() {
+async function submitRenameTag(event?: Event) {
+  if (isImeConfirm(event)) return
   const target = renameTarget.value
   if (!target) return
   const name = renameName.value.trim()
@@ -884,7 +895,8 @@ async function loadAuditLogs(next = auditPage.value) {
   }
 }
 
-function onAuditSearch() {
+function onAuditSearch(event?: Event) {
+  if (isImeConfirm(event)) return
   void loadAuditLogs(1)
 }
 
@@ -1221,7 +1233,7 @@ function goLogin() {
           placeholder="按名称搜索"
           clearable
           style="width: 220px"
-          @keyup.enter="onTagSearch"
+          @keydown.enter="onTagSearch"
         />
         <el-select v-model="tagSort" aria-label="标签排序" style="width: 150px" @change="onTagSearch">
           <el-option label="按使用次数" value="use_count" />
@@ -1279,7 +1291,7 @@ function goLogin() {
           maxlength="32"
           show-word-limit
           placeholder="新标签名"
-          @keyup.enter="submitRenameTag"
+          @keydown.enter="submitRenameTag"
         />
         <template #footer>
           <el-button @click="renameVisible = false">取消</el-button>
@@ -1629,7 +1641,7 @@ function goLogin() {
               placeholder="标题 / 正文，2~50 字"
               clearable
               class="w-[220px]"
-              @keyup.enter="contentPage = 1; loadContents()"
+              @keydown.enter="onContentSearch"
             />
           </el-form-item>
           <el-form-item label="用户 id">
@@ -1730,7 +1742,7 @@ function goLogin() {
                 placeholder="如 123 或 张三"
                 clearable
                 class="w-[200px]"
-                @keyup.enter="loadUsers"
+                @keydown.enter="loadUsers"
               />
             </el-form-item>
             <el-form-item>
@@ -1933,7 +1945,7 @@ function goLogin() {
           placeholder="操作者 id（正整数）"
           clearable
           style="width: 180px"
-          @keyup.enter="onAuditSearch"
+          @keydown.enter="onAuditSearch"
         />
         <el-select
           v-model="auditTargetType"
@@ -1957,7 +1969,7 @@ function goLogin() {
           placeholder="目标 id（正整数）"
           clearable
           style="width: 170px"
-          @keyup.enter="onAuditSearch"
+          @keydown.enter="onAuditSearch"
         />
         <el-select
           v-model="auditDays"

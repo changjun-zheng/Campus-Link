@@ -8,6 +8,7 @@ import { BOARDS } from './constants/boards'
 import UserMenu from './components/UserMenu.vue'
 import BackToTop from './components/BackToTop.vue'
 import SvgIcon from './components/SvgIcon.vue'
+import { isImeConfirm } from './utils/keyboard'
 
 const route = useRoute()
 const router = useRouter()
@@ -52,8 +53,9 @@ function skipToMain() {
   main.scrollIntoView({ block: 'start' })
 }
 
-/** 顶栏回车即搜；关键词为空时进搜索页（该页自带输入框并自动聚焦） */
-function onSearchSubmit() {
+/** 顶栏回车即搜；输入法确认候选词的 Enter 不触发（MWG ime-safe-enter-submit） */
+function onSearchSubmit(event?: Event) {
+  if (isImeConfirm(event)) return
   const kw = searchKeyword.value.trim()
   router.push(kw ? { path: '/search', query: { keyword: kw } } : { path: '/search' })
 }
@@ -110,7 +112,7 @@ function onSearchSubmit() {
               aria-label="搜索帖子标题 / 正文 / 标签"
               placeholder="搜索帖子标题 / 正文 / 标签"
               class="cl-header-search"
-              @keyup.enter="onSearchSubmit"
+              @keydown.enter="onSearchSubmit"
             />
             <button
               v-if="searchKeyword"

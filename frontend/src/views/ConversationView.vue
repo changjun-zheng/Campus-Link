@@ -19,6 +19,7 @@ import { useAuthStore } from '../stores/auth'
 import SvgIcon from '../components/SvgIcon.vue'
 import UserAvatar from '../components/UserAvatar.vue'
 import { formatTime } from '../utils/time'
+import { isImeConfirm } from '../utils/keyboard'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -149,6 +150,12 @@ async function send() {
   }
 }
 
+/** Enter 发送：输入法确认候选词的那次 Enter 不提交（MWG ime-safe-enter-submit） */
+function onEnterSend(event: Event | KeyboardEvent) {
+  if (isImeConfirm(event)) return
+  void send()
+}
+
 watch(peerId, () => void loadAll(), { immediate: true })
 onBeforeUnmount(() => {
   reqSeq += 1
@@ -252,7 +259,7 @@ onBeforeUnmount(() => {
             show-word-limit
             resize="none"
             placeholder="输入私信，Enter 发送，Shift+Enter 换行"
-            @keydown.enter.exact.prevent="send"
+            @keydown.enter.exact.prevent="onEnterSend"
           />
           <div class="mt-3 flex items-center justify-between gap-3">
             <span class="text-caption text-ink-meta">纯文本，不渲染 Markdown</span>
